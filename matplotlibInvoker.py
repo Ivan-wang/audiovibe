@@ -121,3 +121,17 @@ def pitchyin(save_dir, features):
 
     plt.savefig(os.path.join(save_dir, 'pitch_f0_plot.jpg'))
 
+@matplotlib_commands
+def grammel(save_dir, features):
+    S_db = get_feature(features, prefix='grammel')
+    sr = get_feature(features, k='sr')
+
+    fig, ax = plt.subplots()
+    img = librosa.display.specshow(
+        S_db, x_axis='time', y_axis='mel', sr=sr, fmax=8000, ax=ax
+    )
+
+    fig.colorbar(img, ax=ax, format='%+2.0f dB')
+    ax.set(title='Mel-frequency spectrogram')
+
+    plt.save(os.path.join(save_dir, 'mel_spec_plot.jpg'))

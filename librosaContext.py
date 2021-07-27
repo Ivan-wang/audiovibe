@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import numpy as np
 import librosa
 from utils import load_audio
 
@@ -127,6 +128,18 @@ def pitchpyin(audio, sr, frame=DEFAULT_FRAME_LEN, hop=DEFAULT_HOP_LEN):
         frame_length=frame, hop_length=hop)
     
     return f0
+
+DEFAULT_N_MELS = 128
+@librosa_stg_meta
+def grammel(audio, sr, frame=DEFAULT_FRAME_LEN, hop=DEFAULT_HOP_LEN, n_mels=DEFAULT_N_MELS):
+    frame = int(frame)
+    hop = int(hop)
+    n_mels = int(n_mels)
+
+    S = librosa.feature.melspectrogram(y=audio, sr=sr,
+        n_fft=frame, hop_length=hop,n_mels=n_mels)
+    
+    return librosa.power_to_db(S, ref=np.max)
 
 if __name__ == '__main__':
     ctx = LibrosaContext(stg=['rmse_1024_512'])
