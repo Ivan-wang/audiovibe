@@ -47,4 +47,6 @@ Thumbs.db
 *.flv
 *.mov
 *.wmv
+*.wav
 
+**/__pycache__/*
