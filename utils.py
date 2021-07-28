@@ -6,5 +6,6 @@ def load_audio():
     return audio, sr
 
 if __name__ == '__main__':
-    _, sr = load_audio()
+    sound, sr = load_audio()
+    print(f'Audio Sample Data Shape {sound.shape}')
     print(f'Audio Sample Rate {sr}')

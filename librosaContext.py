@@ -10,13 +10,19 @@ DEFAULT_HOP_LEN = 512
 class LibrosaContext(object):
     stg_meta_funcs = {}
     stg_funcs = {}
-    def __init__(self, audio=None, stg=None):
+    def __init__(self, audio=None, sr=None, stg=None):
         super().__init__()
-        if audio is None:
-            self.audio, self.sr = load_audio()
-            self.audio = self.audio[:self.sr*3]
+        if isinstance(audio, str):
+            if len(audio) == 0:
+                self.audio, self.sr = load_audio()
+                self.audio = self.audio[:self.sr*3]
+            else: 
+                self.audio, self.sr = librosa.load(audio, sr=None)
         else:
-            self.audio, self.sr = librosa.load(audio, sr=None)
+            self.audio = audio
+            self.sr = sr
+            if self.audio is None:
+                assert self.sr is not None
     
         if isinstance(stg, str):
             self.stg_names = [stg]
@@ -41,6 +47,14 @@ class LibrosaContext(object):
             return wfunc
         else:
             raise NotImplementedError(f'{stg} is not implemented')
+    
+    @property
+    def sound(self):
+        return self.audio
+    
+    @sound.setter
+    def sound(self, sound):
+        self.audio = sound
 
     @property
     def strategy(self):
@@ -59,6 +73,8 @@ class LibrosaContext(object):
             self.stg = None
 
     def audio_features(self):
+        if self.audio is None: return {}
+
         features = {'audio': self.audio.copy(), 'sr': self.sr}
         features.update({sname: func(self.audio, self.sr)
             for sname, func in zip(self.stg_names, self.stg)})
@@ -109,7 +125,6 @@ def pitchyin(audio, sr, frame=DEFAULT_FRAME_LEN, hop=DEFAULT_HOP_LEN, thres=0.8)
     hop = int(hop)
     thres = float(thres)
 
-    print(frame, hop, thres)
     fmin = librosa.note_to_hz('C2')
     fmax = librosa.note_to_hz('C7')
 
