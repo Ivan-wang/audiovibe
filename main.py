@@ -1,14 +1,16 @@
 from librosaContext import LibrosaContext
+from vibrationEncoder import VibrationEncoder
 from matplotlibInvoker import MatplotlibInvoker
 
 import multiprocessing
 # Producer
 class LibrosaContextProcess(multiprocessing.Process):
-    def __init__(self, io_queue, feat_queue, ctx=None):
+    def __init__(self, io_queue, feat_queue, ctx=None, enc=None):
         super().__init__()
         self.io_queue = io_queue
         self.feat_queue = feat_queue
         self.ctx = ctx
+        self.enc = enc
     
     def run(self):
         # collecte frame from IO Q, extract features, put features to features Q
@@ -55,6 +57,7 @@ def main():
         'rmse_1024_512',
         'pitchyin_2048_512_0.8']
     features = ctx.audio_features()
+    # encoder = VibrationEncoder('')
 
     ioQueue = multiprocessing.Queue()
     featQueue = multiprocessing.Queue()

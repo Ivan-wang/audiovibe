@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from librosaContext import DEFAULT_FRAME_LEN
 from librosaContext import DEFAULT_HOP_LEN
 from librosaContext import DEFAULT_WIN_LEN
+from utils import get_feature
 
 class MatplotlibInvoker(object):
     commands = {}
@@ -37,16 +38,6 @@ def matplotlib_commands(alias=[]):
             MatplotlibInvoker.commands.update({n: func})
         return func
     return command
-
-def get_feature(features, k=None, prefix=None):
-    if k is not None and k in features:
-        return features[k]
-    
-    for name in features:
-        if name.startswith(prefix):
-            return features[name]
-
-    return None 
 
 @matplotlib_commands
 def stempo(save_dir, features):

@@ -1,4 +1,3 @@
-from abc import ABC, abstractmethod
 import numpy as np
 import librosa
 from utils import load_audio
@@ -10,7 +9,7 @@ DEFAULT_HOP_LEN = 512
 class LibrosaContext(object):
     stg_meta_funcs = {}
     stg_funcs = {}
-    def __init__(self, audio=None, sr=None, stg=None):
+    def __init__(self, audio='', sr=None, stg=None):
         super().__init__()
         if isinstance(audio, str):
             if len(audio) == 0:
