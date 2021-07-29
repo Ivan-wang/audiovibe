@@ -55,7 +55,10 @@ class MotorMeta(type):
 class Motor(object, metaclass=MotorMeta):
     def __init__(self, vibration_t):
         super().__init__()
+        if isinstance(vibration_t, str):
+            vibration_t = [vibration_t]
         self.vibration_t = vibration_t
+        self.vibration = {v: None for v in self.vibration_t}
 
     @abstractmethod
     def on_start(self):
@@ -77,10 +80,7 @@ from pprint import pprint
 class ConsoleSimulationMotor(Motor):
     alias = 'console'
     def __init__(self, vibration_t):
-        if isinstance(vibration_t, str):
-            vibration_t = [vibration_t]
         super().__init__(vibration_t)
-        self.vibration = {v: None for v in self.vibration_t}
 
     def on_start(self):
         return super().on_start()
@@ -99,16 +99,6 @@ class ConsoleSimulationMotor(Motor):
 #         pass
 #         # i2c = busio.I2C(board.SCL, board.SDA)
 #         # self.drv = adafruit_drv2605(i2c)
-
-#     def on_running(self, features):
-#         return super().on_running(features)
-
-#     def on_end(self):
-#         return super().on_end()
-
-# class PlotSimulationMotor(Motor):
-#     def on_start(self):
-#         return super().on_start()
 
 #     def on_running(self, features):
 #         return super().on_running(features)
