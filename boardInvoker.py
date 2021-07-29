@@ -32,9 +32,10 @@ class BoardInvoker(object):
 
     def dispatch(self, vibrations):
         for k in vibrations:
+            vib_t = k.split('_')[0]
             for m in self.motors:
-                if k.startswith(m.vibration_t):
-                    m.on_update(self, vibrations[k])
+                if vib_t in m.vibration_t:
+                    m.on_update(vib_t, vibrations[k])
 
         for m in self.motors:
             m.on_running()
@@ -61,7 +62,7 @@ class Motor(object, metaclass=MotorMeta):
         pass
 
     @abstractmethod
-    def on_update(self, vibration):
+    def on_update(self, vib_t, vib):
         pass
 
     @abstractmethod
@@ -72,20 +73,23 @@ class Motor(object, metaclass=MotorMeta):
     def on_end(self):
         pass
 
+from pprint import pprint
 class ConsoleSimulationMotor(Motor):
     alias = 'console'
     def __init__(self, vibration_t):
+        if isinstance(vibration_t, str):
+            vibration_t = [vibration_t]
         super().__init__(vibration_t)
-        self.buf = None
+        self.vibration = {v: None for v in self.vibration_t}
 
     def on_start(self):
         return super().on_start()
     
-    def on_update(self, vibration):
-        self.buf = vibration
+    def on_update(self, vib_t, vib):
+        self.vibration[vib_t] = vib
 
-    def on_running(self, features):
-        print(self.buf)
+    def on_running(self):
+        pprint(self.vibration)
     
     def on_end(self):
         return super().on_end()

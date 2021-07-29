@@ -45,7 +45,7 @@ def demo_config(save=None):
 
     # vibration encoder
     vibration_enc = [
-        'rmse_enc'
+        'rmse_level'
     ]
     config['vibration_enc'] = vibration_enc
 
@@ -64,13 +64,15 @@ def demo_config(save=None):
 
 def load_config(cfg):
     with open(cfg, 'r') as f:
-        cfg = yaml.load(f)
+        cfg = yaml.load(f, Loader=yaml.FullLoader)
     
     ctx = LibrosaContext(audio=cfg['audio'], sr=cfg['sr'], stg=cfg['strategy'])
     venc = VibrationEncoder(stg=cfg['vibration_enc'])
-    bid = BoardInvoker(motors=cfg['motors'])
 
-    return ctx, venc, bid
+    motors = [(k, v) for k, v in cfg['motors'].items()]
+    invoker = BoardInvoker(motors=motors)
+
+    return ctx, venc, invoker
 
 if __name__ == '__main__':
     list_librosa_context()

@@ -8,7 +8,7 @@ class VibrationEncoder(object):
         super().__init__()
         if isinstance(stg, str):
             stg = [stg]
-        self.stg_names = []
+        self.stg_names = stg
         self.stg_funcs = [self._init_enc_func(s) for s in stg]
     
     def _init_enc_func(self, stg):
@@ -21,6 +21,8 @@ class VibrationEncoder(object):
             for sname, func in zip(self.stg_names, self.stg_funcs)
         })
 
+        return encoded
+
 def vib_encoder_stg(func):
     if func.__name__ in VibrationEncoder.enc_funcs:
         raise ValueError(f'Duplicate Function Name {func.__name__}')
@@ -29,10 +31,10 @@ def vib_encoder_stg(func):
     return func
 
 @vib_encoder_stg
-def rmse_enc(features):
+def rmse_level(features):
     rmse = get_feature(features, prefix='rmse')
 
-    return pd.cut(rmse, bins=7, labels=False)
+    return pd.cut(rmse.reshape((-1,)), bins=7, labels=False)
 
 # @vib_encoder_stg
 # def board_vibe_encoder():
