@@ -4,6 +4,22 @@ from matplotlibInvoker import MatplotlibInvoker
 
 import multiprocessing
 # Producer
+class AudioIOProcess(multiprocessing.Process):
+    def __init__(self, audio, sr, io_queue):
+        super(AudioIOProcess, self).__init__()
+
+        self.audio = audio
+        self.sr = sr
+        self.io_queue = io_queue
+    
+    def run(self):
+        # TODO: use blocking calls to load chunk
+        for start in range(0, DEFAULT_FRAME_LEN*9, DEFAULT_FRAME_LEN):
+            # print(data[start:start+DEFAULT_FRAME_LEN].shape)
+            self.io_queue.put(self.audio[start:start+DEFAULT_FRAME_LEN])
+        self.io_queue.put(None)
+        return
+
 class LibrosaContextProcess(multiprocessing.Process):
     def __init__(self, io_queue, vib_queue, ctx=None, enc=None):
         super().__init__()
@@ -56,24 +72,36 @@ from config import load_config
 def main():
     data, sr = load_audio()
     data = data[:DEFAULT_FRAME_LEN*10]
+    print(data.shape)
 
     ctx, venc, invoker = load_config('configs/demo.yaml')
 
     io_queue = multiprocessing.Queue()
     vib_queue = multiprocessing.Queue()
 
-    librosa_proc = LibrosaContextProcess(io_queue=io_queue, vib_queue=vib_queue,
-        ctx=ctx, enc=venc)
+    audio_proc = AudioIOProcess(data, sr, io_queue)
+    # TODO: merge librosa and board procs
+    librosa_proc = LibrosaContextProcess(io_queue, vib_queue, ctx, venc)
     board_proc = BroadProcess(vib_queue=vib_queue, invoker=invoker)
 
     librosa_proc.start()
     board_proc.start()
 
-    for start in range(0, DEFAULT_FRAME_LEN*9, DEFAULT_FRAME_LEN):
-        # print(data[start:start+DEFAULT_FRAME_LEN].shape)
-        io_queue.put(data[start:start+DEFAULT_FRAME_LEN])
+    audio_proc.start()
 
-    io_queue.put(None)
+    # while True:
+    #     if not io_queue.empty():
+    #         chunk = io_queue.get()
+    #         if chunk is None:
+    #             break
+    #         else:
+    #             ctx.sound = chunk
+    #             features = ctx.audio_features()
+    #             vibertion = venc.fit(features)
+    #             vib_queue.put(vibertion)
+    # vib_queue.put(None)
+
+    audio_proc.join()
 
     librosa_proc.join()
     board_proc.join()

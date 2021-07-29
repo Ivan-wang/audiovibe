@@ -38,8 +38,8 @@ def demo_config(save=None):
 
     # librosa context config
     strategy = [
-        'rmse_1024_512',
-        'pitchyin_2048_512_0.8'
+        'rmse_4096_1024',
+        'pitchyin_4096_1024_0.8'
     ]
     config['strategy'] = strategy
 
@@ -52,7 +52,7 @@ def demo_config(save=None):
     # board invoker
     motors = {
         # motor, [features,...]
-        'console': ['rmse']
+        'console': ['rmse', 'pitchyin']
     }
     config['motors'] = motors
 

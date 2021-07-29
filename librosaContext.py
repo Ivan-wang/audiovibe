@@ -2,9 +2,9 @@ import numpy as np
 import librosa
 from utils import load_audio
 
-DEFAULT_FRAME_LEN = 2048
-DEFAULT_WIN_LEN = 1024
-DEFAULT_HOP_LEN = 512
+DEFAULT_FRAME_LEN = 4096
+DEFAULT_WIN_LEN = 4096
+DEFAULT_HOP_LEN = 1024
 # Strategy Pattern
 class LibrosaContext(object):
     stg_meta_funcs = {}

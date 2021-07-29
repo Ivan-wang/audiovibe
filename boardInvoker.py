@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 # import busio
 # import adafruit_drv2605
 
-# dispatch vibration 
+# dispatch vibration
 class BoardInvoker(object):
     motor_t = {}
     def __init__(self, motors=[]):
@@ -20,10 +20,10 @@ class BoardInvoker(object):
         motors = []
         for name, args in self.motor_cfgs:
             if name in BoardInvoker.motor_t:
-                motors.append(BoardInvoker.motor_t[name](*args))
+                motors.append(BoardInvoker.motor_t[name](args))
             else:
                 print(f'Unrecongnized Motor Type {name}')
-            
+
         return motors
 
     def on_start(self):
@@ -46,8 +46,8 @@ class BoardInvoker(object):
 
 class MotorMeta(type):
     def __new__(cls, clsname, bases, attrs):
-        newclass = super(MotorMeta, cls).__new__(cls, clsname, bases, attrs)   
-        alias = getattr(newclass, 'alias', None)    
+        newclass = super(MotorMeta, cls).__new__(cls, clsname, bases, attrs)
+        alias = getattr(newclass, 'alias', None)
         if alias is not None:
             BoardInvoker.motor_t.update({alias: newclass})
         return newclass
@@ -68,7 +68,7 @@ class Motor(object, metaclass=MotorMeta):
     @abstractmethod
     def on_running(self):
         pass
-    
+
     @abstractmethod
     def on_end(self):
         pass
@@ -84,13 +84,13 @@ class ConsoleSimulationMotor(Motor):
 
     def on_start(self):
         return super().on_start()
-    
+
     def on_update(self, vib_t, vib):
         self.vibration[vib_t] = vib
 
     def on_running(self):
         pprint(self.vibration)
-    
+
     def on_end(self):
         return super().on_end()
 
@@ -102,17 +102,17 @@ class ConsoleSimulationMotor(Motor):
 
 #     def on_running(self, features):
 #         return super().on_running(features)
-    
+
 #     def on_end(self):
 #         return super().on_end()
 
 # class PlotSimulationMotor(Motor):
 #     def on_start(self):
 #         return super().on_start()
-    
+
 #     def on_running(self, features):
 #         return super().on_running(features)
-    
+
 #     def on_end(self):
 #         return super().on_end()
 
