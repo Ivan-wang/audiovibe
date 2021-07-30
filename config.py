@@ -14,9 +14,9 @@ def list_vibration_encoder():
 
     print(f'Available Vibration Encoder Strategies : {ks}')
 
-from matplotlibInvoker import MatplotlibInvoker
+from matplotlibMotor import MatplotlibMotor 
 def list_matplotlib_invoker():
-    ks = list(MatplotlibInvoker.commands)
+    ks = list(MatplotlibMotor.commands)
 
     print(f'Available Matplotlib Invoker Strategies : {ks}')
 
@@ -38,8 +38,8 @@ def demo_config(save=None):
 
     # librosa context config
     strategy = [
-        'rmse_4096_1024',
-        'pitchyin_4096_1024_0.8'
+        'rmse',
+        'pitchyin'
     ]
     config['strategy'] = strategy
 

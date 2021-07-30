@@ -77,7 +77,7 @@ class Motor(object, metaclass=MotorMeta):
         pass
 
 from pprint import pprint
-class ConsoleSimulationMotor(Motor):
+class ConsoleMotor(Motor):
     alias = 'console'
     def __init__(self, vibration_t):
         super().__init__(vibration_t)

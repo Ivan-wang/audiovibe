@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 from utils import get_feature
 
@@ -33,8 +34,10 @@ def vib_encoder_stg(func):
 @vib_encoder_stg
 def rmse_level(features):
     rmse = get_feature(features, prefix='rmse')
+    bins = np.linspace(0, 0.5, num=7, endpoint=False)
 
-    return pd.cut(rmse.reshape((-1,)), bins=7, labels=False)
+    # TODO: select a suitable bins
+    return pd.cut(rmse.reshape((-1,)), bins=bins, labels=False)
 
 # @vib_encoder_stg
 # def board_vibe_encoder():

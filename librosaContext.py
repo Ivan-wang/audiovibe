@@ -97,8 +97,10 @@ def librosa_stg_meta(func):
 def rmse(audio, sr, frame=DEFAULT_FRAME_LEN, hop=DEFAULT_HOP_LEN):
     frame = int(frame)
     hop = int(hop)
+
+    # Do not pad the frame
     return librosa.feature.rms(y=audio, frame_length=frame,
-        hop_length=DEFAULT_HOP_LEN)
+        hop_length=hop, center=False)
 
 @librosa_stg
 def stempo(audio, sr):
