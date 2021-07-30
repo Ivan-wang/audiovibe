@@ -1,6 +1,6 @@
 from librosaContext import LibrosaContext
 from vibrationEncoder import VibrationEncoder
-from matplotlibInvoker import MatplotlibInvoker
+# from matplotlibInvoker import MatplotlibInvoker
 
 import multiprocessing
 # Producer
@@ -14,7 +14,9 @@ class AudioIOProcess(multiprocessing.Process):
     
     def run(self):
         # TODO: use blocking calls to load chunk
-        for start in range(0, DEFAULT_FRAME_LEN*9, DEFAULT_FRAME_LEN):
+        step = DEFAULT_FRAME_LEN - DEFAULT_HOP_LEN
+        end = self.audio.shape[0] - step
+        for start in range(0, end, step):
             # print(data[start:start+DEFAULT_FRAME_LEN].shape)
             self.io_queue.put(self.audio[start:start+DEFAULT_FRAME_LEN])
         self.io_queue.put(None)

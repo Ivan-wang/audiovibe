@@ -118,7 +118,7 @@ def gramtempo(audio, sr, hop=512):
     hop = int(hop)
     onset_env = librosa.onset.onset_strength(audio, sr)
     return librosa.feature.tempogram(onset_envelope=onset_env, sr=sr,
-        hop_length=hop)
+        hop_length=hop, center=False)
 
 @librosa_stg_meta
 def pitchyin(audio, sr, frame=DEFAULT_FRAME_LEN, hop=DEFAULT_HOP_LEN, thres=0.8):
@@ -130,7 +130,7 @@ def pitchyin(audio, sr, frame=DEFAULT_FRAME_LEN, hop=DEFAULT_HOP_LEN, thres=0.8)
     fmax = librosa.note_to_hz('C7')
 
     return librosa.yin(audio, fmin=fmin, fmax=fmax, sr=sr,
-        frame_length=frame, hop_length=hop, trough_threshold=thres)
+        frame_length=frame, hop_length=hop, trough_threshold=thres, center=False)
 
 @librosa_stg_meta
 def pitchpyin(audio, sr, frame=DEFAULT_FRAME_LEN, hop=DEFAULT_HOP_LEN):
@@ -141,7 +141,7 @@ def pitchpyin(audio, sr, frame=DEFAULT_FRAME_LEN, hop=DEFAULT_HOP_LEN):
     fmax = librosa.note_to_hz('C7')
 
     f0, _, _ = librosa.pyin(audio, fmin=fmin, fmax=fmax, sr=sr,
-        frame_length=frame, hop_length=hop)
+        frame_length=frame, hop_length=hop, center=False)
     
     return f0
 
@@ -153,7 +153,7 @@ def grammel(audio, sr, frame=DEFAULT_FRAME_LEN, hop=DEFAULT_HOP_LEN, n_mels=DEFA
     n_mels = int(n_mels)
 
     S = librosa.feature.melspectrogram(y=audio, sr=sr,
-        n_fft=frame, hop_length=hop,n_mels=n_mels)
+        n_fft=frame, hop_length=hop,n_mels=n_mels, center=False)
     
     return librosa.power_to_db(S, ref=np.max)
 

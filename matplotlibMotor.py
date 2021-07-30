@@ -9,33 +9,69 @@ from librosaContext import DEFAULT_HOP_LEN
 from librosaContext import DEFAULT_WIN_LEN
 from utils import get_feature
 
-class MatplotlibInvoker(object):
+from boardInvoker import Motor
+class MatplotlibMotor(Motor):
+    alias = 'plot'
     commands = {}
-    def __init__(self, save_dir='.'):
-        super().__init__()
+    def __init__(self, vibration_t, save_dir='.'):
+        super(MatplotlibMotor, self).__init__()
         self.save_dir = save_dir
-    
-    def _on_start(self):
+        for k in self.vibration:
+            self.vibration[k] = []
+        
+        # by default, store the audio
+        if 'audio' not in self.vibration_t:
+            self.vibration_t.append('audio')
+            self.vibration['audio'] = []
+        
+        # add 'sr' in vibration_t to catch the sr
+        if 'sr' not in self.vibration_t:
+            self.vibration_t.append['sr']
+        self.sr = None
+
+    def on_start(self):
         if not os.path.exists(self.save_dir):
             os.mkdir(self.save_dir)
 
-    def execute(self, features):
-        self._on_start()
+    def on_update(self, vib_t, vib):
+        if vib_t == 'sr':
+            if self.sr is None:
+                self.sr = vib
+            return
+        
+        self.vibration_t[vib_t].append(vib)
 
-        for k in features:
-            name = k.split('_')[0]
-            if name in MatplotlibInvoker.commands:
-                print(f'Command matches feature: {k}')
-                MatplotlibInvoker.commands[name](self.save_dir, features)
+    def on_running(self):
+        return super().on_running()
+
+    def on_end(self):
+        for name in self.vibration:
+            if name == 'audio':
+                # need more efforts to recover the audio
+                audios = self.vibration[name]
+                step = DEFAULT_FRAME_LEN-DEFAULT_HOP_LEN
+
+                audios = [s[:step] for s in audios] + [audios[-1]]
+                self.vibration[name] = np.concatenate(audios, axis=-1)
+            else:
+                self.vibration[name] = np.concatenate(self.vibration[name], axis=-1)
+
+        self.vibration['sr'] = self.sr
+
+        for name in self.vibration:
+            # name = k.split('_')[0] 
+            if name in MatplotlibMotor.commands:
+                print(f'Command matches feature: {name}')
+                MatplotlibMotor.commands[name](self.save_dir, self.vibration)
 
 def matplotlib_commands(alias=[]):
     def command(func):
         alias.append(func.__name__)
 
         for n in alias:
-            if n in MatplotlibInvoker.commands:
+            if n in MatplotlibMotor.commands:
                 raise ValueError(f'Duplicate Function Name {func.__name__}')
-            MatplotlibInvoker.commands.update({n: func})
+            MatplotlibMotor.commands.update({n: func})
         return func
     return command
 
