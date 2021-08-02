@@ -7,8 +7,16 @@ import matplotlib.pyplot as plt
 from librosaContext import FRAME_LEN
 from librosaContext import HOP_LEN
 from librosaContext import WIN_LEN
-from utils import get_feature
+# from utils import get_feature
+def get_feature(features, k=None, prefix=None):
+    if k is not None and k in features:
+        return features[k]
+    
+    for name in features:
+        if name.startswith(prefix):
+            return features[name]
 
+    return None 
 from boardInvoker import Motor
 class MatplotlibMotor(Motor):
     alias = 'plot'

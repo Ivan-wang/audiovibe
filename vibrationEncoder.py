@@ -1,8 +1,16 @@
 import pandas as pd
 import numpy as np
 
-from utils import get_feature
+# from utils import get_feature
+def get_feature(features, k=None, prefix=None):
+    if k is not None and k in features:
+        return features[k]
+    
+    for name in features:
+        if name.startswith(prefix):
+            return features[name]
 
+    return None 
 class VibrationEncoder(object):
     enc_funcs = {}
     def __init__(self, stg=None):
