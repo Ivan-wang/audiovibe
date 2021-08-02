@@ -14,11 +14,11 @@ class AudioIOProcess(multiprocessing.Process):
     
     def run(self):
         # TODO: use blocking calls to load chunk
-        step = DEFAULT_FRAME_LEN - DEFAULT_HOP_LEN
+        step = FRAME_LEN - HOP_LEN
         end = self.audio.shape[0] - step
         for start in range(0, end, step):
             # print(data[start:start+DEFAULT_FRAME_LEN].shape)
-            self.io_queue.put(self.audio[start:start+DEFAULT_FRAME_LEN])
+            self.io_queue.put(self.audio[start:start+FRAME_LEN])
         self.io_queue.put(None)
         return
 
@@ -67,13 +67,13 @@ class BroadProcess(multiprocessing.Process):
         return
 
 from utils import load_audio
-from librosaContext import DEFAULT_FRAME_LEN
-from librosaContext import DEFAULT_HOP_LEN
+from librosaContext import FRAME_LEN
+from librosaContext import HOP_LEN
 
 from config import load_config
 def main():
     data, sr = load_audio()
-    data = data[:DEFAULT_FRAME_LEN*10]
+    data = data[:FRAME_LEN*10]
     print(data.shape)
 
     ctx, venc, invoker = load_config('configs/demo.yaml')

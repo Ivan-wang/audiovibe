@@ -1,10 +1,16 @@
-import numpy as np
+import os
+import pickle
 import librosa
-from utils import load_audio
+import numpy as np
 
-DEFAULT_FRAME_LEN = 4096
-DEFAULT_WIN_LEN = 4096
-DEFAULT_HOP_LEN = 1024
+from config import FRAME_LEN
+from config import HOP_LEN
+WIN_LEN = 4096
+
+def load_audio(sr):
+    audio, sr = librosa.load('audio/YellowRiverSliced.wav', sr=sr)
+
+    return audio, sr
 # Strategy Pattern
 class LibrosaContext(object):
     stg_meta_funcs = {}
@@ -12,16 +18,18 @@ class LibrosaContext(object):
     def __init__(self, audio='', sr=None, stg=None):
         super().__init__()
         if isinstance(audio, str):
+            self.audio_name = os.path.basename(audio).split('.')[0]
             if len(audio) == 0:
-                self.audio, self.sr = load_audio()
+                self.audio, self.sr = load_audio(sr=sr)
                 self.audio = self.audio[:self.sr*3]
             else: 
-                self.audio, self.sr = librosa.load(audio, sr=None)
+                self.audio, self.sr = librosa.load(audio, sr=sr)
         else:
+            assert isinstance(audio, np.ndarray), 'audio should be a path-like object or np.ndarray'
+            assert sr is not None, 'SR cannot be None if audio is np.ndarray'
+            self.audio_name = 'audio_clip'
             self.audio = audio
             self.sr = sr
-            if self.audio is None:
-                assert self.sr is not None
     
         if isinstance(stg, str):
             self.stg_names = [stg]
@@ -29,19 +37,28 @@ class LibrosaContext(object):
         elif isinstance(stg, list):
             self.stg_names = stg
             self.stg = [self._init_stg(s) for s in stg]
+        elif isinstance(stg, dict):
+            self.stg_names = list(stg.keys())
+            self.stg = [self._init_stg(s, v) for s, v in stg.items()]
         else:
             self.stg_names = []
             self.stg = None
     
-    def _init_stg(self, stg):
+    def _init_stg(self, stg, kwargs=None):
         if stg in LibrosaContext.stg_funcs:
             return LibrosaContext.stg_funcs[stg]
         
-        stg_name, *args = stg.split('_')
+        if kwargs is None:
+            stg_name, *args = stg.split('_')
+            kwargs = {}
+        else:
+            stg_name = stg
+            args = []
+
         if stg_name in LibrosaContext.stg_meta_funcs:
             func = LibrosaContext.stg_meta_funcs[stg_name]
             def wfunc(autio, sr):
-                return func(autio, sr, *args)
+                return func(autio, sr, *args, **kwargs)
             wfunc.__name__ = stg
             return wfunc
         else:
@@ -78,6 +95,21 @@ class LibrosaContext(object):
         features.update({sname: func(self.audio, self.sr)
             for sname, func in zip(self.stg_names, self.stg)})
         return features
+    
+    def save_features(self, features=None):
+        if features is None:
+            features = self.audio_features()
+        
+        feat_dir = os.path.join('data', self.audio_name)
+        os.makedirs(feat_dir, exist_ok=True)
+        # save meta
+        meta = {'audio_name': self.audio_name, 'sr': features['sr']}
+        pickle.dump(meta, os.path.join(feat_dir, 'meta.pkl'))
+
+        # save features
+        for n in self.stg_names:
+            pickle.dump(features[n], os.path.join(feat_dir, n+'.pkl'))
+    
 
 def librosa_stg(func):
     if func.__name__ in LibrosaContext.stg_funcs:
@@ -94,7 +126,7 @@ def librosa_stg_meta(func):
     return func
 
 @librosa_stg_meta
-def rmse(audio, sr, frame=DEFAULT_FRAME_LEN, hop=DEFAULT_HOP_LEN):
+def rmse(audio, sr, frame=FRAME_LEN, hop=HOP_LEN):
     frame = int(frame)
     hop = int(hop)
 
@@ -121,7 +153,7 @@ def gramtempo(audio, sr, hop=512):
         hop_length=hop, center=False)
 
 @librosa_stg_meta
-def pitchyin(audio, sr, frame=DEFAULT_FRAME_LEN, hop=DEFAULT_HOP_LEN, thres=0.8):
+def pitchyin(audio, sr, frame=FRAME_LEN, hop=HOP_LEN, thres=0.8):
     frame = int(frame)
     hop = int(hop)
     thres = float(thres)
@@ -133,7 +165,7 @@ def pitchyin(audio, sr, frame=DEFAULT_FRAME_LEN, hop=DEFAULT_HOP_LEN, thres=0.8)
         frame_length=frame, hop_length=hop, trough_threshold=thres, center=False)
 
 @librosa_stg_meta
-def pitchpyin(audio, sr, frame=DEFAULT_FRAME_LEN, hop=DEFAULT_HOP_LEN):
+def pitchpyin(audio, sr, frame=FRAME_LEN, hop=HOP_LEN):
     frame = int(frame)
     hop = int(hop)
 
@@ -147,7 +179,7 @@ def pitchpyin(audio, sr, frame=DEFAULT_FRAME_LEN, hop=DEFAULT_HOP_LEN):
 
 DEFAULT_N_MELS = 128
 @librosa_stg_meta
-def grammel(audio, sr, frame=DEFAULT_FRAME_LEN, hop=DEFAULT_HOP_LEN, n_mels=DEFAULT_N_MELS):
+def grammel(audio, sr, frame=FRAME_LEN, hop=HOP_LEN, n_mels=DEFAULT_N_MELS):
     frame = int(frame)
     hop = int(hop)
     n_mels = int(n_mels)
@@ -156,6 +188,19 @@ def grammel(audio, sr, frame=DEFAULT_FRAME_LEN, hop=DEFAULT_HOP_LEN, n_mels=DEFA
         n_fft=frame, hop_length=hop,n_mels=n_mels, center=False)
     
     return librosa.power_to_db(S, ref=np.max)
+    
+
+from config import PLP_FRAME
+@librosa_stg_meta
+def beatplp(audio, sr, hop=HOP_LEN, num_frame=PLP_FRAME):
+    hop = int(hop)
+    num_frame = int(num_frame)
+
+    # duration = hop * num_frame / sr
+    onset_env = librosa.onset.onset_strength(y=audio, sr=sr)
+    pulse = librosa.beat.plp(onset_envelope=onset_env, sr=sr)
+
+    return pulse
 
 if __name__ == '__main__':
     ctx = LibrosaContext(stg=['rmse_1024_512'])

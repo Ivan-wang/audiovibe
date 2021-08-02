@@ -4,9 +4,9 @@ import librosa
 import librosa.display
 import matplotlib.pyplot as plt
 
-from librosaContext import DEFAULT_FRAME_LEN
-from librosaContext import DEFAULT_HOP_LEN
-from librosaContext import DEFAULT_WIN_LEN
+from librosaContext import FRAME_LEN
+from librosaContext import HOP_LEN
+from librosaContext import WIN_LEN
 from utils import get_feature
 
 from boardInvoker import Motor
@@ -49,7 +49,7 @@ class MatplotlibMotor(Motor):
             if name == 'audio':
                 # need more efforts to recover the audio
                 audios = self.vibration[name]
-                step = DEFAULT_FRAME_LEN-DEFAULT_HOP_LEN
+                step = FRAME_LEN-HOP_LEN
 
                 audios = [s[:step] for s in audios] + [audios[-1]]
                 self.vibration[name] = np.concatenate(audios, axis=-1)
@@ -79,7 +79,7 @@ def matplotlib_commands(alias=[]):
 def stempo(save_dir, features):
     tempo = features['stempo'].item()
     audio, sr = features['audio'], features['sr']
-    hop = DEFAULT_HOP_LEN 
+    hop = HOP_LEN 
 
     onset_env = librosa.onset.onset_strength(audio, sr=sr)
     ac = librosa.autocorrelate(onset_env, 2 * sr // hop)
@@ -115,7 +115,7 @@ def dtempo(save_dir, features):
 @matplotlib_commands
 def rmse(save_dir, features):
     S, phase = librosa.magphase(librosa.stft(features['audio'],
-        n_fft=DEFAULT_WIN_LEN, hop_length=DEFAULT_HOP_LEN))
+        n_fft=WIN_LEN, hop_length=HOP_LEN))
     rmse_f = get_feature(features, prefix='rmse')
 
     fig, ax = plt.subplots(2, 1)

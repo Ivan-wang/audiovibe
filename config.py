@@ -1,46 +1,26 @@
 import yaml
 
-from librosaContext import LibrosaContext
-def list_librosa_context():
-    ks = list(LibrosaContext.stg_funcs.keys())
-    meta_ks = list(LibrosaContext.stg_meta_funcs.keys())
-
-    print(f'Available Librosa Strategies : {ks}')
-    print(f'Available Librosa Meta Strategies : {meta_ks}')
-
-from vibrationEncoder import VibrationEncoder
-def list_vibration_encoder():
-    ks = list(VibrationEncoder.enc_funcs)
-
-    print(f'Available Vibration Encoder Strategies : {ks}')
-
-from matplotlibMotor import MatplotlibMotor 
-def list_matplotlib_invoker():
-    ks = list(MatplotlibMotor.commands)
-
-    print(f'Available Matplotlib Invoker Strategies : {ks}')
-
-from boardInvoker import BoardInvoker
-def list_matplotlib_invoker():
-    ks = list(BoardInvoker.motor_t)
-
-    print(f'Available Board Motors: {ks}')
-
 from pprint import pprint
 from collections import OrderedDict
+FRAME_LEN = 4096
+HOP_LEN = 1024
+PLP_FRAME = 300
+
 def demo_config(save=None):
-    config = OrderedDict()
+    config = OrderedDict() # use OrderedDict for easy reading
     config['version'] = 0.1
 
     # audio
     config['audio'] = None
-    config['sr'] = 48000
+    config['sr'] = None
 
     # librosa context config
-    strategy = [
-        'rmse',
-        'pitchyin'
-    ]
+    strategy = {
+        'rmse': {'frame': FRAME_LEN, 'hop': HOP_LEN},
+        'pitchyin': {'frame': FRAME_LEN, 'hop': HOP_LEN, 'thres': 0.8},
+        'beatplp': {'hop': HOP_LEN, 'num_frame': PLP_FRAME}
+    }
+    
     config['strategy'] = strategy
 
     # vibration encoder
@@ -60,22 +40,9 @@ def demo_config(save=None):
 
     if save is not None:
         with open(save, 'w') as f:
-            yaml.dump(dict(config), f)
-
-def load_config(cfg):
-    with open(cfg, 'r') as f:
-        cfg = yaml.load(f, Loader=yaml.FullLoader)
-    
-    ctx = LibrosaContext(audio=cfg['audio'], sr=cfg['sr'], stg=cfg['strategy'])
-    venc = VibrationEncoder(stg=cfg['vibration_enc'])
-
-    motors = [(k, v) for k, v in cfg['motors'].items()]
-    invoker = BoardInvoker(motors=motors)
-
-    return ctx, venc, invoker
+            yaml.dump(dict(config), f, sort_keys=False)
+        
+    return config
 
 if __name__ == '__main__':
-    list_librosa_context()
-    list_vibration_encoder()
-    list_matplotlib_invoker()
     demo_config('configs/demo.yaml')
