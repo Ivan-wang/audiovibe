@@ -6,6 +6,9 @@ from config import PLP_FRAME, FRAME_LEN
 import multiprocessing
 import wave
 import pyaudio
+
+from config import WIN_LEN
+from config import HOP_LEN
 # Producer
 class AudioProcess(multiprocessing.Process):
     def __init__(self, filename, io_queue=None):
@@ -110,9 +113,8 @@ class BroadProcess(multiprocessing.Process):
 # from config import load_config
 import subprocess
 def main():
-    feat_proc = FeatureProcess('audio/YellowRiverSliced.wav')
+    feat_proc = AudioProcess('audio/YellowRiverSliced.wav')
 
-    # subprocess.Popen(['omxplayer', 'audio/YellowRiverSliced.wav'])
     feat_proc.start()
     feat_proc.join()
     # data, sr = load_audio()
