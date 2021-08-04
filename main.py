@@ -6,17 +6,17 @@ from config import PLP_FRAME, FRAME_LEN
 import multiprocessing
 import wave
 import pyaudio
+from tqdm import tqdm
 
-from config import WIN_LEN
+# from config import WIN_LEN
 from config import HOP_LEN
-# Producer
 class AudioProcess(multiprocessing.Process):
-    def __init__(self, filename, io_queue=None):
+    def __init__(self, filename, start_event, frame_event, frame_len, io_queue=None):
         super(AudioProcess, self).__init__()
         self.filename = filename
-        # NOTE: do not create auido object here!
-        # self.audio = pyaudio.PyAudio()
-        # self.sr = librosa.get_samplerate(filename)
+        self.frame_len = frame_len
+        self.start_event = start_event
+        self.frame_event = frame_event
     
     def run(self):
         print('init feature proc...')
@@ -24,7 +24,10 @@ class AudioProcess(multiprocessing.Process):
         # Don't share it across different processes
         audio = pyaudio.PyAudio()
         wf = wave.open(self.filename, 'rb')
+        print(f'Sample Rate {wf.getframerate()}')
+        print(f'Num of Frame {wf.getnframes()}')
         print('loaded wav file...')
+
         stream = audio.open(
             format=audio.get_format_from_width(wf.getsampwidth()),
             channels = wf.getnchannels(),
@@ -32,59 +35,41 @@ class AudioProcess(multiprocessing.Process):
             output=True
         )
         
-        print('loading...')
+        self.start_event.wait()
+        self.start_event.clear()
+
+        print('start to play audio...')
         while True:
-            data = wf.readframes(1024)
+            data = wf.readframes(self.frame_len)
             if len(data) > 0:
+                self.frame_event.set()
                 stream.write(data)
             else:
                 break
         
-        print('feature proc exit...')
+        print('audio playing exit...')
         stream.stop_stream()
         stream.close()
 
-# class AudioIOProcess(multiprocessing.Process):
-#     def __init__(self, audio, sr, io_queue):
-#         super(AudioIOProcess, self).__init__()
+class MotorProcess(multiprocessing.Process):
+    def __init__(self, start_event, frame_event, total_frame):
+        super(MotorProcess, self).__init__()
+        self.start_event = start_event
+        self.frame_event = frame_event
+        self.total_frame = total_frame
 
-#         self.audio = audio
-#         self.sr = sr
-#         self.io_queue = io_queue
-    
-#     def run(self):
-#         # TODO: use blocking calls to load chunk
-#         step = FRAME_LEN - HOP_LEN
-#         end = self.audio.shape[0] - step
-#         for start in range(0, end, step):
-#             # print(data[start:start+DEFAULT_FRAME_LEN].shape)
-#             self.io_queue.put(self.audio[start:start+FRAME_LEN])
-#         self.io_queue.put(None)
-#         return
-
-class LibrosaContextProcess(multiprocessing.Process):
-    def __init__(self, io_queue, vib_queue, ctx=None, enc=None):
-        super().__init__()
-        self.io_queue = io_queue
-        self.vib_queue = vib_queue 
-        self.ctx = ctx
-        self.enc = enc
-    
     def run(self):
-        # collecte frame from IO Q, extract features, put features to features Q
-        print('Librosa Context Process Started..')
-        while True:
-            if not self.io_queue.empty():
-                chunk = self.io_queue.get()
-                if chunk is None:
-                    break
-                else:
-                    self.ctx.sound = chunk
-                    features = self.ctx.audio_features()
-                    vibertion = self.enc.fit(features)
-                    self.vib_queue.put(vibertion)
-        self.vib_queue.put(None)
+        bar = tqdm(desc='progress bar', unit=' frame', total=self.total_frame)
+        self.start_event.set()
+
+        for _ in range(self.total_frame):
+            self.frame_event.wait()
+            self.frame_event.clear()
+            bar.update()
+
+        bar.close()
         return
+
 
 class BroadProcess(multiprocessing.Process):
     def __init__(self, vib_queue, invoker=None):
@@ -106,40 +91,22 @@ class BroadProcess(multiprocessing.Process):
                     self.invoker.dispatch(vib)
         return
 
-# from utils import load_audio
-# from librosaContext import FRAME_LEN
-# from librosaContext import HOP_LEN
-
-# from config import load_config
-import subprocess
 def main():
-    feat_proc = AudioProcess('audio/YellowRiverSliced.wav')
+    frame_event = multiprocessing.Event()
+    start_event = multiprocessing.Event()
 
-    feat_proc.start()
-    feat_proc.join()
-    # data, sr = load_audio()
-    # data = data[:FRAME_LEN*10]
-    # print(data.shape)
+    frame_len = HOP_LEN * 100
+    num_sample = 2422560
+    num_frame = num_sample // frame_len
+    if num_sample % frame_len != 0:
+        num_frame += 1
+    audio_proc = AudioProcess('audio/YellowRiverSliced.wav', start_event, frame_event, frame_len)
+    motor_proc = MotorProcess(start_event, frame_event, num_frame)
 
-    # ctx, venc, invoker = load_config('configs/demo.yaml')
-
-    # io_queue = multiprocessing.Queue()
-    # vib_queue = multiprocessing.Queue()
-
-    # audio_proc = AudioIOProcess(data, sr, io_queue)
-    # # TODO: merge librosa and board procs
-    # librosa_proc = LibrosaContextProcess(io_queue, vib_queue, ctx, venc)
-    # board_proc = BroadProcess(vib_queue=vib_queue, invoker=invoker)
-
-    # librosa_proc.start()
-    # board_proc.start()
-
-    # audio_proc.start()
-
-    # audio_proc.join()
-
-    # librosa_proc.join()
-    # board_proc.join()
+    audio_proc.start()
+    motor_proc.start()
+    motor_proc.join()
+    audio_proc.join()
 
 # call main function
 main()
