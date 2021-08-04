@@ -1,7 +1,32 @@
-from boardInvoker import Motor
-from pprint import pprint
-from tqdm import tqdm
+from boardInvoker import BoardInvoker
 
+from abc import ABC, abstractmethod
+
+class MotorMeta(type):
+    def __new__(cls, clsname, bases, attrs):
+        newclass = super(MotorMeta, cls).__new__(cls, clsname, bases, attrs)
+        alias = getattr(newclass, 'alias', None)
+        if alias is not None:
+            BoardInvoker.motor_t.update({alias: newclass})
+        return newclass
+
+class Motor(object, metaclass=MotorMeta):
+    def __init__(self):
+        super().__init__()
+
+    @abstractmethod
+    def on_start(self):
+        pass
+
+    @abstractmethod
+    def on_running(self, vibrations):
+        pass
+
+    @abstractmethod
+    def on_end(self):
+        pass
+
+from tqdm import tqdm
 from config import HOP_LEN
 
 class ConsoleMotor(Motor):
@@ -37,14 +62,3 @@ class ConsoleMotor(Motor):
             vibs.append('{} : {}'.format('frame', vibrations['frame']))
         vib_str = ' | '.join(vibs)
         return vib_str
-
-if __name__ == '__main__':
-    from boardInvoker import BoardInvoker
-    print(BoardInvoker.motor_t)
-    audioname = 'YellowRiverInstrument'
-    motors = [('console', {'show_frame': True, 'show_none': False})]
-    bid = BoardInvoker(audioname, motors=motors)
-    bid.on_start()
-    for _ in range(10):
-        bid.on_update()
-

@@ -1,9 +1,6 @@
 import os
 import glob
 import pickle
-import librosa
-import numpy as np
-from abc import ABC, abstractmethod
 
 # adafruit lib
 # import board
@@ -59,29 +56,8 @@ class BoardInvoker(object):
         for m in self.motors:
             m.on_end()
 
-class MotorMeta(type):
-    def __new__(cls, clsname, bases, attrs):
-        newclass = super(MotorMeta, cls).__new__(cls, clsname, bases, attrs)
-        alias = getattr(newclass, 'alias', None)
-        if alias is not None:
-            BoardInvoker.motor_t.update({alias: newclass})
-        return newclass
-
-class Motor(object, metaclass=MotorMeta):
-    def __init__(self):
-        super().__init__()
-
-    @abstractmethod
-    def on_start(self):
-        pass
-
-    @abstractmethod
-    def on_running(self, vibrations):
-        pass
-
-    @abstractmethod
-    def on_end(self):
-        pass
+import numpy as np
+import librosa
 
 class VibrationIteratorMeta(type):
     def __new__(cls, clsname, bases, attrs):
@@ -123,7 +99,6 @@ class BeatPLPIteartor(VibrationIterator):
             return True
         else:
             return None
-        
 # class Drv2605Motor(Motor):
 #     def on_start(self):
 #         pass

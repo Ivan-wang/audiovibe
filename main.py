@@ -1,5 +1,5 @@
-from consoleMotor import ConsoleMotor
 from boardInvoker import BoardInvoker
+import motors
 
 import multiprocessing
 import wave
