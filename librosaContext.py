@@ -111,6 +111,19 @@ class LibrosaContext(object):
             with open(os.path.join(feat_dir, n+'.pkl'), 'wb') as f:
                 pickle.dump(features[n], f)
 
+    @classmethod
+    def from_config(cls, config):
+        #TODO: compability check
+        assert config['version'] > 0.1
+
+        audio = config['audio']
+        sr = config['sr']
+
+        # TODO: check args for each strategy
+        stgs = config['stg']
+
+        return cls(audio, sr, stgs)
+
 def librosa_stg(func):
     if func.__name__ in LibrosaContext.stg_funcs:
         raise ValueError(f'Duplicate Function Name {func.__name__}')

@@ -11,12 +11,12 @@ import pickle
 class BoardInvoker(object):
     motor_t = {}
     iterator_t = {}
-    def __init__(self, audioname, motors=[]):
+    def __init__(self, audio, motors=[]):
         super(BoardInvoker, self).__init__()
         # self.drv = None
         self.motors = self._init_motors(motors)
 
-        vibrations = glob.glob(f'data/{audioname}/*.pkl')
+        vibrations = glob.glob(f'data/{audio}/*.pkl')
         vibrations = {os.path.basename(v).split('.')[0] : v for v in vibrations}
         with open(vibrations['meta'], 'rb') as f:
             self.meta = pickle.load(f)
@@ -55,6 +55,9 @@ class BoardInvoker(object):
     def on_end(self):
         for m in self.motors:
             m.on_end()
+    @classmethod
+    def from_config(cls, config):
+        return cls(config['audio'], config['motors'])
 
 import numpy as np
 import librosa
@@ -110,11 +113,3 @@ class BeatPLPIteartor(VibrationIterator):
 
 #     def on_end(self):
 #         return super().on_end()
-
-if __name__ == '__main__':
-    print(BoardInvoker.motor_t)
-    audioname = 'YellowRiverInstrument'
-    motors = ['console']
-    bid = BoardInvoker(audioname, motors=motors)
-    for _ in range(10):
-        bid.on_update()
