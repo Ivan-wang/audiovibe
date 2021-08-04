@@ -1,7 +1,5 @@
-from librosaContext import LibrosaContext
-from vibrationEncoder import VibrationEncoder
-from config import PLP_FRAME, FRAME_LEN
-# from matplotlibInvoker import MatplotlibInvoker
+from consoleMotor import ConsoleMotor
+from boardInvoker import BoardInvoker
 
 import multiprocessing
 import wave
@@ -11,12 +9,11 @@ from tqdm import tqdm
 # from config import WIN_LEN
 from config import HOP_LEN
 class AudioProcess(multiprocessing.Process):
-    def __init__(self, filename, start_event, frame_event, frame_len, io_queue=None):
+    def __init__(self, filename, start_event, frame):
         super(AudioProcess, self).__init__()
         self.filename = filename
-        self.frame_len = frame_len
         self.start_event = start_event
-        self.frame_event = frame_event
+        self.frame = frame
     
     def run(self):
         print('init feature proc...')
@@ -40,9 +37,9 @@ class AudioProcess(multiprocessing.Process):
 
         print('start to play audio...')
         while True:
-            data = wf.readframes(self.frame_len)
+            data = wf.readframes(HOP_LEN)
             if len(data) > 0:
-                self.frame_event.set()
+                self.frame.release()
                 stream.write(data)
             else:
                 break
@@ -52,22 +49,26 @@ class AudioProcess(multiprocessing.Process):
         stream.close()
 
 class MotorProcess(multiprocessing.Process):
-    def __init__(self, start_event, frame_event, total_frame):
+    def __init__(self, invoker, start_event, frame):
         super(MotorProcess, self).__init__()
+        self.invoker = invoker
         self.start_event = start_event
-        self.frame_event = frame_event
-        self.total_frame = total_frame
+        self.frame = frame
+
+        self.total_frame = self.invoker.meta['len_sample'] // HOP_LEN
+        if self.invoker.meta['len_sample'] % HOP_LEN != 0:
+            self.total_frame += 1
 
     def run(self):
-        bar = tqdm(desc='progress bar', unit=' frame', total=self.total_frame)
+        self.invoker.on_start()
+
         self.start_event.set()
 
         for _ in range(self.total_frame):
-            self.frame_event.wait()
-            self.frame_event.clear()
-            bar.update()
+            self.frame.acquire()
+            self.invoker.on_update()
 
-        bar.close()
+        self.invoker.on_end()
         return
 
 
@@ -92,16 +93,18 @@ class BroadProcess(multiprocessing.Process):
         return
 
 def main():
-    frame_event = multiprocessing.Event()
-    start_event = multiprocessing.Event()
+    # frame_event = multiprocessing.Event()
 
-    frame_len = HOP_LEN * 100
-    num_sample = 2422560
-    num_frame = num_sample // frame_len
-    if num_sample % frame_len != 0:
-        num_frame += 1
-    audio_proc = AudioProcess('audio/YellowRiverSliced.wav', start_event, frame_event, frame_len)
-    motor_proc = MotorProcess(start_event, frame_event, num_frame)
+    frame = multiprocessing.Semaphore()
+    start_event = multiprocessing.Event()
+    
+
+    audioname = 'YellowRiverInstrument'
+    motors = [('console', {'show_frame': True, 'show_none': False})]
+    bid = BoardInvoker(audioname, motors=motors)
+
+    audio_proc = AudioProcess('audio/YellowRiverInstrument.wav', start_event, frame)
+    motor_proc = MotorProcess(bid, start_event, frame)
 
     audio_proc.start()
     motor_proc.start()

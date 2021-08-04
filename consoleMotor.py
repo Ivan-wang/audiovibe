@@ -1,56 +1,50 @@
 from boardInvoker import Motor
 from pprint import pprint
-import numpy as np
-import librosa
-import pickle
-import glob
-import os
-
+from tqdm import tqdm
 
 from config import HOP_LEN
 
 class ConsoleMotor(Motor):
     alias = 'console'
-    stgs = {}
-    def __init__(self, audioname):
-        super().__init__([])
-        self.audioname = audioname
-        fnames = glob.glob(f'data/{audioname}/*.pkl')
-        features = {os.path.basename(f).split('.')[0] : f for f in fnames}
-        with open(features['meta'], 'rb') as f:
-            self.meta = pickle.load(f)
-        
-        self.num_frame = self.meta['len_sample'] // HOP_LEN + 1
-        print(f'Number of Frame {self.num_frame}')
-        self.vib_data = {}
-        for vib in self.meta['vibrations']:
-            with open(features[vib], 'rb') as f:
-                self.vib_data[vib] = pickle.load(f)
+    def __init__(self, show_none=True, show_frame=True):
+        super().__init__()
+        self.show_none = show_none
+        self.show_frame = show_frame
 
-    def on_start(self):
-        return super().on_start()
+    def on_start(self, meta):
+        total_frame = meta['len_sample'] // HOP_LEN
+        if meta['len_sample'] % HOP_LEN != 0:
+            total_frame += 1
+        self.bar = tqdm(desc='[Console Motor]', unit=' frame', total=total_frame)
 
-    def on_update(self, vib_t, vib):
-        self.vibration[vib_t] = vib
-
-    def on_running(self):
-        pprint(self.vibration)
+    def on_running(self, vibrations):
+        vib_str = self._build_vibration_str(vibrations)
+        if len(vib_str) > 0:
+            tqdm.write(vib_str)
+        self.bar.update()
 
     def on_end(self):
-        return super().on_end()
-
-def console_motor_stg(func):
-    if func.__name__ in ConsoleMotor.stgs:
-        raise ValueError(f'Duplicated Function Name {func.__func__}')
+        self.bar.close()
     
-    ConsoleMotor.stgs.update({func.__name__: func})
-    return func
-
-@console_motor_stg
-def beatplp(data, sr, hop, len_frame):
-    beats = np.flatnonzero(librosa.util.localmax(data)) # frame
-
-    return beats
+    def _build_vibration_str(self, vibrations):
+        vibs = []
+        for k in vibrations:
+            if k == 'frame':
+                continue
+            if self.show_none or vibrations[k] is not None:
+                vibs.append('{} : {}'.format(k, vibrations[k]))
+        if self.show_frame and len(vibs) > 0:
+            vibs.append('{} : {}'.format('frame', vibrations['frame']))
+        vib_str = ' | '.join(vibs)
+        return vib_str
 
 if __name__ == '__main__':
-    motor = ConsoleMotor('YellowRiverInstrument')
+    from boardInvoker import BoardInvoker
+    print(BoardInvoker.motor_t)
+    audioname = 'YellowRiverInstrument'
+    motors = [('console', {'show_frame': True, 'show_none': False})]
+    bid = BoardInvoker(audioname, motors=motors)
+    bid.on_start()
+    for _ in range(10):
+        bid.on_update()
+
