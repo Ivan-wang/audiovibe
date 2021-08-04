@@ -2,9 +2,9 @@ import yaml
 
 from pprint import pprint
 from collections import OrderedDict
-FRAME_LEN = 4096
+WIN_LEN = 4096
 HOP_LEN = 1024
-PLP_FRAME = 300
+FRAME_LEN = 300
 
 def demo_config(save=None):
     config = OrderedDict() # use OrderedDict for easy reading
@@ -18,7 +18,7 @@ def demo_config(save=None):
     strategy = {
         'rmse': {'frame': FRAME_LEN, 'hop': HOP_LEN},
         'pitchyin': {'frame': FRAME_LEN, 'hop': HOP_LEN, 'thres': 0.8},
-        'beatplp': {'hop': HOP_LEN, 'num_frame': PLP_FRAME}
+        'beatplp': {'hop': HOP_LEN, 'num_frame': WIN_LEN}
     }
     
     config['strategy'] = strategy

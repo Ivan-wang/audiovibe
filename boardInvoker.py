@@ -76,24 +76,6 @@ class Motor(object, metaclass=MotorMeta):
     def on_end(self):
         pass
 
-from pprint import pprint
-class ConsoleMotor(Motor):
-    alias = 'console'
-    def __init__(self, vibration_t):
-        super().__init__(vibration_t)
-
-    def on_start(self):
-        return super().on_start()
-
-    def on_update(self, vib_t, vib):
-        self.vibration[vib_t] = vib
-
-    def on_running(self):
-        pprint(self.vibration)
-
-    def on_end(self):
-        return super().on_end()
-
 # class Drv2605Motor(Motor):
 #     def on_start(self):
 #         pass
