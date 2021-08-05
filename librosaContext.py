@@ -3,24 +3,18 @@ import pickle
 import librosa
 import numpy as np
 
-def load_audio(sr):
-    audio, sr = librosa.load('audio/YellowRiverSliced.wav', sr=sr)
+from config import BASE_HOP_LEN
 
-    return audio, sr
 # Strategy Pattern
 class LibrosaContext(object):
     stg_meta_funcs = {}
     stg_funcs = {}
-    def __init__(self, audio='', sr=None, stg=None):
+    def __init__(self, audio=None, sr=None, stg=None):
         super().__init__()
         # load audio data
         if isinstance(audio, str):
             self.audio_name = os.path.basename(audio).split('.')[0]
-            if len(audio) == 0:
-                self.audio, self.sr = load_audio(sr=sr)
-                self.audio = self.audio[:self.sr*3]
-            else: 
-                self.audio, self.sr = librosa.load(audio, sr=sr)
+            self.audio, self.sr = librosa.load(audio, sr=sr)
         else:
             assert isinstance(audio, np.ndarray), 'audio should be a path-like object or np.ndarray'
             assert sr is not None, 'SR cannot be None if audio is np.ndarray'
@@ -38,8 +32,7 @@ class LibrosaContext(object):
             self.stg_names = list(stg.keys())
             self.stg = [self._init_stg(s, v) for s, v in stg.items()]
         else:
-            self.stg_names = []
-            self.stg = None
+            raise TypeError('Use <str>, List<str> or Dict<str, args> to initialize stratiges.')
     
     def _init_stg(self, stg, kwargs=None):
         if stg in LibrosaContext.stg_funcs:
@@ -47,9 +40,14 @@ class LibrosaContext(object):
         
         if kwargs is None:
             stg_name, *args = stg.split('_')
-            kwargs = {}
+            if len(args) == 0:
+                kwargs = {'len_hop': BASE_HOP_LEN}
+            else:
+                assert args[0] % BASE_HOP_LEN == 0, f'Cannot Aligh HOP_LEN for {stg_name}'
         else:
             stg_name = stg
+            if 'len_hop' not in kwargs:
+                kwargs['len_hop'] = BASE_HOP_LEN
             args = []
 
         if stg_name in LibrosaContext.stg_meta_funcs:
@@ -120,7 +118,7 @@ class LibrosaContext(object):
         sr = config['sr']
 
         # TODO: check args for each strategy
-        stgs = config['stg']
+        stgs = config['stgs']
 
         return cls(audio, sr, stgs)
 
@@ -138,23 +136,32 @@ def librosa_stg_meta(func):
     LibrosaContext.stg_meta_funcs.update({func.__name__: func})
     return func
 
-from config import HOP_LEN
-from config import WIN_LEN
-from config import FRAME_LEN # 300
 @librosa_stg_meta
-def beatplp(audio, sr, hop=HOP_LEN, len_frame=FRAME_LEN, tempo_min=30, tempo_max=300):
-    hop = int(hop)
+def beatplp(audio, sr, len_hop, len_frame=300, tempo_min=30, tempo_max=300):
     len_frame = int(len_frame)
+    tempo_min = int(tempo_min)
+    tempo_max = int(tempo_max)
 
-    # duration = hop * num_frame / sr
-    onset_env = librosa.onset.onset_strength(y=audio, sr=sr)
-    pulse = librosa.beat.plp(onset_envelope=onset_env, sr=sr,
+    # onset_env = librosa.onset.onset_strength(y=audio, sr=sr, hop_length=len_hop)
+    pulse = librosa.beat.plp(y=audio, sr=sr, hop_length=len_hop,
         win_length=len_frame, tempo_min=tempo_min, tempo_max=tempo_max)
     ret = {
-        'hop': hop, 'len_frame': len_frame,
+        'len_hop': len_hop, 'len_frame': len_frame,
         'tempo_min': tempo_min, 'tempo_max': tempo_max,
         'data': pulse
     }
+
+    return ret
+
+@librosa_stg_meta
+def rmse(audio, sr, len_hop, len_window=2048):
+    len_window = int(len_window)
+
+    mse = librosa.feature.rms(y=audio, frame_length=len_window, 
+        hop_length=len_hop, center=True)
+    mse = mse.reshape((-1, ))
+    ret = {'len_hop': len_hop, 'len_frame': len_window, 'data': mse}
+
     return ret
 
 # @librosa_stg_meta
@@ -225,23 +232,19 @@ def beatplp(audio, sr, hop=HOP_LEN, len_frame=FRAME_LEN, tempo_min=30, tempo_max
 
 
 if __name__ == '__main__':
+    import yaml
+    # load template config
+    with open('configs/librosa_context.yaml', 'r') as f:
+        config = yaml.safe_load(f)
+
+    # change configures 
     audio = 'audio/YellowRiverInstrument.wav'
-    sr = None
+    config['audio'] = audio
+    config['stgs']['beatplp']['len_frame'] = 50
 
-    len_frame = 50
-    stgs = {
-        'beatplp': {
-            'hop': HOP_LEN,
-            'len_frame': len_frame,
-            'tempo_min': 150,
-            'tempo_max': 400
-        }
-    }
+    # add new configures
+    config['stgs']['rmse'] = {'len_window': 1024}
 
-    ctx = LibrosaContext(audio=audio, sr=sr, stg=stgs)
+    # initial cxt from config
+    ctx = LibrosaContext.from_config(config)
     features = ctx.audio_features()
-
-    sr = ctx.sr
-    dur = HOP_LEN * len_frame / sr
-    print (f'Frame Duration {dur:.2f}s')
-    ctx.save_features()
