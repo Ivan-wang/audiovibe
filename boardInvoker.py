@@ -102,6 +102,22 @@ class BeatPLPIteartor(VibrationIterator):
             return True
         else:
             return None
+
+class RmseIterator(VibrationIterator):
+    alias = 'rmse'
+    def __init__(self, meta, vib_data):
+        super(RmseIterator, self).__init__()
+        # TODO handle different HOP_LEN
+        self.rmse = vib_data['data']
+        self.num_frame = -1
+    
+    def __next__(self):
+        self.num_frame += 1
+        if self.num_frame < len(self.rmse):
+            return self.rmse[self.num_frame]
+        else:
+            return None
+
 # class Drv2605Motor(Motor):
 #     def on_start(self):
 #         pass

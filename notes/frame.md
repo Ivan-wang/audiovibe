@@ -81,4 +81,8 @@ $$T_{\text{frame}} = \frac{L_{\text{hop}}\times L_{\text{frame}}}{SR}$$
 
 ---
 
-4732 Frames
+# Frame Converntion
+1. Consistent `BASE_HOP_LEN` for all audio
+2. Each audio uses the same `HOP_LEN` for all feature extraction. `HOP_LEN = n x BASE_HOP_LEN`
+3. Feature can use different `N_FFT` or `FRAME_LEN`.
+4. To sync the audio playing and features, `PLAY_HOP_LEN` is `BASE_HOP_LEN`
