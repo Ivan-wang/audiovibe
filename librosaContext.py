@@ -248,3 +248,4 @@ if __name__ == '__main__':
     # initial cxt from config
     ctx = LibrosaContext.from_config(config)
     features = ctx.audio_features()
+    ctx.save_features()
