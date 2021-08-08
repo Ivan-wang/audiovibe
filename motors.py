@@ -71,7 +71,6 @@ class ConsoleMotor(Motor):
         vib_str = ' | '.join(vibs)
         return vib_str
 
-import adafruit_drv2605 # need effect id
 from multiprocessing import shared_memory
 import numpy as np
 class BoardMotor(Motor):
@@ -87,14 +86,28 @@ class BoardMotor(Motor):
         self.vib_sequence = np.ndarray((8, ), dtype=np.uint8, buffer=buf)
     
     def on_running(self, vibrations):
-        vib = self._handle_vibrations(vibrations)
+        amp, freq = self._handle_vibrations(vibrations)
 
         # lock, write to shared memory?
-        self.drv.sequence[0] = vib
-        # release
+        self.vib_lock.acquire()
+
+        if amp is not None:
+            self.vib_sequence[0] = amp
+            self.vib_sequence[1] = freq
+        else:
+            self.vib_sequence[7] = 1 # Flag of End
+
+        self.vib_lock.release()
 
     def on_end(self):
         pass
     
     def _handle_vibrations(self, vibrations):
-        return 0
+        next_amp = vibrations['beatplp'] # Int, 1 - 128
+
+        # handle amp , and freq here
+        if next_amp is None:
+            return None, None
+        else:
+            next_freq = 64
+            return next_amp, next_freq

@@ -93,13 +93,16 @@ class BeatPLPIteartor(VibrationIterator):
     def __init__(self, meta, vib_data):
         super(BeatPLPIteartor, self).__init__()
         pulse = vib_data['data']
-        self.beats = np.flatnonzero(librosa.util.localmax(pulse))
+        bins = np.linspace(pulse.min(), pulse.max(), num=129, endpoint=True)
+        # 
+        # self.beats = np.flatnonzero(librosa.util.localmax(pulse))
+        self.beat_amp = np.digitize(pulse, bins)
         self.num_frame = -1
 
     def __next__(self):
         self.num_frame += 1
-        if self.num_frame in self.beats:
-            return True
+        if self.num_frame < len(self.beat_amp):
+            return self.beat_amp[self.num_frame]
         else:
             return None
 
