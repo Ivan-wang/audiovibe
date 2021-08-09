@@ -92,9 +92,15 @@ class BoardProcess(multiprocessing.Process):
         # drv._write_u8(0x1D, 0xA1) # enable LRA Open Loop Mode
 
         self.board_on.set()
+        last_amp, last_freq, last_end = 0, 0, False
 
         while True:
-            amp, freq, end = self.vib_queue.get()
+            try:
+                amp, freq, end = self.vib_queue.get(block=False)
+            except:
+                amp, freq, end = last_amp, last_freq, last_end
+            else:
+                last_amp, last_freq, last_end = amp, freq, end
 
             if end:
                 break
