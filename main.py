@@ -67,7 +67,7 @@ class MotorProcess(multiprocessing.Process):
     def run(self):
         self.invoker.on_start()
 
-        self.start_event.set()
+        self.motor_on.set()
 
         for _ in range(self.total_frame):
             self.frame.acquire()
@@ -80,69 +80,72 @@ import board
 import busio
 import adafruit_drv2605
 
-from multiprocessing import shared_memory
-class BroadProcess(multiprocessing.Process):
-    def __init__(self, buf_name, buf_lock, board_on):
+class BoardProcess(multiprocessing.Process):
+    def __init__(self, vib_queue, board_on):
         super().__init__()
-        self.buf_name = buf_name
-        self.buf_lock = buf_lock
+        self.vib_queue = vib_queue
         self.board_on = board_on
     
     def run(self):
-        buf_mem = shared_memory.SharedMemory(name=self.buf_name).buf
-        vib_buf = np.ndarray((8, ), dtype=np.uint8, buffer=buf_mem)
-        vib_buf[2] = 5 # set buf[2] as real-time play mode
-
-        i2c = busio.I2C(board.SCL, board.SDA)
-        drv = adafruit_drv2605.DRV2605(i2c)
-        drv._write_u8(0x1D, 0xA1) # enable LRA Open Loop Mode
+        # i2c = busio.I2C(board.SCL, board.SDA)
+        # drv = adafruit_drv2605.DRV2605(i2c)
+        # drv._write_u8(0x1D, 0xA1) # enable LRA Open Loop Mode
 
         self.board_on.set()
 
         while True:
-            self.buf_lock.acquire()
+            amp, freq, end = self.vib_queue.get()
 
-            if vib_buf[7] != 0:
+            if end:
                 break
+            print(amp, freq, end)
             # Set real-time play value (amplitude)
-            drv._write_u8(0x02, vib_buf[0]) 
+            # drv._write_u8(0x02, amp) 
             # Set real-time play value (frequency)
-            drv._write_u8(0x20, vib_buf[1]) 
+            # drv._write_u8(0x20, freq) 
             # Set real-time play mode
-            drv._write_u8(0x01, 5) 
+            # drv._write_u8(0x01, 5) 
 
-            drv.play()
+            # drv.play()
         
         # drv.close()
         return
 
 
-def init_vib_shm():
-    vib_mem = np.zeors((8,), dtype=np.uint8)
-    vib_shm = shared_memory.SharedMemory(create=True, size=vib_mem.nbytes)
-    vib_mem_init = np.ndarray(vib_mem.shape, dtype=vib_mem.dtype, buf=vib_shm.buf)
-    vib_mem_init[:] = vib_mem[:]
+# shared memory works with python 3.8+
+# def init_vib_shm():
+#     vib_mem = np.zeors((8,), dtype=np.uint8)
+#     vib_shm = shared_memory.SharedMemory(create=True, size=vib_mem.nbytes)
+#     vib_mem_init = np.ndarray(vib_mem.shape, dtype=vib_mem.dtype, buf=vib_shm.buf)
+#     vib_mem_init[:] = vib_mem[:]
 
-    return vib_shm.name
+#     return vib_shm.name
 
 def main():
     # frame_event = multiprocessing.Event()
-    vib_shm_name = init_vib_shm()
-    vib_buf_lock = multiprocessing.Lock()
+    vib_queue = multiprocessing.Queue()
+    # vib_shm_name = init_vib_shm()
+    # vib_buf_lock = multiprocessing.Lock()
     frame = multiprocessing.Semaphore()
     motor_on = multiprocessing.Event()
     board_on = multiprocessing.Event()
 
     audioname = 'YellowRiverInstrument'
-    motors = [('console', {'show_frame': True, 'show_none': False})]
+    motors = [
+        ('console', {'show_frame': True, 'show_none': False}),
+        ('board', {'vib_queue': vib_queue})
+    ]
     bid = BoardInvoker(audioname, motors=motors)
 
     audio_proc = AudioProcess('audio/YellowRiverInstrument.wav', motor_on, board_on, frame)
     motor_proc = MotorProcess(bid, motor_on, frame)
-    board_proc = BoardProcess(buf_name=vib_shm_name, buf_lock=vib_buf_lock)
+    board_proc = BoardProcess(vib_queue, board_on=board_on)
 
     audio_proc.start()
     motor_proc.start()
+    board_proc.start()
+
+    board_proc.join()
     motor_proc.join()
     audio_proc.join()
 

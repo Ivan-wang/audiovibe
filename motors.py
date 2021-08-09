@@ -71,33 +71,22 @@ class ConsoleMotor(Motor):
         vib_str = ' | '.join(vibs)
         return vib_str
 
-from multiprocessing import shared_memory
 import numpy as np
 class BoardMotor(Motor):
     alias = 'board'
-    def __init__(self, buf_name=None, vib_lock = None, vib_lut = None):
-        self.buf_name = buf_name
-        self.vib_lock = vib_lock
-        self.vib_lut = vib_lut
-        self.vib_sequence = None
+    def __init__(self, vib_queue):
+        self.vib_queue = vib_queue
     
-    def on_start(self):
-        buf = shared_memory.SharedMemory(name=self.buf_name).buf
-        self.vib_sequence = np.ndarray((8, ), dtype=np.uint8, buffer=buf)
+    def on_start(self, meta):
+        pass
     
     def on_running(self, vibrations):
         amp, freq = self._handle_vibrations(vibrations)
 
-        # lock, write to shared memory?
-        self.vib_lock.acquire()
-
         if amp is not None:
-            self.vib_sequence[0] = amp
-            self.vib_sequence[1] = freq
+            self.vib_queue.put((amp, freq, False))
         else:
-            self.vib_sequence[7] = 1 # Flag of End
-
-        self.vib_lock.release()
+            self.vib_queue.put((0, 0, True))
 
     def on_end(self):
         pass
