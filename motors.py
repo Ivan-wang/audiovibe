@@ -89,7 +89,7 @@ class BoardMotor(Motor):
             self.vib_queue.put((0, 0, True))
 
     def on_end(self):
-        pass
+        self.vib_queue.put((0, 0, True))
     
     def _handle_vibrations(self, vibrations):
         next_amp = vibrations['beatplp'] # Int, 1 - 128
