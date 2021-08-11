@@ -238,12 +238,12 @@ if __name__ == '__main__':
         config = yaml.safe_load(f)
 
     # change configures 
-    audio = 'audio/YellowRiverInstrument.wav'
-    config['audio'] = audio
+    # audio = 'audio/YellowRiverInstrument.wav'
+    # config['audio'] = audio
     config['stgs']['beatplp']['len_frame'] = 50
 
     # add new configures
-    config['stgs']['rmse'] = {'len_window': 1024}
+    # config['stgs']['rmse'] = {'len_window': 1024}
 
     # initial cxt from config
     ctx = LibrosaContext.from_config(config)

@@ -1,6 +1,5 @@
 import yaml
 
-from pprint import pprint
 from collections import OrderedDict
 
 BASE_HOP_LEN = 512

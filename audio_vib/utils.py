@@ -1,6 +1,6 @@
-import librosa
+import yaml
+from .features import LibrosaContext
 
-from librosaContext import LibrosaContext
 def list_librosa_context():
     ks = list(LibrosaContext.stg_funcs.keys())
     meta_ks = list(LibrosaContext.stg_meta_funcs.keys())
