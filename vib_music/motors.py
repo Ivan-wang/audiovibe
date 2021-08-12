@@ -49,7 +49,7 @@ class ConsoleMotor(Motor):
             if k == 'frame':
                 continue
             if vibrations[k] is not None:
-                vibs.append('{} : {:.4f}'.format(k, vibrations[k]))
+                vibs.append('{} : {}'.format(k, vibrations[k]))
             elif self.show_none:
                 vibs.append('{} : {}'.format(k, vibrations[k]))
             else:
@@ -70,7 +70,7 @@ class BoardMotor(Motor):
         self.vib_queue = runtime.vib_queue
 
     def on_running(self, vibrations):
-        amp, freq = self._handle_vibrations(vibrations)
+        amp, freq = vibrations['beatplp']
 
         if amp is not None:
             self.vib_queue.put((amp, freq, False))
@@ -79,13 +79,3 @@ class BoardMotor(Motor):
 
     def on_end(self):
         self.vib_queue.put((0, 0, True))
-
-    def _handle_vibrations(self, vibrations):
-        next_amp = vibrations['beatplp'] # Int, 1 - 128
-
-        # handle amp , and freq here
-        if next_amp is None:
-            return None, None
-        else:
-            next_freq = 64
-            return next_amp, next_freq

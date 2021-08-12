@@ -5,7 +5,7 @@ import pickle
 class MotorInvoker(object):
     motor_t = {}
     iterator_t = {}
-    def __init__(self, basedir, audio, motors=[]):
+    def __init__(self, basedir, audio, motors=[], iter_kwargs={}):
         super(MotorInvoker, self).__init__()
         self.motors = self._init_motors(motors)
 
@@ -17,19 +17,20 @@ class MotorInvoker(object):
 
         self.vib_iter = {'frame': self._build_vib_iter('frame', None, None)}
         for vib in self.meta['vibrations']:
+            kwargs = iter_kwargs.get(vib, {})
             with open(vibrations[vib], 'rb') as f:
-                self.vib_iter[vib] = self._build_vib_iter(vib, self.meta, pickle.load(f))
+                self.vib_iter[vib] = self._build_vib_iter(vib, self.meta, pickle.load(f), **kwargs)
 
         self.total_frame = self.meta['len_sample'] // self.meta['len_hop']
         if self.meta['len_sample'] % self.meta['len_hop'] == 1:
             self.total_frame += 1
 
-    def _build_vib_iter(self, vib_t, audio_meta, vib_data):
+    def _build_vib_iter(self, vib_t, audio_meta, vib_data, **kwargs):
         if vib_t not in MotorInvoker.iterator_t:
             print(list(self.iterator_t.keys()))
             raise KeyError(f'Cannot build iterator for {vib_t}')
 
-        return MotorInvoker.iterator_t[vib_t](audio_meta, vib_data)
+        return MotorInvoker.iterator_t[vib_t](audio_meta, vib_data, **kwargs)
 
     def _init_motors(self, motor_t):
         motors = []
@@ -57,7 +58,8 @@ class MotorInvoker(object):
 
     @classmethod
     def from_config(cls, config):
-        return cls(config['datadir'], config['audio'], config['motors'])
+        return cls(config['datadir'], config['audio'],
+            config['motors'], config['iter_kwargs'])
 
     @classmethod
     def register_motor(cls, motor_cls):

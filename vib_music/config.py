@@ -15,6 +15,8 @@ def init_board_invoker_config(save=None):
         # other motor
     ]
 
+    config['iter_kwargs'] = {}
+
     if save is not None:
         with open(save, 'w') as f:
             yaml.dump(dict(config), f, sort_keys=False)

@@ -36,20 +36,21 @@ class BeatPLPIteartor(VibrationIterator):
         super(BeatPLPIteartor, self).__init__()
         pulse = vib_data['data']
         if vib_func is not None:
-            self.beat_amp = vib_func(pulse)
+            self.amp, self.freq = vib_func(pulse)
         else:
             bins = np.linspace(pulse.min(), pulse.max(), num=129, endpoint=True)
-            self.beat_amp = np.digitize(pulse, bins).astype(np.uint8)
+            self.amp = np.digitize(pulse, bins).astype(np.uint8)
+            self.freq = np.ones_like(self.amp, dtype=np.uint8) * 64
 
         self.num_frame = -1
         # self.beats = np.flatnonzero(librosa.util.localmax(pulse))
 
     def __next__(self):
         self.num_frame += 1
-        if self.num_frame < len(self.beat_amp):
-            return self.beat_amp[self.num_frame]
+        if self.num_frame < len(self.amp):
+            return (self.amp[self.num_frame], self.freq[self.num_frame])
         else:
-            return None
+            return (None, None)
 
 # class RmseIterator(VibrationIterator):
 #     alias = 'rmse'
