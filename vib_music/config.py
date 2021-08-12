@@ -4,6 +4,24 @@ from collections import OrderedDict
 
 BASE_HOP_LEN = 512
 
+def init_board_invoker_config(save=None):
+    config = OrderedDict()
+    config['version'] = 0.2
+    config['audio'] = None
+    config['datadir'] = '.'
+
+    config['motors'] = [
+        ('console', {'show_none': False, 'show_frame': True}),
+        # other motor
+    ]
+
+    if save is not None:
+        with open(save, 'w') as f:
+            yaml.dump(dict(config), f, sort_keys=False)
+
+    return dict(config)
+
+
 def example_board_invoker_config(save=None):
     config = OrderedDict()
     config['version'] = 0.2
@@ -19,6 +37,29 @@ def example_board_invoker_config(save=None):
             yaml.dump(dict(config), f, sort_keys=False)
 
     return config
+
+def init_vibration_extraction_config(save=None):
+    config = OrderedDict()
+    config['version'] = 0.2
+
+    # define common settings
+    len_hop = BASE_HOP_LEN
+    # audio
+    config['audio'] = None
+    config['sr'] = None
+    config['len_hop'] = len_hop
+
+    # extract vibration
+    stgs = {
+        # other strategies here
+    }
+    config['stgs'] = stgs
+
+    if save is not None:
+        with open(save, 'w') as f:
+            yaml.dump(dict(config), f, sort_keys=False)
+
+    return dict(config)
 
 def example_vibration_extracton_config(save=None):
     config = OrderedDict()
