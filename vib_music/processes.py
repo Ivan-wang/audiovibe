@@ -29,10 +29,6 @@ class AudioProcess(multiprocessing.Process):
         except ImportError:
             stream = None
 
-        # print(f'Sample Rate {wf.getframerate()}')
-        # print(f'Num of Frame {wf.getnframes()}')
-        # print('loaded wav file...')
-
         self.motor_on.wait()
         self.motor_on.clear()
 
@@ -76,8 +72,13 @@ class MotorProcess(multiprocessing.Process):
             print('Please Attach Motor Process to an Audio Process Before Start!')
             return
 
-        self.invoker.on_start(self)
-        self.motor_on.set()
+        try:
+            self.invoker.on_start(self)
+        except Exception as e:
+            print('Motor Invoker Start Error')
+            print(e)
+        finally:
+            self.motor_on.set() # release the audio process
 
         for _ in range(self.invoker.total_frame):
             self.frame.acquire()
@@ -113,6 +114,7 @@ class BoardProcess(multiprocessing.Process):
     def run(self):
         if self.vib_queue is None or self.board_on is None:
             print('Please Attach Board Process to an AudioProcess and a MotorProcess Before Start!')
+            return
 
         if _BOARD_ENV_READY:
             i2c = busio.I2C(board.SCL, board.SDA)

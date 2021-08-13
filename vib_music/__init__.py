@@ -6,3 +6,5 @@ from .processes import BoardProcess
 
 from .motors import *
 from .VibIterator import *
+
+from .plot import PlotContext

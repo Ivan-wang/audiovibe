@@ -5,14 +5,15 @@ from typing import Tuple
 import numpy as np
 from utils import tune_beat_parser
 
-from vib_music import LibrosaContext
+from vib_music import LibrosaContext, plot
 from vib_music import MotorInvoker
 from vib_music import AudioProcess, BoardProcess, MotorProcess
+from vib_music import PlotContext
 from vib_music.config import init_board_invoker_config
 from vib_music.config import init_vibration_extraction_config
 
 def handle_pulse(pulse: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-    bins = np.linspace(0., 1., 256, endpoint=True)
+    bins = np.linspace(0., 1., 255, endpoint=True)
     amp = np.digitize(pulse, bins).astype(np.uint8)
     freq = np.ones_like(amp, dtype=np.uint8) * 64
 
@@ -36,6 +37,15 @@ def main():
         ctx = LibrosaContext.from_config(librosa_config)
         ctx.save_features(root=opt.data_dir)
         print('Done!')
+
+    if opt.plot:
+        print('Plotting Featrues...', end='')
+        ctx = PlotContext(opt.data_dir, opt.audio,
+            plot_kwargs={'beatplp': {'vib_func': handle_pulse}}
+        )
+        ctx.save_plots()
+        print('Done!')
+    return
 
     if opt.task == 'run' or 'play':
         print('Prepare to Play Audio...')

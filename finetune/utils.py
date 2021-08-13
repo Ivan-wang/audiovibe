@@ -7,6 +7,7 @@ def _base_arg_parser():
     p.add_argument('--len-hop', type=int, default=512)
     p.add_argument('--data-dir', type=str, default='.')
 
+    p.add_argument('--plot', action='store_true')
     return p
 
 def tune_beat_parser(base_parser=None):
