@@ -48,16 +48,16 @@ def beatplp(plotdir, audio, meta, beat_data, vib_func=None):
     onset_env = librosa.onset.onset_strength(y=audio, sr=sr, hop_length=hop_len)
 
     # mel-spectrogram for reference
-    # melspec = librosa.feature.melspectrogram(y=audio, sr=sr, hop_length=hop_len)
+    melspec = librosa.feature.melspectrogram(y=audio, sr=sr, hop_length=hop_len)
 
-    nrows = 1 if vib_func is None else 2
+    nrows = 2 if vib_func is None else 3
     fig, ax = plt.subplots(nrows=nrows, sharex=True, figsize=(10, 10))
     # draw mel-spectrogram
-    # librosa.display.specshow(
-    #     librosa.power_to_db(melspec, ref=np.max),
-    #         x_axis='time', y_axis='mel', ax=ax[0])
-    # ax[0].set(title='Mel spectrogram')
-    # ax[0].label_outer()
+    librosa.display.specshow(
+        librosa.power_to_db(melspec, ref=np.max), sr=sr,
+            x_axis='time', y_axis='mel', ax=ax[0])
+    ax[0].set(title='Mel spectrogram')
+    ax[0].label_outer()
 
     # draw pulse and beats points
     min_tempo = beat_data['tempo_min']
@@ -66,23 +66,23 @@ def beatplp(plotdir, audio, meta, beat_data, vib_func=None):
     beats = np.flatnonzero(librosa.util.localmax(pulse))
     times = librosa.times_like(pulse, sr=sr, hop_length=hop_len)
 
-    ax[0].plot(librosa.times_like(onset_env, sr=sr, hop_length=hop_len),
+    ax[1].plot(librosa.times_like(onset_env, sr=sr, hop_length=hop_len),
             librosa.util.normalize(onset_env),
             label='Onset strength')
-    ax[0].plot(librosa.times_like(pulse, sr=sr, hop_length=hop_len),
+    ax[1].plot(librosa.times_like(pulse, sr=sr, hop_length=hop_len),
         librosa.util.normalize(pulse),
         label='Predominant local pulse (PLP)')
-    ax[0].vlines(times[beats], 0, 1, alpha=0.5, color='r', linestyle='--', label='PLP Beats')
-    ax[0].set(title=f'Uniform tempo prior [{min_tempo}, {max_tempo}]')
-    ax[0].label_outer()
-    ax[0].legend()
+    ax[1].vlines(times[beats], 0, 1, alpha=0.5, color='r', linestyle='--', label='PLP Beats')
+    ax[1].set(title=f'Uniform tempo prior [{min_tempo}, {max_tempo}]')
+    ax[1].label_outer()
+    ax[1].legend()
 
     # draw vibraction function
     if vib_func is not None:
         amp, freq = vib_func(pulse)
-        ax[1].plot(times, amp, label='Vibration AMP')
-        ax[1].plot(times, freq, label='Vibration FREQ')
-        ax[1].set(title='Vibration Signals')
-        ax[1].legend()
+        ax[2].plot(times, amp, label='Vibration AMP')
+        ax[2].plot(times, freq, label='Vibration FREQ')
+        ax[2].set(title='Vibration Signals')
+        ax[2].legend()
 
     fig.savefig(os.path.join(plotdir, 'beatplp.jpg'))
