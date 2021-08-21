@@ -146,72 +146,40 @@ def rmse(audio, sr, len_hop, len_window=2048):
 
     return ret
 
-# @librosa_stg_meta
-# def rmse(audio, sr, frame=WIN_LEN, hop=HOP_LEN):
-#     frame = int(frame)
-#     hop = int(hop)
+@LibrosaContext.register_vib_meta_stg
+def pitchyin(audio, sr, len_hop, len_window=2048, fmin='C2', fmax='C7', thres=0.8):
+    len_window = int(len_window)
+    thres = float(thres)
 
-#     # Do not pad the frame
-#     return librosa.feature.rms(y=audio, frame_length=frame,
-#         hop_length=hop, center=False)
+    if isinstance(fmin, str):
+        fmin = librosa.note_to_hz('C2')
+    if isinstance(fmax, str):
+        fmax = librosa.note_to_hz('C7')
 
-# @librosa_stg
-# def stempo(audio, sr):
-#     onset_env = librosa.onset.onset_strength(audio, sr)
-#     return librosa.beat.tempo(onset_envelope=onset_env, sr=sr)
+    return librosa.yin(audio, fmin=fmin, fmax=fmax, sr=sr,
+        frame_length=len_window, hop_length=len_hop, trough_threshold=thres, center=True)
 
-# @librosa_stg
-# def dtempo(audio, sr):
-#     onset_env = librosa.onset.onset_strength(audio, sr)
-#     return librosa.beat.tempo(onset_envelope=onset_env, sr=sr,
-#         aggregate=None)
+@LibrosaContext.register_vib_meta_stg
+def pitchpyin(audio, sr, len_hop, len_window=2048, fmin='C2', fmax='C7'):
+    len_window = int(len_window)
 
-# @librosa_stg_meta
-# def gramtempo(audio, sr, hop=512):
-#     hop = int(hop)
-#     onset_env = librosa.onset.onset_strength(audio, sr)
-#     return librosa.feature.tempogram(onset_envelope=onset_env, sr=sr,
-#         hop_length=hop, center=False)
+    if isinstance(fmin, str):
+        fmin = librosa.note_to_hz('C2')
+    if isinstance(fmax, str):
+        fmax = librosa.note_to_hz('C7')
 
-# @librosa_stg_meta
-# def pitchyin(audio, sr, frame=WIN_LEN, hop=HOP_LEN, thres=0.8):
-#     frame = int(frame)
-#     hop = int(hop)
-#     thres = float(thres)
+    f0, _, _ = librosa.pyin(audio, fmin=fmin, fmax=fmax, sr=sr,
+        frame_length=len_window, hop_length=len_hop, center=True)
 
-#     fmin = librosa.note_to_hz('C2')
-#     fmax = librosa.note_to_hz('C7')
+    return f0
 
-#     return librosa.yin(audio, fmin=fmin, fmax=fmax, sr=sr,
-#         frame_length=frame, hop_length=hop, trough_threshold=thres, center=False)
+@LibrosaContext.register_vib_meta_stg
+def chromastft(audio, sr, len_hop, len_window=2048):
+    pass
 
-# @librosa_stg_meta
-# def pitchpyin(audio, sr, frame=WIN_LEN, hop=HOP_LEN):
-#     frame = int(frame)
-#     hop = int(hop)
-
-#     fmin = librosa.note_to_hz('C2')
-#     fmax = librosa.note_to_hz('C7')
-
-#     f0, _, _ = librosa.pyin(audio, fmin=fmin, fmax=fmax, sr=sr,
-#         frame_length=frame, hop_length=hop, center=False)
-
-#     return f0
-
-# DEFAULT_N_MELS = 128
-# @librosa_stg_meta
-# def grammel(audio, sr, frame=WIN_LEN, hop=HOP_LEN, n_mels=DEFAULT_N_MELS):
-#     frame = int(frame)
-#     hop = int(hop)
-#     n_mels = int(n_mels)
-
-#     S = librosa.feature.melspectrogram(y=audio, sr=sr,
-#         n_fft=frame, hop_length=hop,n_mels=n_mels, center=False)
-
-#     return librosa.power_to_db(S, ref=np.max)
-
-
-
+@LibrosaContext.register_vib_meta_stg
+def chromecqt(audio, sr, len_hop, len_window=2048):
+    pass
 
 if __name__ == '__main__':
     import yaml

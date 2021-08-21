@@ -29,21 +29,15 @@ class FrameCounter(VibrationIterator):
         self.num_frame += 1
         return self.num_frame
 
-@MotorInvoker.register_vib_iterator
-class BeatPLPIteartor(VibrationIterator):
-    alias = 'beatplp'
-    def __init__(self, meta, vib_data, vib_func=None):
-        super(BeatPLPIteartor, self).__init__()
-        pulse = vib_data['data']
-        if vib_func is not None:
-            self.amp, self.freq = vib_func(pulse)
-        else:
-            bins = np.linspace(pulse.min(), pulse.max(), num=129, endpoint=True)
-            self.amp = np.digitize(pulse, bins).astype(np.uint8)
-            self.freq = np.ones_like(self.amp, dtype=np.uint8) * 64
 
+@MotorInvoker.register_vib_iterator
+class LambdaIterator(VibrationIterator):
+    def __init__(self, meta, vib_data, vib_func):
+        super().__init__()
+        data = vib_data['data']
+        self.amp, self.freq = vib_func(data)
+    
         self.num_frame = -1
-        # self.beats = np.flatnonzero(librosa.util.localmax(pulse))
 
     def __next__(self):
         self.num_frame += 1
@@ -52,17 +46,25 @@ class BeatPLPIteartor(VibrationIterator):
         else:
             return (None, None)
 
-# class RmseIterator(VibrationIterator):
-#     alias = 'rmse'
-#     def __init__(self, meta, vib_data):
-#         super(RmseIterator, self).__init__()
-#         # TODO handle different HOP_LEN
-#         self.rmse = vib_data['data']
-#         self.num_frame = -1
 
-#     def __next__(self):
-#         self.num_frame += 1
-#         if self.num_frame < len(self.rmse):
-#             return self.rmse[self.num_frame]
-#         else:
-#             return None
+def _default_beatplp_func(pulse):
+    bins = np.linspace(pulse.min(), pulse.max(), num=129, endpoint=True)
+    amp = np.digitize(pulse, bins).astype(np.uint8)
+    freq = np.ones_like(amp, dtype=np.uint8) * 64
+
+    return amp, freq
+
+@MotorInvoker.register_vib_iterator
+class BeatPLPIteartor(LambdaIterator):
+    alias = 'beatplp'
+    def __init__(self, meta, vib_data, vib_func=_default_beatplp_func):
+        super(BeatPLPIteartor, self).__init__(meta, vib_data, vib_func)
+
+def _default_pitch_func(pitch):
+    return [], []
+
+@MotorInvoker.register_vib_iterator
+class PitchIterator(LambdaIterator):
+    alias = 'pitch'
+    def __init__(self, meta, vib_data, vib_func=_default_beatplp_func):
+        super(PitchIterator, self).__init__(meta, vib_data, vib_func)

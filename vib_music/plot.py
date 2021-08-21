@@ -34,10 +34,11 @@ class PlotContext(object):
 
     @classmethod
     def register_plot(cls, func):
-        if func.__name__ in cls.stgs:
+        name = func.__name__.split('_')[0]
+        if name in cls.stgs:
             raise ValueError(f'Duplicated Plot Function Name {func.__func__}')
-
-        cls.stgs.update({func.__name__: func})
+        
+        cls.stgs.update({name: func})
         return func
 
 @PlotContext.register_plot
@@ -86,3 +87,11 @@ def beatplp(plotdir, audio, meta, beat_data, vib_func=None):
         ax[2].legend()
 
     fig.savefig(os.path.join(plotdir, 'beatplp.jpg'))
+
+@PlotContext.register_plot
+def pitch_plot(plotdir, audio, meta, pitch_data, vib_func=None):
+    pass
+
+@PlotContext.register_plot
+def chrome_plot(plotdir, audio, meta, chrome_data, vib_func=None):
+    pass

@@ -45,7 +45,6 @@ def main():
         )
         ctx.save_plots()
         print('Done!')
-    return
 
     if opt.task == 'run' or 'play':
         print('Prepare to Play Audio...')
