@@ -156,8 +156,12 @@ def pitchyin(audio, sr, len_hop, len_window=2048, fmin='C2', fmax='C7', thres=0.
     if isinstance(fmax, str):
         fmax = librosa.note_to_hz('C7')
 
-    return librosa.yin(audio, fmin=fmin, fmax=fmax, sr=sr,
+    f0 = librosa.yin(audio, fmin=fmin, fmax=fmax, sr=sr,
         frame_length=len_window, hop_length=len_hop, trough_threshold=thres, center=True)
+
+    ret = {'len_hop': len_hop, 'len_window': len_window, 'fmin': fmin, 'fmax': fmax,
+        'thres': thres, 'data': f0}
+    return ret
 
 @LibrosaContext.register_vib_meta_stg
 def pitchpyin(audio, sr, len_hop, len_window=2048, fmin='C2', fmax='C7'):
@@ -171,21 +175,25 @@ def pitchpyin(audio, sr, len_hop, len_window=2048, fmin='C2', fmax='C7'):
     f0, _, _ = librosa.pyin(audio, fmin=fmin, fmax=fmax, sr=sr,
         frame_length=len_window, hop_length=len_hop, center=True)
 
-    return f0
+    ret = {'len_hop': len_hop, 'len_window': len_window, 'fmin': fmin, 'fmax': fmax,
+        'data': f0}
+    return ret
 
 @LibrosaContext.register_vib_meta_stg
 def chromastft(audio, sr, len_hop, len_window=2048):
     len_window = int(len_window)
     chroma = librosa.feature.chroma_stft(y=audio, sr=sr, n_fft=len_window)
 
-    return chroma
+    ret = {'len_hop': len_hop, 'len_window': len_window, 'data': chroma}
+    return ret
 
 @LibrosaContext.register_vib_meta_stg
 def chromecqt(audio, sr, len_hop, len_window=2048):
     len_window = int(len_window)
     chroma = librosa.feature.chroma_cqt(y=audio, sr=sr, n_fft=len_window)
 
-    return chroma
+    ret = {'len_hop': len_hop, 'len_window': len_window, 'data': chroma}
+    return ret
 
 if __name__ == '__main__':
     import yaml

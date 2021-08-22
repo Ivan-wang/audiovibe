@@ -8,13 +8,14 @@ import matplotlib.pyplot as plt
 
 class PlotContext(object):
     stgs = {}
-    def __init__(self, datadir, audio, plot_kwargs={}):
+    def __init__(self, datadir, audio, vib_mode_func, plots=[]):
         super(PlotContext, self).__init__()
 
         self.plotdir = './plots'
         self.audio_name = audio
         self.datadir = datadir
-        self.plot_kwargs = plot_kwargs
+        self.vib_mode_func = vib_mode_func
+        self.plots = plots
 
     def save_plots(self):
         os.makedirs(self.plotdir, exist_ok=True)
@@ -26,11 +27,17 @@ class PlotContext(object):
             meta = pickle.load(f)
 
         audio_data, _ = librosa.load(self.audio_name, sr=meta['sr'])
+        feature_bundle = {}
         for vib in meta['vibrations']:
             with open(vibrations[vib], 'rb') as f:
-                vib_data = pickle.load(f)
-            PlotContext.stgs[vib](self.plotdir, audio_data, meta,
-                vib_data, **self.plot_kwargs.get(vib, {}))
+                feature_bundle['vib'] = pickle.load(f)
+
+        amp, freq = self.vib_mode_func(feature_bundle)
+        feature_bundle.update({
+            'amp': amp, 'freq': freq
+        })
+        for p in self.plots:
+            PlotContext.stgs[p](self.plotdir, audio_data, meta, feature_bundle)
 
     @classmethod
     def register_plot(cls, func):
@@ -42,16 +49,17 @@ class PlotContext(object):
         return func
 
 @PlotContext.register_plot
-def beatplp(plotdir, audio, meta, beat_data, vib_func=None):
+def beatplp(plotdir, audio, meta, feature_bundle):
     # recover feature extraction environment
     sr = meta['sr']
     hop_len = meta['len_hop']
+    beat_data = feature_bundle['beatplp']
     onset_env = librosa.onset.onset_strength(y=audio, sr=sr, hop_length=hop_len)
 
     # mel-spectrogram for reference
     melspec = librosa.feature.melspectrogram(y=audio, sr=sr, hop_length=hop_len)
 
-    nrows = 2 if vib_func is None else 3
+    nrows = 3
     fig, ax = plt.subplots(nrows=nrows, sharex=True, figsize=(10, 10))
     # draw mel-spectrogram
     librosa.display.specshow(
@@ -79,19 +87,63 @@ def beatplp(plotdir, audio, meta, beat_data, vib_func=None):
     ax[1].legend()
 
     # draw vibraction function
-    if vib_func is not None:
-        amp, freq = vib_func(pulse)
-        ax[2].plot(times, amp, label='Vibration AMP')
-        ax[2].plot(times, freq, label='Vibration FREQ')
-        ax[2].set(title='Vibration Signals')
-        ax[2].legend()
+    amp, freq = feature_bundle['amp'], feature_bundle['freq']
+    ax[2].plot(times, amp, label='Vibration AMP')
+    ax[2].plot(times, freq, label='Vibration FREQ')
+    ax[2].set(title='Vibration Signals')
+    ax[2].legend()
 
     fig.savefig(os.path.join(plotdir, 'beatplp.jpg'))
 
 @PlotContext.register_plot
-def pitch_plot(plotdir, audio, meta, pitch_data, vib_func=None):
-    pass
+def pitch_plot(plotdir, audio, meta, feature_bundle):
+    sr = meta['sr']
+    hop_len = meta['len_hop']
+    win_len = feature_bundle['pitch']['len_window']
+    D = librosa.amplitude_to_db(
+        np.abs(librosa.stft(y=audio, hop_length=hop_len, n_fft=win_len)), ref=np.max)
+
+    fig, ax = plt.subplots(nrows=2, sharex = True, figsize=(10, 5))
+    img = librosa.display.specshow(D, x_axis='time', y_axis='log', ax=ax[0])
+    ax.set(title='Pitch Frequency Estimation')
+    fig.colorbar(img, ax=ax[0], format='%+2.f dB')
+
+    f0 = feature_bundle['pitch']['data']
+    times = librosa.times_like(f0, sr=sr, hop_length=hop_len)
+    ax[0].plot(times, f0, color='cyan', linewitdh=3)
+
+    amp, freq = feature_bundle['amp'], feature_bundle['freq']
+    ax[2].plot(times, amp, label='Vibration AMP')
+    ax[2].plot(times, freq, label='Vibration FREQ')
+    ax[2].set(title='Vibration Signals')
+    ax[2].legend()
+
+    fig.savefig(os.path.join(plotdir, 'pitch.jpg'))
 
 @PlotContext.register_plot
-def chrome_plot(plotdir, audio, meta, chrome_data, vib_func=None):
-    pass
+def chrome_plot(plotdir, audio, meta, feature_bundle):
+    sr = meta['sr']
+    hop_len = meta['len_hop']
+    melspec = librosa.feature.melspectrogram(y=audio, sr=sr, hop_length=hop_len)
+
+    nrows = 3
+    fig, ax = plt.subplots(nrows=nrows, sharex=True, figsize=(10, 10))
+    # draw mel-spectrogram
+    librosa.display.specshow(
+        librosa.power_to_db(melspec, ref=np.max), sr=sr,
+            x_axis='time', y_axis='mel', ax=ax[0])
+    ax[0].set(title='Mel spectrogram')
+    ax[0].label_outer()
+
+    chroma = feature_bundle['chroma']['data']
+    librosa.display.specshow(chroma, y_axis='chroma', x_axis='time', ax=ax[1])
+
+    amp, freq = feature_bundle['amp'], feature_bundle['freq']
+    times = librosa.times_like(amp, sr=sr, hop_length=hop_len)
+    ax[2].plot(times, amp, label='Vibration AMP')
+    ax[2].plot(times, freq, label='Vibration FREQ')
+    ax[2].set(title='Vibration Signals')
+    ax[2].legend()
+
+    fig.savefig(os.path.join(plotdir, 'chroma.jpg'))
+
