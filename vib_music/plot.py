@@ -99,35 +99,40 @@ def beatplp(plotdir, audio, meta, feature_bundle):
 def pitch_plot(plotdir, audio, meta, feature_bundle):
     sr = meta['sr']
     hop_len = meta['len_hop']
-    win_len = feature_bundle['pitch']['len_window']
+    pitch_t = 'pitchyin' if 'pitchyin' in feature_bundle else 'pitchpyin'
+    win_len = feature_bundle[pitch_t]['len_window']
+    print(sr, hop_len, win_len)
     D = librosa.amplitude_to_db(
-        np.abs(librosa.stft(y=audio, hop_length=hop_len, n_fft=win_len)), ref=np.max)
+        np.abs(librosa.stft(y=audio, hop_length=hop_len,
+            n_fft=win_len)), ref=np.max)
 
     fig, ax = plt.subplots(nrows=2, sharex = True, figsize=(10, 5))
-    img = librosa.display.specshow(D, x_axis='time', y_axis='log', ax=ax[0])
-    ax.set(title='Pitch Frequency Estimation')
-    fig.colorbar(img, ax=ax[0], format='%+2.f dB')
+    img = librosa.display.specshow(D, sr=sr, x_axis='time', y_axis='log', ax=ax[0])
+    ax[0].set(title='Pitch Frequency Estimation')
+    # fig.colorbar(img, ax=ax[0], format='%+2.f dB')
 
-    f0 = feature_bundle['pitch']['data']
-    times = librosa.times_like(f0, sr=sr, hop_length=hop_len)
-    ax[0].plot(times, f0, color='cyan', linewitdh=3)
+    f0 = feature_bundle[pitch_t]['data']
+    times = librosa.times_like(f0, sr=sr, 
+        hop_length=hop_len, n_fft=win_len)
+    ax[0].plot(times, f0, color='cyan', linewidth=3, label='F0')
+    ax[0].legend(loc='upper right')
 
     amp, freq = feature_bundle['amp'], feature_bundle['freq']
-    ax[2].plot(times, amp, label='Vibration AMP')
-    ax[2].plot(times, freq, label='Vibration FREQ')
-    ax[2].set(title='Vibration Signals')
-    ax[2].legend()
+    ax[1].plot(times, amp, label='Vibration AMP')
+    ax[1].plot(times, freq, label='Vibration FREQ')
+    ax[1].set(title='Vibration Signals')
+    ax[1].legend()
 
     fig.savefig(os.path.join(plotdir, 'pitch.jpg'))
 
 @PlotContext.register_plot
-def chrome_plot(plotdir, audio, meta, feature_bundle):
+def chroma_plot(plotdir, audio, meta, feature_bundle):
     sr = meta['sr']
     hop_len = meta['len_hop']
     melspec = librosa.feature.melspectrogram(y=audio, sr=sr, hop_length=hop_len)
 
     nrows = 3
-    fig, ax = plt.subplots(nrows=nrows, sharex=True, figsize=(10, 10))
+    fig, ax = plt.subplots(nrows=nrows, sharex=True, figsize=(10, 15))
     # draw mel-spectrogram
     librosa.display.specshow(
         librosa.power_to_db(melspec, ref=np.max), sr=sr,
@@ -135,8 +140,9 @@ def chrome_plot(plotdir, audio, meta, feature_bundle):
     ax[0].set(title='Mel spectrogram')
     ax[0].label_outer()
 
-    chroma = feature_bundle['chroma']['data']
-    librosa.display.specshow(chroma, y_axis='chroma', x_axis='time', ax=ax[1])
+    chroma_t = 'chromastft' if 'chromastft' in feature_bundle else 'chromacqt'
+    chroma = feature_bundle[chroma_t]['data']
+    librosa.display.specshow(chroma, sr=sr, y_axis='chroma', x_axis='time', ax=ax[1])
 
     amp, freq = feature_bundle['amp'], feature_bundle['freq']
     times = librosa.times_like(amp, sr=sr, hop_length=hop_len)
