@@ -188,11 +188,12 @@ def chromastft(audio, sr, len_hop, len_window=2048):
     return ret
 
 @LibrosaContext.register_vib_meta_stg
-def chromecqt(audio, sr, len_hop, len_window=2048):
-    len_window = int(len_window)
-    chroma = librosa.feature.chroma_cqt(y=audio, sr=sr, n_fft=len_window)
+def chromacqt(audio, sr, len_hop, fmin='C1'):
+    # len_window = int(len_window)
+    fmin = librosa.note_to_hz(fmin)
+    chroma = librosa.feature.chroma_cqt(y=audio, sr=sr, fmin=fmin)
 
-    ret = {'len_hop': len_hop, 'len_window': len_window, 'data': chroma}
+    ret = {'len_hop': len_hop, 'fmin': fmin, 'data': chroma}
     return ret
 
 if __name__ == '__main__':

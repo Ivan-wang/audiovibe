@@ -28,11 +28,15 @@ class MotorInvoker(object):
         self.vib_mode = vib_mode
 
     def _build_vib_iter(self, vib_t, audio_meta, vib_data, **kwargs):
-        if vib_t not in MotorInvoker.iterator_t:
-            print(list(self.iterator_t.keys()))
+        if vib_t in MotorInvoker.iterator_t:
+            return MotorInvoker.iterator_t[vib_t](audio_meta, vib_data, **kwargs)
+        else:
+            for k in self.iterator_t.keys():
+                if vib_t.startswith(k):
+                    return MotorInvoker.iterator_t[k](audio_meta, vib_data, **kwargs)
+            print(f'Available Iterators : {list(self.iterator_t.keys())}')
             raise KeyError(f'Cannot build iterator for {vib_t}')
 
-        return MotorInvoker.iterator_t[vib_t](audio_meta, vib_data, **kwargs)
 
     def _init_motors(self, motor_t):
         motors = []

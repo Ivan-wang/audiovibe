@@ -30,7 +30,7 @@ def tune_pitch_parser(base_parser=None):
     p.add_argument('--pitch', action='store_true')
     p.add_argument('--pitch-alg', type=str, default='pyin', choices=['pyin', 'yin'])
     p.add_argument('--chroma', action='store_true')
-    p.add_argument('--chroma-alg', type=str, default='stft', choices=['stft, cqt'])
+    p.add_argument('--chroma-alg', type=str, default='stft', choices=['stft', 'cqt'])
     p.add_argument('--len-window', type=int, default=2048)
     p.add_argument('--fmin', type=str, default='C2')
     p.add_argument('--fmax', type=str, default='C7')
@@ -44,7 +44,7 @@ from vib_music import MotorInvoker
 from vib_music import AudioProcess, MotorProcess, BoardProcess
 
 def _main(opt, librosa_cfg=None, invoker_cfg=None, plot_cfg=None):
-    if opt.task == 'run' or 'build':
+    if opt.task == 'run' or opt.task == 'build':
         ctx = LibrosaContext.from_config(librosa_cfg)
         ctx.save_features(root=opt.data_dir)
 
@@ -52,7 +52,7 @@ def _main(opt, librosa_cfg=None, invoker_cfg=None, plot_cfg=None):
         ctx = PlotContext(**plot_cfg)
         ctx.save_plots()
 
-    if opt.task == 'run' or 'play':
+    if opt.task == 'run' or opt.task == 'play':
         invoker = MotorInvoker.from_config(invoker_cfg)
 
         print('Init Processes...')
