@@ -142,6 +142,7 @@ def chroma_plot(plotdir, audio, meta, feature_bundle):
 
     chroma_t = 'chromastft' if 'chromastft' in feature_bundle else 'chromacqt'
     chroma = feature_bundle[chroma_t]['data']
+    chroma = chroma.T # feature extraction puts time at 1st axis. now transpose it.
     librosa.display.specshow(chroma, sr=sr, y_axis='chroma', x_axis='time', ax=ax[1])
 
     amp, freq = feature_bundle['amp'], feature_bundle['freq']

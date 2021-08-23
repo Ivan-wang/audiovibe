@@ -25,9 +25,8 @@ def handle_chroma(bundle: dict) -> Tuple[np.ndarray, np.ndarray]:
     else:
         chroma = bundle['chromacqt']['data']
 
-    print(chroma.shape)
-    amp = np.ones((chroma.shape[1],)).astype(np.uint8) * 128
-    freq = np.ones((chroma.shape[1],)).astype(np.uint8) * 64
+    amp = np.ones((chroma.shape[0],)).astype(np.uint8) * 128
+    freq = np.ones((chroma.shape[0],)).astype(np.uint8) * 64
 
     return amp, freq
 
@@ -89,7 +88,7 @@ def main():
         invoker_cfg['audio'] = opt.audio
         invoker_cfg['datadir'] = opt.data_dir
         invoker_cfg['motors'] = [
-            ('console', {'show_none':False, 'show_frame': True}),
+            ('console', {'show_none':True, 'show_frame': True}),
             ('board', {})
         ]
         invoker_cfg['vib_mode'] = 'handle_pitch' if opt.pitch else 'handle_chroma'

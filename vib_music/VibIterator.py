@@ -76,5 +76,4 @@ class PitchIterator(SequenceIterator):
 class ChromaIterator(SequenceIterator):
     alias = 'chroma'
     def __init__(self, audio_meta, data):
-        data['data'] = data['data'].T
         super(ChromaIterator, self).__init__(audio_meta, data)
