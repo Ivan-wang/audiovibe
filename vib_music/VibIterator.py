@@ -1,52 +1,46 @@
 import numpy as np
 
-from .MotorInvoker import MotorInvoker
+from .invoker import MotorInvoker
 
 class VibrationIterator(object):
-    def __init__(self, vib_matrix=None):
+    def __init__(self, audio_meta, feature):
         super(VibrationIterator, self).__init__()
-        self._vib_matrix = vib_matrix
+        self._feature = feature
 
     def __iter__(self):
         return self
-
+    
     @property
-    def vib_matrix(self):
-        return self._vib_matrix
-
-    @vib_matrix.setter
-    def vib_matrix(self, vib_matrix):
-        self._vib_matrix = vib_matrix
+    def feature(self):
+        return self._feature
+    
+    @feature.setter
+    def feature(self, feature):
+        self._feature = feature
 
 @MotorInvoker.register_vib_iterator
-class FrameCounter(VibrationIterator):
+class FrameIterator(VibrationIterator):
     alias = 'frame'
-    def __init__(self, meta=None, vib_func=None):
-        super(FrameCounter, self).__init__()
+    def __init__(self, *args):
+        super(FrameIterator, self).__init__(None, None)
         self.num_frame = -1
 
     def __next__(self):
         self.num_frame += 1
         return self.num_frame
 
-
-@MotorInvoker.register_vib_iterator
-class LambdaIterator(VibrationIterator):
-    def __init__(self, meta, vib_data, vib_func):
-        super().__init__()
-        data = vib_data['data']
-        self.amp, self.freq = vib_func(data)
-    
+class SequenceIterator(VibrationIterator):
+    def __init__(self, audio_meta, feature):
+        super().__init__(audio_meta, feature)
         self.num_frame = -1
 
     def __next__(self):
         self.num_frame += 1
-        if self.num_frame < len(self.amp):
-            return (self.amp[self.num_frame], self.freq[self.num_frame])
+        if self.num_frame < len(self._feature['data']):
+            return self._feature['data'][self.num_frame]
         else:
-            return (None, None)
-
-
+            return None
+    
 def _default_beatplp_func(pulse):
     bins = np.linspace(pulse.min(), pulse.max(), num=129, endpoint=True)
     amp = np.digitize(pulse, bins).astype(np.uint8)
@@ -55,16 +49,31 @@ def _default_beatplp_func(pulse):
     return amp, freq
 
 @MotorInvoker.register_vib_iterator
-class BeatPLPIteartor(LambdaIterator):
-    alias = 'beatplp'
-    def __init__(self, meta, vib_data, vib_func=_default_beatplp_func):
-        super(BeatPLPIteartor, self).__init__(meta, vib_data, vib_func)
-
-def _default_pitch_func(pitch):
-    return [], []
+class AmpIterator(SequenceIterator):
+    alias = 'amp'
+    def __init__(self, audio_meta, amp):
+        super().__init__(audio_meta, {'data': amp})
 
 @MotorInvoker.register_vib_iterator
-class PitchIterator(LambdaIterator):
+class FreqIterator(SequenceIterator):
+    alias = 'freq'
+    def __init__(self, audio_meta, freq):
+        super().__init__(audio_meta, {'data': freq})
+
+@MotorInvoker.register_vib_iterator
+class BeatPLPIteartor(SequenceIterator):
+    alias = 'beatplp'
+    def __init__(self, audio_meta, data):
+        super(BeatPLPIteartor, self).__init__(audio_meta, data)
+
+@MotorInvoker.register_vib_iterator
+class PitchIterator(SequenceIterator):
     alias = 'pitch'
-    def __init__(self, meta, vib_data, vib_func=_default_beatplp_func):
-        super(PitchIterator, self).__init__(meta, vib_data, vib_func)
+    def __init__(self, audio_meta, data):
+        super(PitchIterator, self).__init__(audio_meta, data)
+
+@MotorInvoker.register_vib_iterator
+class ChromaIterator(SequenceIterator):
+    alias = 'chroma'
+    def __init__(self, audio_meta, data):
+        super(ChromaIterator, self).__init__(audio_meta, data)

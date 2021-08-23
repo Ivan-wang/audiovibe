@@ -12,7 +12,9 @@ from vib_music import PlotContext
 from vib_music.config import init_board_invoker_config
 from vib_music.config import init_vibration_extraction_config
 
-def handle_pulse(pulse: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+@MotorInvoker.register_vibration_mode
+def beatplp_mode(bundle: dict) -> Tuple[np.ndarray, np.ndarray]:
+    pulse = bundle['beatplp']['data']
     bins = np.linspace(0., 1., 255, endpoint=True)
     amp = np.digitize(pulse, bins).astype(np.uint8)
     freq = np.ones_like(amp, dtype=np.uint8) * 64
@@ -41,7 +43,7 @@ def main():
     if opt.plot:
         print('Plotting Featrues...', end='')
         ctx = PlotContext(opt.data_dir, opt.audio,
-            plot_kwargs={'beatplp': {'vib_func': handle_pulse}}
+            vib_mode_func=beatplp_mode, plots=['beatplp']
         )
         ctx.save_plots()
         print('Done!')
@@ -55,9 +57,8 @@ def main():
             ('console', {'show_none':False, 'show_frame': True}),
             ('board', {})
         ]
-        invoker_config['iter_kwargs'] = {
-            'beatplp': {'vib_func': handle_pulse}
-        }
+        invoker_config['vib_mode'] = 'beatplp_mode'
+        
 
         print('Loading Vibration Database...')
         invoker = MotorInvoker.from_config(invoker_config)

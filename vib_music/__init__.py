@@ -1,5 +1,5 @@
 from .features import LibrosaContext
-from .MotorInvoker import MotorInvoker
+from .invoker import MotorInvoker
 from .processes import AudioProcess
 from .processes import MotorProcess
 from .processes import BoardProcess

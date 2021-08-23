@@ -30,7 +30,7 @@ class PlotContext(object):
         feature_bundle = {}
         for vib in meta['vibrations']:
             with open(vibrations[vib], 'rb') as f:
-                feature_bundle['vib'] = pickle.load(f)
+                feature_bundle[vib] = pickle.load(f)
 
         amp, freq = self.vib_mode_func(feature_bundle)
         feature_bundle.update({
