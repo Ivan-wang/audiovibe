@@ -2,6 +2,7 @@ import sys
 sys.path.append('..')
 
 import argparse
+import logging
 
 def _base_arg_parser():
     p = argparse.ArgumentParser()
@@ -26,7 +27,7 @@ def tune_beat_parser(base_parser=None):
 def tune_pitch_parser(base_parser=None):
     if base_parser is None:
         p = _base_arg_parser()
-    
+
     p.add_argument('--pitch', action='store_true')
     p.add_argument('--pitch-alg', type=str, default='pyin', choices=['pyin', 'yin'])
     p.add_argument('--chroma', action='store_true')
@@ -44,6 +45,8 @@ from vib_music import MotorInvoker
 from vib_music import AudioProcess, MotorProcess, BoardProcess
 
 def _main(opt, librosa_cfg=None, invoker_cfg=None, plot_cfg=None):
+    logger = logging.getLogger('finetune')
+
     if opt.task == 'run' or opt.task == 'build':
         ctx = LibrosaContext.from_config(librosa_cfg)
         ctx.save_features(root=opt.data_dir)
@@ -55,7 +58,7 @@ def _main(opt, librosa_cfg=None, invoker_cfg=None, plot_cfg=None):
     if opt.task == 'run' or opt.task == 'play':
         invoker = MotorInvoker.from_config(invoker_cfg)
 
-        print('Init Processes...')
+        logger.info('initializing processes...')
         audio_proc = AudioProcess(opt.audio, opt.len_hop)
         motor_proc = MotorProcess(invoker)
         board_proc = BoardProcess()
@@ -63,7 +66,7 @@ def _main(opt, librosa_cfg=None, invoker_cfg=None, plot_cfg=None):
         motor_proc.attach(audio_proc)
         board_proc.attach(audio_proc, motor_proc)
 
-        print('Start To Run...')
+        logger.info('start process...')
         board_proc.start()
         motor_proc.start()
         audio_proc.start()
@@ -71,3 +74,4 @@ def _main(opt, librosa_cfg=None, invoker_cfg=None, plot_cfg=None):
         audio_proc.join()
         motor_proc.join()
         board_proc.join()
+        logger.info('all processes joined. exit...')

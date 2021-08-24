@@ -1,7 +1,9 @@
-from utils import tune_pitch_parser, _main
+import logging
+import sys
 from typing import Tuple
 import numpy as np
 
+from utils import tune_pitch_parser, _main
 from vib_music import MotorInvoker
 from vib_music.config import init_board_invoker_config
 from vib_music.config import init_vibration_extraction_config
@@ -39,12 +41,23 @@ def handle_chroma(bundle: dict) -> Tuple[np.ndarray, np.ndarray]:
 def main():
     p = tune_pitch_parser()
     opt = p.parse_args()
-    print(opt)
+
+    logger = logging.getLogger('finetune')
+    logger.setLevel(logging.INFO)
+    ch = logging.StreamHandler(sys.stdout)
+    ch.setLevel(logging.INFO)
+    formatter = logging.Formatter('[%(asctime)s][%(name)s][%(levelname)s][%(message)s]')
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+
+    logger.info('commond line arguments:')
+    logger.info(opt)
 
     librosa_cfg = None
     plot_cfg = None
     invoker_cfg = None
 
+    logger.info('building configure...')
     if opt.task in ['run', 'build']:
         librosa_cfg = init_vibration_extraction_config()
         librosa_cfg['audio'] = opt.audio
@@ -64,7 +77,7 @@ def main():
                     'thres': opt.yin_thres
                 }
             else:
-                print(f'Unknown pitch axtraction algorithm {opt.pitch_alg}')
+                logger.error(f'Unknown pitch axtraction algorithm {opt.pitch_alg}')
                 return
         elif opt.chroma:
             if opt.chroma_alg == 'stft':
@@ -76,9 +89,9 @@ def main():
                     'fmin': opt.fmin
                 }
             else:
-                print(f'Unknown chroma extraction algorithm {opt.chroma_alg}')
+                logger.error(f'Unknown chroma extraction algorithm {opt.chroma_alg}')
         else:
-            print('Use --pitch or --chroma to finetune the picth features')
+            logger.error('Use --pitch or --chroma to finetune the picth features')
             return
 
     if opt.plot:
@@ -98,6 +111,7 @@ def main():
             ('board', {})
         ]
         invoker_cfg['vib_mode'] = 'handle_pitch' if opt.pitch else 'handle_chroma'
+    logger.info('Done!')
 
     _main(opt, librosa_cfg, invoker_cfg, plot_cfg)
 
