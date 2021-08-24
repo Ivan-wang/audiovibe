@@ -12,13 +12,15 @@ class AudioProcess(multiprocessing.Process):
         self.frame = multiprocessing.Semaphore()
 
     def run(self):
-        print('init feature proc...')
         # IMPORTANT: initialize the audio within one process
         # Don't share it across different processes
         wf = wave.open(self.filename, 'rb')
+
         try:
             import pyaudio
-
+        except ImportError:
+            stream = None
+        else:
             audio = pyaudio.PyAudio()
             stream = audio.open(
                 format=audio.get_format_from_width(wf.getsampwidth()),
@@ -26,8 +28,6 @@ class AudioProcess(multiprocessing.Process):
                 rate=wf.getframerate(),
                 output=True
             )
-        except ImportError:
-            stream = None
 
         self.motor_on.wait()
         self.motor_on.clear()
@@ -72,15 +72,10 @@ class MotorProcess(multiprocessing.Process):
             print('Please Attach Motor Process to an Audio Process Before Start!')
             return
 
-        try:
-            self.invoker.on_start(self)
-        except Exception as e:
-            print('Motor Invoker Start Error')
-            print(e)
-        finally:
-            self.motor_on.set() # release the audio process
+        self.invoker.on_start(self)
+        self.motor_on.set() # release the audio process
 
-        for _ in range(self.invoker.total_frame):
+        for _ in range(self.invoker.num_frame):
             self.frame.acquire()
             self.invoker.on_update()
         self.invoker.on_end()

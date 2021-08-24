@@ -57,6 +57,9 @@ def _main(opt, librosa_cfg=None, invoker_cfg=None, plot_cfg=None):
 
     if opt.task == 'run' or opt.task == 'play':
         invoker = MotorInvoker.from_config(invoker_cfg)
+        if invoker is None:
+            logger.error('invoker start failure, exit...')
+            return
 
         logger.info('initializing processes...')
         audio_proc = AudioProcess(opt.audio, opt.len_hop)

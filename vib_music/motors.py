@@ -44,7 +44,7 @@ class ConsoleMotor(Motor):
         self.handler = lambda bundle: _build_vibration_str(bundle, show_none, show_frame)
 
     def on_start(self, runtime):
-        total_frame = runtime.invoker.total_frame
+        total_frame = runtime.invoker.num_frame
         self.bar = tqdm(desc='[Console Motor]', unit=' frame', total=total_frame)
 
     def on_running(self, bundle):
