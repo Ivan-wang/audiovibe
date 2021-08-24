@@ -13,6 +13,9 @@ def handle_pitch(bundle: dict) -> Tuple[np.ndarray, np.ndarray]:
     else:
         pitch = bundle['pitchpyin']['data']
 
+    # pitch:
+    # shape: [num frame x 1]
+    # each entry is the estiamte base frequency of the frame
     amp = np.ones_like(pitch).astype(np.uint8) * 128
     freq = np.ones_like(pitch).astype(np.uint8) * 64
 
@@ -25,6 +28,9 @@ def handle_chroma(bundle: dict) -> Tuple[np.ndarray, np.ndarray]:
     else:
         chroma = bundle['chromacqt']['data']
 
+    # chroma
+    # shape: [num_frame x 12]
+    #
     amp = np.ones((chroma.shape[0],)).astype(np.uint8) * 128
     freq = np.ones((chroma.shape[0],)).astype(np.uint8) * 64
 
@@ -81,7 +87,7 @@ def main():
             'audio': opt.audio,
             'vib_mode_func': handle_pitch if opt.pitch else handle_chroma,
             'plots': ['pitch' if opt.pitch else 'chroma']
-        } 
+        }
 
     if opt.task in ['run', 'play']:
         invoker_cfg = init_board_invoker_config()
