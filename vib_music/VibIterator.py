@@ -1,68 +1,79 @@
 import numpy as np
 
-from .MotorInvoker import MotorInvoker
+from .invoker import MotorInvoker
 
 class VibrationIterator(object):
-    def __init__(self, vib_matrix=None):
+    def __init__(self, audio_meta, feature):
         super(VibrationIterator, self).__init__()
-        self._vib_matrix = vib_matrix
+        self._feature = feature
 
     def __iter__(self):
         return self
-
+    
     @property
-    def vib_matrix(self):
-        return self._vib_matrix
-
-    @vib_matrix.setter
-    def vib_matrix(self, vib_matrix):
-        self._vib_matrix = vib_matrix
+    def feature(self):
+        return self._feature
+    
+    @feature.setter
+    def feature(self, feature):
+        self._feature = feature
 
 @MotorInvoker.register_vib_iterator
-class FrameCounter(VibrationIterator):
+class FrameIterator(VibrationIterator):
     alias = 'frame'
-    def __init__(self, meta=None, vib_func=None):
-        super(FrameCounter, self).__init__()
+    def __init__(self, *args):
+        super(FrameIterator, self).__init__(None, None)
         self.num_frame = -1
 
     def __next__(self):
         self.num_frame += 1
         return self.num_frame
 
-@MotorInvoker.register_vib_iterator
-class BeatPLPIteartor(VibrationIterator):
-    alias = 'beatplp'
-    def __init__(self, meta, vib_data, vib_func=None):
-        super(BeatPLPIteartor, self).__init__()
-        pulse = vib_data['data']
-        if vib_func is not None:
-            self.amp, self.freq = vib_func(pulse)
-        else:
-            bins = np.linspace(pulse.min(), pulse.max(), num=129, endpoint=True)
-            self.amp = np.digitize(pulse, bins).astype(np.uint8)
-            self.freq = np.ones_like(self.amp, dtype=np.uint8) * 64
-
+class SequenceIterator(VibrationIterator):
+    def __init__(self, audio_meta, feature):
+        super().__init__(audio_meta, feature)
         self.num_frame = -1
-        # self.beats = np.flatnonzero(librosa.util.localmax(pulse))
 
     def __next__(self):
         self.num_frame += 1
-        if self.num_frame < len(self.amp):
-            return (self.amp[self.num_frame], self.freq[self.num_frame])
+        if self.num_frame < len(self._feature['data']):
+            return self._feature['data'][self.num_frame]
         else:
-            return (None, None)
+            return None
+    
+def _default_beatplp_func(pulse):
+    bins = np.linspace(pulse.min(), pulse.max(), num=129, endpoint=True)
+    amp = np.digitize(pulse, bins).astype(np.uint8)
+    freq = np.ones_like(amp, dtype=np.uint8) * 64
 
-# class RmseIterator(VibrationIterator):
-#     alias = 'rmse'
-#     def __init__(self, meta, vib_data):
-#         super(RmseIterator, self).__init__()
-#         # TODO handle different HOP_LEN
-#         self.rmse = vib_data['data']
-#         self.num_frame = -1
+    return amp, freq
 
-#     def __next__(self):
-#         self.num_frame += 1
-#         if self.num_frame < len(self.rmse):
-#             return self.rmse[self.num_frame]
-#         else:
-#             return None
+@MotorInvoker.register_vib_iterator
+class AmpIterator(SequenceIterator):
+    alias = 'amp'
+    def __init__(self, audio_meta, amp):
+        super().__init__(audio_meta, {'data': amp})
+
+@MotorInvoker.register_vib_iterator
+class FreqIterator(SequenceIterator):
+    alias = 'freq'
+    def __init__(self, audio_meta, freq):
+        super().__init__(audio_meta, {'data': freq})
+
+@MotorInvoker.register_vib_iterator
+class BeatPLPIteartor(SequenceIterator):
+    alias = 'beatplp'
+    def __init__(self, audio_meta, data):
+        super(BeatPLPIteartor, self).__init__(audio_meta, data)
+
+@MotorInvoker.register_vib_iterator
+class PitchIterator(SequenceIterator):
+    alias = 'pitch'
+    def __init__(self, audio_meta, data):
+        super(PitchIterator, self).__init__(audio_meta, data)
+
+@MotorInvoker.register_vib_iterator
+class ChromaIterator(SequenceIterator):
+    alias = 'chroma'
+    def __init__(self, audio_meta, data):
+        super(ChromaIterator, self).__init__(audio_meta, data)
