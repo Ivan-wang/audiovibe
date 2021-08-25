@@ -142,4 +142,5 @@ class BoardProcess(multiprocessing.Process):
                 drv.play()
 
         # drv.close()
+        drv._write_u8(0x01,0)
         self.board_off.set()
