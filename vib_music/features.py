@@ -180,19 +180,21 @@ def pitchpyin(audio, sr, len_hop, len_window=2048, fmin='C2', fmax='C7'):
     return ret
 
 @LibrosaContext.register_vib_meta_stg
-def chromastft(audio, sr, len_hop, len_window=2048):
+def chromastft(audio, sr, len_hop, len_window=2048, n_chroma=12, tuning=0.0):
     len_window = int(len_window)
-    chroma = librosa.feature.chroma_stft(y=audio, sr=sr, n_fft=len_window)
+    chroma = librosa.feature.chroma_stft(y=audio, sr=sr, n_fft=len_window,
+        n_chroma=n_chroma, tuning=tuning)
     chroma = chroma.T # use time at first axis
 
     ret = {'len_hop': len_hop, 'len_window': len_window, 'data': chroma}
     return ret
 
 @LibrosaContext.register_vib_meta_stg
-def chromacqt(audio, sr, len_hop, fmin='C1'):
+def chromacqt(audio, sr, len_hop, fmin='C1', n_chroma=12, tuning=0.0):
     # len_window = int(len_window)
     fmin = librosa.note_to_hz(fmin)
-    chroma = librosa.feature.chroma_cqt(y=audio, sr=sr, fmin=fmin)
+    chroma = librosa.feature.chroma_cqt(y=audio, sr=sr, fmin=fmin,
+        n_chroma=n_chroma, tuning=tuning)
     chroma = chroma.T # use time at first axis
 
     ret = {'len_hop': len_hop, 'fmin': fmin, 'data': chroma}

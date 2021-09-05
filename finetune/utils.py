@@ -1,4 +1,6 @@
 import sys
+
+from numpy import double
 sys.path.append('..')
 
 import argparse
@@ -35,6 +37,8 @@ def tune_pitch_parser(base_parser=None):
     p.add_argument('--len-window', type=int, default=2048)
     p.add_argument('--fmin', type=str, default='C2')
     p.add_argument('--fmax', type=str, default='C7')
+    p.add_argument('--n-chroma', type=int, default=12)
+    p.add_argument('--tuning', type=double, default=0.0)
     p.add_argument('--yin-thres', type=float, default=0.8)
 
     return p

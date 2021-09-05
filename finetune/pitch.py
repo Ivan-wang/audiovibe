@@ -82,11 +82,15 @@ def main():
         elif opt.chroma:
             if opt.chroma_alg == 'stft':
                 librosa_cfg['stgs']['chromastft'] = {
-                    'len_window': opt.len_window
+                    'len_window': opt.len_window,
+                    'n_chroma': opt.n_chroma,
+                    'tuning': opt.tuning
                 }
             elif opt.chroma_alg == 'cqt':
                 librosa_cfg['stgs']['chromacqt'] = {
-                    'fmin': opt.fmin
+                    'fmin': opt.fmin,
+                    'n_chroma': opt.n_chroma,
+                    'tuning': opt.tuning,
                 }
             else:
                 logger.error(f'Unknown chroma extraction algorithm {opt.chroma_alg}')

@@ -8,7 +8,7 @@ def list_librosa_context():
     print(f'Available Librosa Strategies : {ks}')
     print(f'Available Librosa Meta Strategies : {meta_ks}')
 
-from .MotorInvoker import MotorInvoker
+from .invoker import MotorInvoker
 def list_matplotlib_invoker():
     ks = list(MotorInvoker.motor_t)
 
