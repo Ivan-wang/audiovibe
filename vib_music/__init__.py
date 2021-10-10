@@ -1,10 +1,10 @@
 from .features import LibrosaContext
-from .invoker import MotorInvoker
+from .FeatureManager import FeatureManager
 from .processes import AudioProcess
-from .processes import MotorProcess
 from .processes import BoardProcess
 
-from .motors import *
-from .VibIterator import *
-
 from .plot import PlotContext
+
+from .drivers import VibrationDriver
+from .drivers import DR2605Driver
+from .drivers import SquareWaveDriver
