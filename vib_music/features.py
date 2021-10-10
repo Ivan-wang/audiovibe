@@ -3,7 +3,7 @@ import pickle
 import librosa
 import numpy as np
 
-from .config import BASE_HOP_LEN
+from .misc import BASE_HOP_LEN
 
 # Strategy Pattern
 class LibrosaContext(object):

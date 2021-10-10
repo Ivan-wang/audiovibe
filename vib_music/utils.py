@@ -28,7 +28,7 @@ else:
     AUDIO_RUNTIME_READY = True
 
 from .processes import AudioProcess
-def get_audio_process(audio, frame_len, sem):
+def get_audio_process(audio, frame_len, sem, vib_sim=None):
     if not AUDIO_RUNTIME_READY:
         print('cannot import audio libs.')
         return None
@@ -39,7 +39,7 @@ def get_audio_process(audio, frame_len, sem):
         print('cannot open audio file.')
         return None
 
-    return AudioProcess(wf, frame_len, sem)
+    return AudioProcess(wf, frame_len, sem, vib_sim)
 
 from .processes import BoardProcess
 from .drivers import DR2605Driver, SquareWaveDriver, VibrationDriver
@@ -98,6 +98,15 @@ def launch_vibration(audio, feature_dir, mode, driver):
 
     board_proc.join()
     audio_proc.join()
+
+from .plot import PlotManager
+def launch_plotting(audio, feature_dir, mode, plots):
+    fm = FeatureManager.from_folder(feature_dir, mode)
+    if fm is None:
+        print('cannot create feature manager')
+        return
+    ctx = PlotManager(audio, fm, plots)
+    ctx.save_plots()
 
 if __name__ == '__main__':
     list_librosa_context()

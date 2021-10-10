@@ -1,12 +1,10 @@
-from typing import Tuple
+import os
 import numpy as np
-from numpy.core.shape_base import stack
 from utils import tune_beat_parser
 from utils import _main
 
-from vib_music import FeatureManager, features
-from vib_music.config import init_board_invoker_config
-from vib_music.config import init_vibration_extraction_config
+from vib_music import FeatureManager
+from vib_music.misc import init_vibration_extraction_config
 
 @FeatureManager.vibration_mode
 def beatplp_drv2605(fm:FeatureManager) -> np.ndarray:
@@ -14,7 +12,7 @@ def beatplp_drv2605(fm:FeatureManager) -> np.ndarray:
     bins = np.linspace(0., 1., 255, endpoint=True)
     amp = np.digitize(pulse, bins).astype(np.uint8)
     freq = np.ones_like(amp, dtype=np.uint8) * 64
-    vibration = np.stack([amp, freq], stack=-1)
+    vibration = np.stack([amp, freq], axis=-1)
     return vibration
 
 @FeatureManager.vibration_mode
@@ -44,10 +42,7 @@ def main():
 
     if opt.plot:
         plot_config = {
-            'datadir': opt.data_dir,
-            'audio': opt.audio,
-            'vib_mode_func': beatplp_drv2605,
-            'plots': ['beatplp']
+            'plots': ['melspec', 'beatplp', 'vibration_drv2605']
         }
 
     _main(opt, 'beatplp_drv2605', 'drv2605', librosa_config, plot_config)

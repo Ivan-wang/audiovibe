@@ -5,7 +5,7 @@ import math
 import numpy as np
 
 class FeatureManager(object):
-    vibration_mode = {}
+    vibration_mode_func = {}
     # def __init__(self, num_frame, vib_iterators, motors):
     def __init__(self, meta, features, mode):
         self.meta = meta
@@ -13,8 +13,8 @@ class FeatureManager(object):
         self.mode = mode
 
     def vibration_sequence(self):
-        if self.mode in FeatureManager.vibration_mode:
-            return FeatureManager.vibration_mode[self.mode](self.features)
+        if self.mode in FeatureManager.vibration_mode_func:
+            return FeatureManager.vibration_mode_func[self.mode](self)
         else:
             raise KeyError('unknown vibration mode')
 
@@ -38,9 +38,9 @@ class FeatureManager(object):
 
     @classmethod
     def vibration_mode(cls, mode_func):
-        if mode_func.__name__ in cls.vibration_mode:
+        if mode_func.__name__ in cls.vibration_mode_func:
             raise KeyError('Cannot register duplicated vibration mode {mode_func.__name__}')
-        cls.vibration_mode.update({
+        cls.vibration_mode_func.update({
             mode_func.__name__: mode_func
         })
         return mode_func
