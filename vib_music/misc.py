@@ -1,10 +1,9 @@
 import yaml
-
 from collections import OrderedDict
 
 BASE_HOP_LEN = 512
 
-def init_board_invoker_config(save=None):
+def init_driver_config(save=None):
     config = OrderedDict()
     config['version'] = 0.2
     config['audio'] = None

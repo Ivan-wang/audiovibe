@@ -45,12 +45,9 @@ def tune_pitch_parser(base_parser=None):
 
 from vib_music import LibrosaContext
 from vib_music import PlotContext
-from vib_music import MotorInvoker
-from vib_music import AudioProcess, MotorProcess, BoardProcess
+from vib_music import launch_vibration
 
-def _main(opt, librosa_cfg=None, invoker_cfg=None, plot_cfg=None):
-    logger = logging.getLogger('finetune')
-
+def _main(opt, mode, driver, librosa_cfg, plot_cfg):
     if opt.task == 'run' or opt.task == 'build':
         ctx = LibrosaContext.from_config(librosa_cfg)
         ctx.save_features(root=opt.data_dir)
@@ -60,25 +57,4 @@ def _main(opt, librosa_cfg=None, invoker_cfg=None, plot_cfg=None):
         ctx.save_plots()
 
     if opt.task == 'run' or opt.task == 'play':
-        invoker = MotorInvoker.from_config(invoker_cfg)
-        if invoker is None:
-            logger.error('invoker start failure, exit...')
-            return
-
-        logger.info('initializing processes...')
-        audio_proc = AudioProcess(opt.audio, opt.len_hop)
-        motor_proc = MotorProcess(invoker)
-        board_proc = BoardProcess()
-
-        motor_proc.attach(audio_proc)
-        board_proc.attach(audio_proc, motor_proc)
-
-        logger.info('start process...')
-        board_proc.start()
-        motor_proc.start()
-        audio_proc.start()
-
-        audio_proc.join()
-        motor_proc.join()
-        board_proc.join()
-        logger.info('all processes joined. exit...')
+        launch_vibration(opt.audio, opt.data_dir, mode, driver)

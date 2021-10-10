@@ -4,16 +4,16 @@ from typing import Tuple
 import numpy as np
 
 from utils import tune_pitch_parser, _main
-from vib_music import MotorInvoker
+from vib_music import FeatureManager
 from vib_music.config import init_board_invoker_config
 from vib_music.config import init_vibration_extraction_config
 
-@MotorInvoker.register_vibration_mode
-def handle_pitch(bundle: dict) -> Tuple[np.ndarray, np.ndarray]:
-    if 'pitchyin' in bundle:
-        pitch = bundle['pitchyin']['data']
+@FeatureManager.vibration_mode
+def pitch_drv2605(fm: FeatureManager) -> np.ndarray:
+    if 'pitchyin' in fm.feature_names():
+        pitch = fm.feature_data('pitchyin')
     else:
-        pitch = bundle['pitchpyin']['data']
+        pitch = fm.feature_data('pitchpyin')
 
     # pitch:
     # shape: [num frame x 1]
@@ -21,14 +21,14 @@ def handle_pitch(bundle: dict) -> Tuple[np.ndarray, np.ndarray]:
     amp = np.ones_like(pitch).astype(np.uint8) * 128
     freq = np.ones_like(pitch).astype(np.uint8) * 64
 
-    return amp, freq
+    return np.stack([amp, freq], axis=-1)
 
-@MotorInvoker.register_vibration_mode
-def handle_chroma(bundle: dict) -> Tuple[np.ndarray, np.ndarray]:
-    if 'chromastft' in bundle:
-        chroma = bundle['chromastft']['data']
+@FeatureManager.vibration_mode
+def chroma_drv2605(fm: FeatureManager) -> np.ndarray:
+    if 'chromastft' in fm.feature_names():
+        chroma = fm.feature_data('chromastft')
     else:
-        chroma = bundle['chromacqt']['data']
+        chroma = fm.feature_data('chromacqt')
 
     # chroma
     # shape: [num_frame x 12]
@@ -36,7 +36,38 @@ def handle_chroma(bundle: dict) -> Tuple[np.ndarray, np.ndarray]:
     amp = np.ones((chroma.shape[0],)).astype(np.uint8) * 128
     freq = np.ones((chroma.shape[0],)).astype(np.uint8) * 64
 
-    return amp, freq
+    return np.stack([amp, freq], axis=-1)
+
+@FeatureManager.vibration_mode
+def pitch_sw(fm: FeatureManager) -> np.ndarray:
+    if 'pitchyin' in fm.feature_names():
+        pitch = fm.feature_data('pitchyin')
+    else:
+        pitch = fm.feature_data('pitchpyin')
+
+    # pitch:
+    # shape: [num frame x 1]
+    # each entry is the estiamte base frequency of the frame
+
+    frame_len = fm.frame_len()
+    sample_len = fm.sample_len()
+    num_frame = (sample_len+frame_len-1) // frame_len
+    return np.zeros((num_frame, 3), dtype=np.uint8)
+
+@FeatureManager.vibration_mode
+def chroma_sw(fm: FeatureManager) -> np.ndarray:
+    if 'chromastft' in fm.feature_names():
+        chroma = fm.feature_data('chromastft')
+    else:
+        chroma = fm.feature_data('chromacqt')
+
+    # chroma
+    # shape: [num_frame x 12]
+    #
+    frame_len = fm.frame_len()
+    sample_len = fm.sample_len()
+    num_frame = (sample_len+frame_len-1) // frame_len
+    return np.zeros((num_frame, 3), dtype=np.uint8)
 
 def main():
     p = tune_pitch_parser()
@@ -102,21 +133,11 @@ def main():
         plot_cfg = {
             'datadir': opt.data_dir,
             'audio': opt.audio,
-            'vib_mode_func': handle_pitch if opt.pitch else handle_chroma,
+            'vib_mode_func': pitch_drv2605 if opt.pitch else chroma_drv2605,
             'plots': ['pitch' if opt.pitch else 'chroma']
         }
 
-    if opt.task in ['run', 'play']:
-        invoker_cfg = init_board_invoker_config()
-        invoker_cfg['audio'] = opt.audio
-        invoker_cfg['datadir'] = opt.data_dir
-        invoker_cfg['motors'] = [
-            ('console', {'show_none':True, 'show_frame': True}),
-            ('board', {})
-        ]
-        invoker_cfg['vib_mode'] = 'handle_pitch' if opt.pitch else 'handle_chroma'
-    logger.info('Done!')
-
-    _main(opt, librosa_cfg, invoker_cfg, plot_cfg)
+    vib_mode = 'pitch_drv2605' if opt.pitch else 'chroma_drv2605'
+    _main(opt, vib_mode, 'drv2605', librosa_cfg, plot_cfg)
 
 main()
