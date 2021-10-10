@@ -43,9 +43,9 @@ class AudioProcess(multiprocessing.Process):
         from pyaudio import PyAudio
         audio = PyAudio()
         self.stream = audio.open(
-            format=audio.get_format_from_width(self.wf.getsampwidth()),
-            channels = self.wf.getnchannels(),
-            rate=self.wf.getframerate(),
+            format=audio.get_format_from_width(self.wavefile.getsampwidth()),
+            channels = self.wavefile.getnchannels(),
+            rate=self.wavefile.getframerate(),
             output=True
         )
 
@@ -63,13 +63,15 @@ class AudioProcess(multiprocessing.Process):
         while True:
             data = self.wavefile.readframes(self.frame_len)
             if len(data) > 0:
-                self.vib_sem.release() # release data here
+                # release to vibration process
+                self.vib_sem.release()
+                # release to main process
                 if self.proc_sem is not None: self.proc_sem.release()
                 if self.stream is not None: self.stream.write(data)
             else:
                 break
 
-        self.frame.release()
+        self.proc_sem.release()
         print('audio playing exit...')
         self._clean_stream()
 
@@ -84,10 +86,9 @@ class BoardProcess(multiprocessing.Process):
         # self.driver.on_start()
         update = False
         while self.driver.on_running(update):
-            if self.sem.locked():
-                update = False
-            else:
-                self.sem.acquire()
+            if self.sem.acquire(block=False):
                 update = True
+            else:
+                update = False
 
         self.driver.on_close()
