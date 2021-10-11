@@ -1,12 +1,8 @@
-import logging
-import sys
-from typing import Tuple
 import numpy as np
 
 from utils import tune_pitch_parser, _main
 from vib_music import FeatureManager
-from vib_music.config import init_board_invoker_config
-from vib_music.config import init_vibration_extraction_config
+from vib_music.misc import init_vibration_extraction_config
 
 @FeatureManager.vibration_mode
 def pitch_drv2605(fm: FeatureManager) -> np.ndarray:
@@ -45,10 +41,6 @@ def pitch_sw(fm: FeatureManager) -> np.ndarray:
     else:
         pitch = fm.feature_data('pitchpyin')
 
-    # pitch:
-    # shape: [num frame x 1]
-    # each entry is the estiamte base frequency of the frame
-
     frame_len = fm.frame_len()
     sample_len = fm.sample_len()
     num_frame = (sample_len+frame_len-1) // frame_len
@@ -61,9 +53,6 @@ def chroma_sw(fm: FeatureManager) -> np.ndarray:
     else:
         chroma = fm.feature_data('chromacqt')
 
-    # chroma
-    # shape: [num_frame x 12]
-    #
     frame_len = fm.frame_len()
     sample_len = fm.sample_len()
     num_frame = (sample_len+frame_len-1) // frame_len
@@ -72,23 +61,11 @@ def chroma_sw(fm: FeatureManager) -> np.ndarray:
 def main():
     p = tune_pitch_parser()
     opt = p.parse_args()
-
-    logger = logging.getLogger('finetune')
-    logger.setLevel(logging.INFO)
-    ch = logging.StreamHandler(sys.stdout)
-    ch.setLevel(logging.INFO)
-    formatter = logging.Formatter('[%(asctime)s][%(name)s][%(levelname)s][%(message)s]')
-    ch.setFormatter(formatter)
-    logger.addHandler(ch)
-
-    logger.info('commond line arguments:')
-    logger.info(opt)
+    print(opt)
 
     librosa_cfg = None
     plot_cfg = None
-    invoker_cfg = None
 
-    logger.info('building configure...')
     if opt.task in ['run', 'build']:
         librosa_cfg = init_vibration_extraction_config()
         librosa_cfg['audio'] = opt.audio
@@ -108,7 +85,7 @@ def main():
                     'thres': opt.yin_thres
                 }
             else:
-                logger.error(f'Unknown pitch axtraction algorithm {opt.pitch_alg}')
+                print(f'Unknown pitch axtraction algorithm {opt.pitch_alg}')
                 return
         elif opt.chroma:
             if opt.chroma_alg == 'stft':
@@ -124,17 +101,15 @@ def main():
                     'tuning': opt.tuning,
                 }
             else:
-                logger.error(f'Unknown chroma extraction algorithm {opt.chroma_alg}')
+                print(f'Unknown chroma extraction algorithm {opt.chroma_alg}')
         else:
-            logger.error('Use --pitch or --chroma to finetune the picth features')
+            print('Use --pitch or --chroma to finetune the picth features')
             return
 
     if opt.plot:
+        feature = 'pitch' if opt.pitch else 'chroma'
         plot_cfg = {
-            'datadir': opt.data_dir,
-            'audio': opt.audio,
-            'vib_mode_func': pitch_drv2605 if opt.pitch else chroma_drv2605,
-            'plots': ['pitch' if opt.pitch else 'chroma']
+            'plots': ['melspec', feature, 'vibration_drv2605']
         }
 
     vib_mode = 'pitch_drv2605' if opt.pitch else 'chroma_drv2605'

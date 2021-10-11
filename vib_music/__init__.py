@@ -1,4 +1,4 @@
-from .features import LibrosaContext
+from .features import FeatureExtractionManager
 from .FeatureManager import FeatureManager
 from .processes import AudioProcess
 from .processes import BoardProcess

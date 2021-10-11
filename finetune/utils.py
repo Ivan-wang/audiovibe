@@ -44,19 +44,19 @@ def tune_pitch_parser(base_parser=None):
 
     return p
 
-from vib_music import LibrosaContext
+from vib_music import FeatureExtractionManager
 from vib_music import launch_vibration
 from vib_music import launch_plotting
 
 def _main(opt, mode, driver, librosa_cfg, plot_cfg):
-    # if opt.task == 'run' or opt.task == 'build':
-    #     ctx = LibrosaContext.from_config(librosa_cfg)
-    #     ctx.save_features(root=opt.data_dir)
+    if opt.task == 'run' or opt.task == 'build':
+        ctx = FeatureExtractionManager.from_config(librosa_cfg)
+        ctx.save_features(root=opt.data_dir)
 
     feature_folder = os.path.basename(opt.audio).split('.')[0]
     feature_folder = os.path.join(opt.data_dir, feature_folder)
-    # if opt.plot and plot_cfg is not None:
-    #     launch_plotting(opt.audio, feature_folder, mode, plot_cfg['plots'])
+    if opt.plot and plot_cfg is not None:
+        launch_plotting(opt.audio, feature_folder, mode, plot_cfg['plots'])
 
     if opt.task == 'run' or opt.task == 'play':
         launch_vibration(opt.audio, feature_folder, mode, driver)

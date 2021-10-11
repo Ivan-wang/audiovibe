@@ -1,4 +1,3 @@
-import os
 import numpy as np
 from utils import tune_beat_parser
 from utils import _main

@@ -6,7 +6,7 @@ import numpy as np
 from .misc import BASE_HOP_LEN
 
 # Strategy Pattern
-class LibrosaContext(object):
+class FeatureExtractionManager(object):
     stg_meta_funcs = {}
     stg_funcs = {}
     def __init__(self, audio=None, sr=None, len_hop=BASE_HOP_LEN, stg={}):
@@ -27,15 +27,15 @@ class LibrosaContext(object):
         self.stg = [self._init_stg(s, v) for s, v in stg.items()]
 
     def _init_stg(self, stg, kwargs):
-        if stg in LibrosaContext.stg_funcs:
-            return LibrosaContext.stg_funcs[stg]
+        if stg in FeatureExtractionManager.stg_funcs:
+            return FeatureExtractionManager.stg_funcs[stg]
 
         stg_name = stg
         if 'len_hop' not in kwargs:
             kwargs['len_hop'] = self.len_hop
 
-        if stg_name in LibrosaContext.stg_meta_funcs:
-            func = LibrosaContext.stg_meta_funcs[stg_name]
+        if stg_name in FeatureExtractionManager.stg_meta_funcs:
+            func = FeatureExtractionManager.stg_meta_funcs[stg_name]
             def wfunc(autio, sr):
                 return func(autio, sr, **kwargs)
             wfunc.__name__ = stg
@@ -118,7 +118,7 @@ class LibrosaContext(object):
         cls.stg_meta_funcs.update({func.__name__: func})
         return func
 
-@LibrosaContext.register_vib_meta_stg
+@FeatureExtractionManager.register_vib_meta_stg
 def beatplp(audio, sr, len_hop, len_frame=300, tempo_min=30, tempo_max=300):
     len_frame = int(len_frame)
     tempo_min = int(tempo_min)
@@ -135,7 +135,7 @@ def beatplp(audio, sr, len_hop, len_frame=300, tempo_min=30, tempo_max=300):
 
     return ret
 
-@LibrosaContext.register_vib_meta_stg
+@FeatureExtractionManager.register_vib_meta_stg
 def rmse(audio, sr, len_hop, len_window=2048):
     len_window = int(len_window)
 
@@ -146,7 +146,7 @@ def rmse(audio, sr, len_hop, len_window=2048):
 
     return ret
 
-@LibrosaContext.register_vib_meta_stg
+@FeatureExtractionManager.register_vib_meta_stg
 def pitchyin(audio, sr, len_hop, len_window=2048, fmin='C2', fmax='C7', thres=0.8):
     len_window = int(len_window)
     thres = float(thres)
@@ -163,7 +163,7 @@ def pitchyin(audio, sr, len_hop, len_window=2048, fmin='C2', fmax='C7', thres=0.
         'thres': thres, 'data': f0}
     return ret
 
-@LibrosaContext.register_vib_meta_stg
+@FeatureExtractionManager.register_vib_meta_stg
 def pitchpyin(audio, sr, len_hop, len_window=2048, fmin='C2', fmax='C7'):
     len_window = int(len_window)
 
@@ -179,7 +179,7 @@ def pitchpyin(audio, sr, len_hop, len_window=2048, fmin='C2', fmax='C7'):
         'data': f0}
     return ret
 
-@LibrosaContext.register_vib_meta_stg
+@FeatureExtractionManager.register_vib_meta_stg
 def chromastft(audio, sr, len_hop, len_window=2048, n_chroma=12, tuning=0.0):
     len_window = int(len_window)
     chroma = librosa.feature.chroma_stft(y=audio, sr=sr, n_fft=len_window,
@@ -189,7 +189,7 @@ def chromastft(audio, sr, len_hop, len_window=2048, n_chroma=12, tuning=0.0):
     ret = {'len_hop': len_hop, 'len_window': len_window, 'data': chroma}
     return ret
 
-@LibrosaContext.register_vib_meta_stg
+@FeatureExtractionManager.register_vib_meta_stg
 def chromacqt(audio, sr, len_hop, fmin='C1', n_chroma=12, tuning=0.0):
     # len_window = int(len_window)
     fmin = librosa.note_to_hz(fmin)
@@ -215,6 +215,6 @@ if __name__ == '__main__':
     # config['stgs']['rmse'] = {'len_window': 1024}
 
     # initial cxt from config
-    ctx = LibrosaContext.from_config(config)
+    ctx = FeatureExtractionManager.from_config(config)
     features = ctx.audio_features()
     ctx.save_features()

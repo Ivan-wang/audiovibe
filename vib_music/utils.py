@@ -1,9 +1,9 @@
 import multiprocessing
-from .features import LibrosaContext
+from .features import FeatureExtractionManager
 
 def list_librosa_context():
-    ks = list(LibrosaContext.stg_funcs.keys())
-    meta_ks = list(LibrosaContext.stg_meta_funcs.keys())
+    ks = list(FeatureExtractionManager.stg_funcs.keys())
+    meta_ks = list(FeatureExtractionManager.stg_meta_funcs.keys())
 
     print(f'Available Librosa Strategies : {ks}')
     print(f'Available Librosa Meta Strategies : {meta_ks}')
