@@ -1,4 +1,7 @@
+import os
 import sys
+
+from numpy import double
 sys.path.append('..')
 
 import argparse
@@ -35,43 +38,25 @@ def tune_pitch_parser(base_parser=None):
     p.add_argument('--len-window', type=int, default=2048)
     p.add_argument('--fmin', type=str, default='C2')
     p.add_argument('--fmax', type=str, default='C7')
+    p.add_argument('--n-chroma', type=int, default=12)
+    p.add_argument('--tuning', type=double, default=0.0)
     p.add_argument('--yin-thres', type=float, default=0.8)
 
     return p
 
-from vib_music import LibrosaContext
-from vib_music import PlotContext
-from vib_music import MotorInvoker
-from vib_music import AudioProcess, MotorProcess, BoardProcess
+from vib_music import FeatureExtractionManager
+from vib_music import launch_vibration
+from vib_music import launch_plotting
 
-def _main(opt, librosa_cfg=None, invoker_cfg=None, plot_cfg=None):
-    logger = logging.getLogger('finetune')
-
+def _main(opt, mode, driver, librosa_cfg, plot_cfg):
     if opt.task == 'run' or opt.task == 'build':
-        ctx = LibrosaContext.from_config(librosa_cfg)
+        ctx = FeatureExtractionManager.from_config(librosa_cfg)
         ctx.save_features(root=opt.data_dir)
 
+    feature_folder = os.path.basename(opt.audio).split('.')[0]
+    feature_folder = os.path.join(opt.data_dir, feature_folder)
     if opt.plot and plot_cfg is not None:
-        ctx = PlotContext(**plot_cfg)
-        ctx.save_plots()
+        launch_plotting(opt.audio, feature_folder, mode, plot_cfg['plots'])
 
     if opt.task == 'run' or opt.task == 'play':
-        invoker = MotorInvoker.from_config(invoker_cfg)
-
-        logger.info('initializing processes...')
-        audio_proc = AudioProcess(opt.audio, opt.len_hop)
-        motor_proc = MotorProcess(invoker)
-        board_proc = BoardProcess()
-
-        motor_proc.attach(audio_proc)
-        board_proc.attach(audio_proc, motor_proc)
-
-        logger.info('start process...')
-        board_proc.start()
-        motor_proc.start()
-        audio_proc.start()
-
-        audio_proc.join()
-        motor_proc.join()
-        board_proc.join()
-        logger.info('all processes joined. exit...')
+        launch_vibration(opt.audio, feature_folder, mode, driver)
