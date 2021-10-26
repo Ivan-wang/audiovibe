@@ -7,7 +7,7 @@ from .plot import PlotManager
 
 from .drivers import VibrationDriver
 from .drivers import DR2605Driver
-from .drivers import SquareWaveDriver
+from .drivers import AdcDriver
 
 from .utils import launch_vibration
 from .utils import launch_plotting

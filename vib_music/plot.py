@@ -125,6 +125,18 @@ def vibration_drv2605(ax, audio, fm:FeatureManager):
     ax.legend()
 
 @PlotManager.plot
+def vibration_adc(ax, audio, fm:FeatureManager):
+    sr = fm.sample_rate()
+    hop_len = fm.frame_len()
+    vibration_seq = fm.vibration_sequence()
+    times = librosa.times_like(vibration_seq, sr=sr, 
+        hop_length=hop_len)
+    ax.plot(times, vibration_seq, label='Sigmal AMP')
+    ax.set(title='ADC Vibration Signals')
+    ax.set_xlim(xmin=0, xmax=times[-1])
+    ax.legend()
+
+@PlotManager.plot
 def pitch(ax, audio, fm:FeatureManager):
     sr = fm.sample_rate()
     hop_len = fm.frame_len()

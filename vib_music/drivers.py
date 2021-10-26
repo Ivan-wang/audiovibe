@@ -23,15 +23,11 @@ class VibrationDriver(abc.ABC):
     def on_close(self):
         return
 
-DRV2605_ENV_READY = False
-try:
+from .env import DRV2605_ENV_READY
+if DRV2605_ENV_READY:
     import board
     import busio
     import adafruit_drv2605
-except ImportError:
-    pass
-else:
-    DRV2605_ENV_READY = True
 
 class DR2605Driver(VibrationDriver):
     def __init__(self, vibrations) -> None:
@@ -66,24 +62,17 @@ class DR2605Driver(VibrationDriver):
     def on_close(self):
         self.device._write_u8(0x01, 0)
 
-SQUARE_WAVE_ENV_READY = False
-try:
+from .env import ADC_ENV_READY
+if ADC_ENV_READY:
     import smbus
-except ImportError:
-    pass
-else:
-    SQUARE_WAVE_ENV_READY = True
 
-import time
-class SquareWaveDriver(VibrationDriver):
+class AdcDriver(VibrationDriver):
     def __init__(self, vibration_data=None) -> None:
         super().__init__(vibration_data=vibration_data)
-
         self.amp = 0
-        self.act_time = 0
-        self.cycle_time = 0
+
     def on_start(self):
-        if SQUARE_WAVE_ENV_READY:
+        if ADC_ENV_READY:
             self.device = smbus.SMBus(1)
             return True
         else:
@@ -92,11 +81,8 @@ class SquareWaveDriver(VibrationDriver):
     def on_running(self, update=False):
         if update:
             try:
-                self.amp, self.act_time, self.cycle_time = next(self.vibration_iter)
+                self.amp = next(self.vibration_iter)
             except StopIteration:
                 return False
         self.device.write_byte_data(0x48, 0x40, self.amp)
-        time.sleep(self.activate)
-        self.device.write_byte_data(0x48, 0x40, 0)
-        time.sleep(self.cycle-self.activate)
         return True

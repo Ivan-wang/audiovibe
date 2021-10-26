@@ -1,33 +1,10 @@
 import wave
 import multiprocessing
 
-AUDIO_RUNTIME_READY = False
-try:
-    import pyaudio
-except ImportError:
-    AUDIO_RUNTIME_READY = False
-else:
-    AUDIO_RUNTIME_READY = True
+from .env import AUDIO_RUNTIME_READY
+
+if AUDIO_RUNTIME_READY:
     from pyaudio import PyAudio
-
-
-DRV2605_ENV_READY = False
-try:
-    import board
-    import busio
-    import adafruit_drv2605
-except ImportError:
-    pass
-else:
-    DRV2605_ENV_READY = True
-
-SQUARE_WAVE_ENV_READY = False
-try:
-    import smbus
-except ImportError:
-    pass
-else:
-    SQUARE_WAVE_ENV_READY = True
 
 class AudioProcess(multiprocessing.Process):
     def __init__(self, wavefile, frame_len, vib_sem, proc_sem=None):

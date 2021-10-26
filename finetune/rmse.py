@@ -6,10 +6,15 @@ from vib_music import FeatureManager
 from vib_music.misc import init_vibration_extraction_config
 
 @FeatureManager.vibration_mode
-def rmse_drv2605(fm:FeatureManager) -> np.ndarray:
+def rmse_voltage(fm:FeatureManager) -> np.ndarray:
     rmse = fm.feature_data('rmse')
-
-    return np.zeros((2, rmse.shape[0]), dtype=np.uint8)
+    rmse = (rmse-rmse.min()) / (rmse.max()-rmse.min())
+    rmse = rmse * 0.5 + 0.5
+    
+    bins = np.linspace(0.5, 1., 128, endpoint=True)
+    level = np.digitize(rmse, bins).astype(np.uint8) + 60
+    # level[level < 60] = 60
+    return level
 
 def main():
     p = tune_rmse_parser()
@@ -29,9 +34,9 @@ def main():
 
     if opt.plot:
         plot_config = {
-            'plots': ['waveform', 'wavermse']
+            'plots': ['waveform', 'wavermse', 'vibration_adc']
         }
 
-    _main(opt, 'rmse_drv2605', 'drv2605', librosa_config, plot_config)
+    _main(opt, 'rmse_voltage', 'adc', librosa_config, plot_config)
 
 main()
