@@ -39,18 +39,52 @@ class PlotManager(object):
         return func
 
 @PlotManager.plot
+def waveform(ax, audio, fm:FeatureManager):
+    sr = fm.sample_rate()
+    librosa.display.waveplot(audio, sr=sr, ax=ax)
+    ax.set_title('Time Domain Waveform')
+
+@PlotManager.plot
+def wavermse(ax, audio, fm:FeatureManager):
+    sr = fm.sample_rate()
+    hop_len = fm.frame_len()
+
+    librosa.display.waveplot(audio, sr=sr, ax=ax)
+
+    rmse = fm.feature_data('rmse')
+    times = librosa.times_like(rmse, sr=sr, hop_length=hop_len)
+
+    ax.plot(times, rmse, 'r')
+    ax.set_xlim(xmin=0, xmax=times[-1])
+    ax.set_title('RMSE Waveform')
+
+@PlotManager.plot
 def melspec(ax, audio, fm:FeatureManager):
     # recover feature extraction environment
     sr = fm.sample_rate()
     hop_len = fm.frame_len()
-    # mel-spectrogram for reference
-    melspec = librosa.feature.melspectrogram(y=audio, sr=sr, hop_length=hop_len)
+
+    melspec = fm.feature_data('melspec')
+    if melspec is not None:
+        fmax = fm.feature_data('melspec', 'fmax')
+    else:
+        # melspec is not one of the features
+        melspec = librosa.feature.melspectrogram(y=audio, sr=sr, hop_length=hop_len)
+        fmax = None
 
     librosa.display.specshow(
-        librosa.power_to_db(melspec, ref=np.max), sr=sr,
+        librosa.power_to_db(melspec, ref=np.max), sr=sr, fmax=fmax,
             x_axis='time', y_axis='mel', ax=ax)
     ax.set(title='Mel spectrogram')
     ax.label_outer()
+
+@PlotManager.plot
+def contrastspec(ax, audio, fm:FeatureManager):
+    constrast = fm.feature_data('contrastspec')
+    librosa.display.specshow(
+        constrast, x_axis='time', ax=ax
+    )
+    ax.set(ylabel='Frequency bands', title='Spectral Contrast')
 
 @PlotManager.plot
 def beatplp(ax, audio, fm:FeatureManager):
@@ -85,8 +119,9 @@ def vibration_drv2605(ax, audio, fm:FeatureManager):
     amp, freq = vibration_seq[:, 0], vibration_seq[:, 1]
     times = librosa.times_like(amp, sr=sr, hop_length=hop_len)
     ax.plot(times, amp, label='Vibration AMP')
-    ax.plot(times, freq, label='Vibration FREQ')
+    ax.plot(times, freq, 'bo', label='Vibration FREQ')
     ax.set(title='Vibration Signals')
+    ax.set_xlim(xmin=0, xmax=times[-1])
     ax.legend()
 
 @PlotManager.plot

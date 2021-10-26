@@ -5,7 +5,6 @@ from numpy import double
 sys.path.append('..')
 
 import argparse
-import logging
 
 def _base_arg_parser():
     p = argparse.ArgumentParser()
@@ -15,6 +14,22 @@ def _base_arg_parser():
     p.add_argument('--data-dir', type=str, default='.')
 
     p.add_argument('--plot', action='store_true')
+    return p
+
+def tune_melspec_parser(base_parser=None):
+    if base_parser is None:
+        p = _base_arg_parser()
+    p.add_argument('--len-window', type=int, default=2048)
+    p.add_argument('--n-mels', type=int, default=128)
+    p.add_argument('--fmax', type=int, default=-1)
+
+    return p
+
+def tune_rmse_parser(base_parser=None):
+    if base_parser is None:
+        p = _base_arg_parser()
+    p.add_argument('--len-window', type=int, default=2048)
+
     return p
 
 def tune_beat_parser(base_parser=None):

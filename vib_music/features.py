@@ -119,6 +119,38 @@ class FeatureExtractionManager(object):
         return func
 
 @FeatureExtractionManager.register_vib_meta_stg
+def melspec(audio, sr, len_hop, len_window=2048, n_mels=128, fmax=None):
+    mel = librosa.feature.melspectrogram(y=audio,
+        sr=sr, n_fft=len_window, hop_length=len_hop, n_mels=n_mels, fmax=fmax)
+    ret = {'len_window': len_window, 'n_mels': n_mels,
+        'fmax': fmax, 'data': mel
+    }
+    return ret
+
+@FeatureExtractionManager.register_vib_meta_stg
+def contrastspec(audio, sr, len_hop, len_window=2048, n_bands=6, band_width=200, use_linear=True):
+    contrast = librosa.feature.spectral_contrast(
+        y=audio, sr=sr, n_fft=len_window, hop_length=len_hop,
+        fmin=band_width, n_bands=n_bands, linear=use_linear
+    )
+    ret = {'len_window': len_window, 'n_bands': n_bands,
+        'band_width': 200, 'use_linear': use_linear, 'data': contrast
+    }
+    return ret
+
+@FeatureExtractionManager.register_vib_meta_stg
+def centroidspec(audio, sr, len_hop, len_window=2048, freqs=None):
+    centroid = librosa.feature.spectral_centroid(
+        y=audio, sr=sr, n_fft=len_window, hop_length=len_hop,
+        freq=freqs
+    )
+
+    ret = {'len_window': len_window, 'freqs': freqs,
+        'data': centroid
+    }
+    return ret
+
+@FeatureExtractionManager.register_vib_meta_stg
 def beatplp(audio, sr, len_hop, len_frame=300, tempo_min=30, tempo_max=300):
     len_frame = int(len_frame)
     tempo_min = int(tempo_min)
@@ -142,7 +174,7 @@ def rmse(audio, sr, len_hop, len_window=2048):
     mse = librosa.feature.rms(y=audio, frame_length=len_window,
         hop_length=len_hop, center=True)
     mse = mse.reshape((-1, ))
-    ret = {'len_hop': len_hop, 'len_frame': len_window, 'data': mse}
+    ret = {'len_frame': len_window, 'data': mse}
 
     return ret
 
