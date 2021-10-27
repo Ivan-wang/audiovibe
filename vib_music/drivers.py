@@ -84,5 +84,10 @@ class AdcDriver(VibrationDriver):
                 self.amp = next(self.vibration_iter)
             except StopIteration:
                 return False
-        self.device.write_byte_data(0x48, 0x40, self.amp)
+            else:
+                self.device.write_byte_data(0x48, 0x40, self.amp)
         return True
+
+    def on_close(self):
+        # close the device?
+        return

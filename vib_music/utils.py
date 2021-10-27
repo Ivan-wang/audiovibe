@@ -79,20 +79,21 @@ def launch_vibration(audio, feature_dir, mode, driver):
         print('initial audio process failed. exit...')
         return
 
-    # board_proc = get_board_process(driver, audio_sem)
-    # if board_proc is None:
-        # print('initial board process failed. exit...')
+    board_proc = get_board_process(driver, audio_sem)
+    if board_proc is None:
+        print('initial board process failed. exit...')
+        return
 
     # show prograss bar here
     sample_len = fm.sample_len()
     num_frame = (sample_len + frame_len - 1) // frame_len
 
-    # board_proc.start()
+    board_proc.start()
     audio_proc.start()
 
     show_proc_bar(num_frame, vib_sem)
 
-    # board_proc.join()
+    board_proc.join()
     audio_proc.join()
 
 from .plot import PlotManager
