@@ -10,11 +10,16 @@ def rmse_voltage(fm:FeatureManager) -> np.ndarray:
     rmse = fm.feature_data('rmse')
     rmse = (rmse-rmse.min()) / (rmse.max()-rmse.min())
     rmse = rmse * 0.5 + 0.5
-    
+
     bins = np.linspace(0.5, 1., 128, endpoint=True)
     level = np.digitize(rmse, bins).astype(np.uint8) + 60
-    # level[level < 60] = 60
-    return level
+
+    # mimic a square wave for each frame [x, x, x, x, 0, 0, 0, 0]
+    # when using 2D sequence, do not use plot function
+    level_zeros = np.zeros_like(level)
+    level_seq = np.stack([level]*4+[level_zeros]*4, axis=-1)
+
+    return level_seq
 
 def main():
     p = tune_rmse_parser()

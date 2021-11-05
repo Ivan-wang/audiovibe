@@ -3,10 +3,15 @@ import abc
 class VibrationDriver(abc.ABC):
     def __init__(self, vibration_data=None) -> None:
         super(VibrationDriver, self).__init__()
-        self.vibration_len = len(vibration_data)
-        self.vibration_iter = iter(vibration_data)
+        if vibration_data is None:
+            self.vibration_iter = None
+            self.vibration_len = 0
+        else:
+            self.vibration_len = len(vibration_data)
+            self.vibration_iter = iter(vibration_data)
 
         self.device = None
+        self.blocking = False
 
     def __len__(self):
         return self.vibration_len
@@ -66,12 +71,29 @@ from .env import ADC_ENV_READY
 if ADC_ENV_READY:
     import smbus
 
+# NOTE: each sample accept at most 8 operations
+import numpy as np
 class AdcDriver(VibrationDriver):
     def __init__(self, vibration_data=None) -> None:
+        if isinstance(vibration_data, np.ndarray):
+            if len(vibration_data.shape) > 2:
+                print(f'vibration data should be at most 2D but get {vibration_data.shape}')
+                vibration_data = None
+        else:
+            print(f'need a np.ndarray for vibration data but get {type(vibration_data)}')
+            vibration_data = None
         super().__init__(vibration_data=vibration_data)
+
         self.amp = 0
 
+        # when use a sequence for each frame, set blocking mode as true
+        if len(vibration_data.shape) > 2:
+            self.blocking = True
+
     def on_start(self):
+        if self.vibration_iter is None:
+            return False
+
         if ADC_ENV_READY:
             self.device = smbus.SMBus(1)
             return True
@@ -85,7 +107,13 @@ class AdcDriver(VibrationDriver):
             except StopIteration:
                 return False
             else:
-                self.device.write_byte_data(0x48, 0x40, self.amp)
+                if isinstance(self.amp, np.ndarray):
+                    for amp in self.amp[:8]:
+                        self.device.write_byte_data(0x48, 0x40, amp)
+                else:
+                    for _ in range(4):
+                        self.device.write_byte_data(0x48, 0x40, self.amp)
+                    self.device.write_byte_data(0x48, 0x40, 0)
         return True
 
     def on_close(self):

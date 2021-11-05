@@ -60,10 +60,11 @@ class BoardProcess(multiprocessing.Process):
         self.driver = driver
 
     def run(self):
-        self.driver.on_start()
+        # driver starting before creating the board process
+        # self.driver.on_start()
         update = False
         while self.driver.on_running(update):
-            if self.sem.acquire(block=False):
+            if self.sem.acquire(block=self.driver.blocking):
                 update = True
             else:
                 update = False
