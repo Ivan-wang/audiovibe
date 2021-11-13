@@ -84,11 +84,11 @@ class AdcDriver(VibrationDriver):
             vibration_data = None
         super().__init__(vibration_data=vibration_data)
 
-        self.amp = 0
+        # self.amp = 0
 
         # when use a sequence for each frame, set blocking mode as true
         if len(vibration_data.shape) > 2:
-            self.blocking = True
+            self.blocking = False
 
     def on_start(self):
         if self.vibration_iter is None:
@@ -103,16 +103,16 @@ class AdcDriver(VibrationDriver):
     def on_running(self, update=False):
         if update:
             try:
-                self.amp = next(self.vibration_iter)
+                amp = next(self.vibration_iter)
             except StopIteration:
                 return False
             else:
-                if isinstance(self.amp, np.ndarray):
-                    for amp in self.amp[:8]:
-                        self.device.write_byte_data(0x48, 0x40, amp)
+                if isinstance(amp, np.ndarray):
+                    for a in amp:
+                        self.device.write_byte_data(0x48, 0x40, a)
                 else:
                     for _ in range(4):
-                        self.device.write_byte_data(0x48, 0x40, self.amp)
+                        self.device.write_byte_data(0x48, 0x40, amp)
                     self.device.write_byte_data(0x48, 0x40, 0)
         return True
 
