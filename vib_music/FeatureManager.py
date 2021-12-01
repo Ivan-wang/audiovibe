@@ -34,7 +34,13 @@ class FeatureManager(object):
         return self.meta['vibrations']
 
     def feature_data(self, name, prop='data'):
-        return self.features[name][prop]
+        if name in self.features:
+            if prop in self.features[name]:
+                return self.features[name][prop]
+            else:
+                return None
+        else:
+            return None
 
     @classmethod
     def vibration_mode(cls, mode_func):

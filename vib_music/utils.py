@@ -18,16 +18,13 @@ def get_feature(features, k=None, prefix=None):
 
     return None
 
-AUDIO_RUNTIME_READY = False
-try:
+from .env import AUDIO_RUNTIME_READY
+from .processes import AudioProcess
+
+if AUDIO_RUNTIME_READY:
     import pyaudio
     import wave
-except ImportError:
-    AUDIO_RUNTIME_READY = False
-else:
-    AUDIO_RUNTIME_READY = True
 
-from .processes import AudioProcess
 def get_audio_process(audio, frame_len, sem, vib_sim=None):
     if not AUDIO_RUNTIME_READY:
         print('cannot import audio libs.')
@@ -42,7 +39,7 @@ def get_audio_process(audio, frame_len, sem, vib_sim=None):
     return AudioProcess(wf, frame_len, sem, vib_sim)
 
 from .processes import BoardProcess
-from .drivers import DR2605Driver, SquareWaveDriver, VibrationDriver
+from .drivers import DR2605Driver, AdcDriver, VibrationDriver
 def get_board_process(driver:VibrationDriver, sem):
     if not driver.on_start():
         print('cannot initialize board.')
@@ -67,8 +64,8 @@ def launch_vibration(audio, feature_dir, mode, driver):
 
     if driver == 'drv2605':
         driver = DR2605Driver(fm.vibration_sequence())
-    elif driver == 'squarewave':
-        driver = SquareWaveDriver(fm.vibration_sequence())
+    elif driver == 'adc':
+        driver = AdcDriver(fm.vibration_sequence())
     else:
         print(f'unknown driver {driver}. exit...')
         return
@@ -82,20 +79,21 @@ def launch_vibration(audio, feature_dir, mode, driver):
         print('initial audio process failed. exit...')
         return
 
-    # board_proc = get_board_process(driver, audio_sem)
-    # if board_proc is None:
-        # print('initial board process failed. exit...')
+    board_proc = get_board_process(driver, audio_sem)
+    if board_proc is None:
+        print('initial board process failed. exit...')
+        return
 
     # show prograss bar here
     sample_len = fm.sample_len()
     num_frame = (sample_len + frame_len - 1) // frame_len
 
-    # board_proc.start()
+    board_proc.start()
     audio_proc.start()
 
     show_proc_bar(num_frame, vib_sem)
 
-    # board_proc.join()
+    board_proc.join()
     audio_proc.join()
 
 from .plot import PlotManager

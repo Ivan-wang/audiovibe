@@ -3,10 +3,15 @@ import abc
 class VibrationDriver(abc.ABC):
     def __init__(self, vibration_data=None) -> None:
         super(VibrationDriver, self).__init__()
-        self.vibration_len = len(vibration_data)
-        self.vibration_iter = iter(vibration_data)
+        if vibration_data is None:
+            self.vibration_iter = None
+            self.vibration_len = 0
+        else:
+            self.vibration_len = len(vibration_data)
+            self.vibration_iter = iter(vibration_data)
 
         self.device = None
+        self.blocking = False
 
     def __len__(self):
         return self.vibration_len
@@ -23,15 +28,11 @@ class VibrationDriver(abc.ABC):
     def on_close(self):
         return
 
-DRV2605_ENV_READY = False
-try:
+from .env import DRV2605_ENV_READY
+if DRV2605_ENV_READY:
     import board
     import busio
     import adafruit_drv2605
-except ImportError:
-    pass
-else:
-    DRV2605_ENV_READY = True
 
 class DR2605Driver(VibrationDriver):
     def __init__(self, vibrations) -> None:
@@ -66,24 +67,34 @@ class DR2605Driver(VibrationDriver):
     def on_close(self):
         self.device._write_u8(0x01, 0)
 
-SQUARE_WAVE_ENV_READY = False
-try:
+from .env import ADC_ENV_READY
+if ADC_ENV_READY:
     import smbus
-except ImportError:
-    pass
-else:
-    SQUARE_WAVE_ENV_READY = True
 
-import time
-class SquareWaveDriver(VibrationDriver):
+# NOTE: each sample accept at most 8 operations
+import numpy as np
+class AdcDriver(VibrationDriver):
     def __init__(self, vibration_data=None) -> None:
+        if isinstance(vibration_data, np.ndarray):
+            if len(vibration_data.shape) > 2:
+                print(f'vibration data should be at most 2D but get {vibration_data.shape}')
+                vibration_data = None
+        else:
+            print(f'need a np.ndarray for vibration data but get {type(vibration_data)}')
+            vibration_data = None
         super().__init__(vibration_data=vibration_data)
 
-        self.amp = 0
-        self.act_time = 0
-        self.cycle_time = 0
+        # self.amp = 0
+
+        # when use a sequence for each frame, set blocking mode as true
+        if len(vibration_data.shape) > 2:
+            self.blocking = False
+
     def on_start(self):
-        if SQUARE_WAVE_ENV_READY:
+        if self.vibration_iter is None:
+            return False
+
+        if ADC_ENV_READY:
             self.device = smbus.SMBus(1)
             return True
         else:
@@ -92,11 +103,19 @@ class SquareWaveDriver(VibrationDriver):
     def on_running(self, update=False):
         if update:
             try:
-                self.amp, self.act_time, self.cycle_time = next(self.vibration_iter)
+                amp = next(self.vibration_iter)
             except StopIteration:
                 return False
-        self.device.write_byte_data(0x48, 0x40, self.amp)
-        time.sleep(self.activate)
-        self.device.write_byte_data(0x48, 0x40, 0)
-        time.sleep(self.cycle-self.activate)
+            else:
+                if isinstance(amp, np.ndarray):
+                    for a in amp:
+                        self.device.write_byte_data(0x48, 0x40, a)
+                else:
+                    for _ in range(4):
+                        self.device.write_byte_data(0x48, 0x40, amp)
+                    self.device.write_byte_data(0x48, 0x40, 0)
         return True
+
+    def on_close(self):
+        # close the device?
+        return
