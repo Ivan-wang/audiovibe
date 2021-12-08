@@ -121,9 +121,11 @@ class FeatureExtractionManager(object):
 @FeatureExtractionManager.register_vib_meta_stg
 def melspec(audio, sr, len_hop, len_window=2048, n_mels=128, fmax=None):
     mel = librosa.feature.melspectrogram(y=audio,
-        sr=sr, n_fft=len_window, hop_length=len_hop, n_mels=n_mels, fmax=fmax)
+        sr=sr, n_fft=len_window, hop_length=len_hop, n_mels=n_mels, fmax=fmax, power=1)
+    mel_freq = librosa.mel_frequencies(n_mels=n_mels, fmax=sr//2)
+    mel_freq = np.round(mel_freq)
     ret = {'len_window': len_window, 'n_mels': n_mels,
-        'fmax': fmax, 'data': mel
+        'fmax': fmax, 'mel_freq': mel_freq, 'data': mel
     }
     return ret
 

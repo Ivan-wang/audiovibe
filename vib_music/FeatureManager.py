@@ -75,3 +75,7 @@ class FeatureManager(object):
                 features[vib] = pickle.load(f)
 
         return cls(meta, features, mode)
+
+@FeatureManager.vibration_mode
+def power_sequence_mode(fm:FeatureManager) -> np.ndarray:
+    power = fm.feature_data('rmse')
