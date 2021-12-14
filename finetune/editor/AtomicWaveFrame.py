@@ -22,7 +22,7 @@ class WavePlotFrame(LabelFrame):
         data = np.clip(np.random.randn(24), 0., 1)
         x, y = self.__make_plot_data(data)
 
-        self.figure = Figure()
+        self.figure = Figure(figsize=(6, 3))
         self.ax = self.figure.subplots(1, 1)
         self.ax.plot(x, y)
         self.ax.set_xticks(np.arange(0, 25, 1))
