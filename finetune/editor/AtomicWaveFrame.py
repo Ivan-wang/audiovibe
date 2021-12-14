@@ -142,6 +142,7 @@ class WavePlayFrame(LabelFrame):
             )
             self.wave_len_options[-1].pack(anchor=W)
         self.buttonFrame = Frame(self)
+        self.scaleSpinbox = Spinbox(self.buttonFrame, from_=1, to=255, increment=1)
         self.playButton = Button(self.buttonFrame, text='Play')
 
         self.playButton.pack(side=RIGHT)
@@ -149,6 +150,8 @@ class WavePlayFrame(LabelFrame):
         self.radioFrame.pack(side=TOP, padx=5)
         self.buttonFrame.pack(side=TOP)
 
+    def get_duration(self):
+        return self.wave_len.get()
        
 class AtomicWaveFrame(Frame):
     def __init__(self, root=None):
@@ -166,6 +169,7 @@ class AtomicWaveFrame(Frame):
         )
 
         self.waveDBFrame.waveOptions.bind('<Double-1>', self.__update_sliders)
+        self.playFrame.playButton.bind('<Button-1>', self.__launch_vibration)
 
         self.waveDBFrame.pack(side=LEFT, padx=10)
         self.playFrame.pack(side=RIGHT, fill=Y, expand=NO)
@@ -180,7 +184,11 @@ class AtomicWaveFrame(Frame):
         arr = self.data[dbName][waveName]
         self.sliderFrame.set_values(arr)
 
-
+    def __launch_vibration(self, event):
+        duration = self.playFrame.get_duration()
+        wave = self.sliderFrame.get_values()
+        print(f'Duration {duration}')
+        print(f'waveform {wave}')
 
 if __name__ == '__main__':
     root = Tk()
