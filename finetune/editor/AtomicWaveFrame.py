@@ -1,5 +1,8 @@
 from tkinter import *
 import tkinter.ttk as ttk
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+from matplotlib.figure import Figure
+
 
 import numpy as np
 import pickle
@@ -11,6 +14,35 @@ def load_database():
         data = pickle.load(f)
     
     return data 
+
+class WavePlotFrame(LabelFrame):
+    def __init__(self, master=None, **args):
+        LabelFrame.__init__(self, master=master, text='Atomic Wave Plot', **args)
+
+        data = np.clip(np.random.randn(24), 0., 1)
+        x, y = self.__make_plot_data(data)
+
+        self.figure = Figure()
+        self.ax = self.figure.subplots(1, 1)
+        self.ax.plot(x, y)
+        self.ax.set_xticks(np.arange(0, 25, 1))
+        self.ax.set_yticks(np.arange(0, 1.01, 0.2))
+        self.ax.set_yticks(np.arange(0, 1.01, 0.1), minor=True)
+        self.ax.grid(which='both')
+        self.ax.grid(which='minor', alpha=0.2)
+        self.ax.grid(which='major', alpha=0.5)
+
+        self.canvas = FigureCanvasTkAgg(self.figure, self)
+        self.toolbar = NavigationToolbar2Tk(self.canvas, self)
+        self.toolbar.update()
+
+        self.canvas.get_tk_widget().pack(side=TOP, fill=BOTH, expand=YES)
+
+    def __make_plot_data(self, x):
+        xdata = np.linspace(0, 24, num=1000, endpoint=False)
+        ydata = x[np.floor(xdata).astype(np.int64)]
+        return xdata, ydata
+
 
 class SliderPanel(LabelFrame):
     def __init__(self, master=None, **args):
@@ -63,18 +95,18 @@ class WaveDBFrame(LabelFrame):
         self.dbOptions.bind('<Double-1>', self.__on_database_selected)
         # self.waveOptions.bind('<Double-1>', self.__on_waveform_selected)
 
-        self.dbOptions.pack(expand=YES)
-        self.waveOptions.pack(expand=YES)
+        self.dbOptions.pack(side=TOP, fill=X, padx=5, expand=YES)
+        self.waveOptions.pack(side=TOP, fill=X, padx=5, expand=YES)
 
-        self.dBframe.pack(side=LEFT, fill=X, padx=(0, 10))
-        ttk.Separator(self.selFrame, orient=VERTICAL).pack(side=LEFT, fill=Y, expand=YES)
-        self.waveFrame.pack(side=LEFT, fill=X, padx=(10, 0))
+        self.dBframe.pack(side=LEFT, fill=X, padx=5, expand=YES)
+        # ttk.Separator(self.selFrame, orient=VERTICAL).pack(side=LEFT, fill=Y, expand=YES)
+        self.waveFrame.pack(side=LEFT, fill=X, padx=5, expand=YES)
 
-        self.newDB.pack(side=LEFT)
-        self.newDBName.pack(side=LEFT)
+        self.newDB.pack(side=LEFT, padx=5, expand=NO)
+        self.newDBName.pack(side=LEFT, fill=X, padx=5, expand=YES)
 
         self.selFrame.pack(side=TOP, fill=X, expand=YES, padx=5)
-        self.btnFrame.pack(side=TOP, fill=X, expand=YES, padx=5, pady=(5, 0))
+        self.btnFrame.pack(side=TOP, fill=X, expand=YES, padx=5, pady=5)
     
     def set_wave_database_list(self, dbs):
         self.dbOptions.delete(0, END)
@@ -115,9 +147,20 @@ class SliderFrame(Frame):
         # args.setdefault('width', 800)
         Frame.__init__(self, root, **args)
 
+        self.waveScaleVar = DoubleVar()
+
         self.sliderPanel = SliderPanel(self, height=400, width=800)
-       
-        self.sliderPanel.pack()
+        self.controlPanel = LabelFrame(self, text='Wave Scale')
+
+        Label(self.controlPanel, textvariable=self.waveScaleVar).pack(side=LEFT, padx=5)
+        self.scaleSlider = Scale(self.controlPanel, from_=0., to=1., resolution=0.1,
+                                 orient=HORIZONTAL, showvalue=False, tickinterval=0.1,
+                                 variable=self.waveScaleVar)
+
+        self.scaleSlider.pack(side=LEFT, padx=5, fill=X, expand=YES)
+
+        self.sliderPanel.pack(side=TOP, fill=X, padx=5, pady=5, expand=NO)
+        self.controlPanel.pack(side=TOP, fill=X, padx=5, pady=5, expand=NO)
         self.sliderPanel.pack_propagate(0) # keep the panel size
         ttk.Separator(self, orient=HORIZONTAL).pack(side=BOTTOM, fill=X, expand=YES)
     
@@ -127,12 +170,18 @@ class SliderFrame(Frame):
     def get_values(self):
         return self.sliderPanel.get_values()
 
+    def sel_scale(self, value):
+        self.waveScaleVar.set(value)
+
+    def get_scale(self, value):
+        return self.waveScaleVar.get()
+
 class WavePlayFrame(LabelFrame):
     def __init__(self, master=None, **args):
         LabelFrame.__init__(self, master=master, text='Atomic Wave Playing', **args)
 
         self.wave_len = DoubleVar()
-
+        self.wave_scale = IntVar()
         self.radioFrame = LabelFrame(self, text='Wave Length (in Time)')
         self.wave_len_options = []
         for t in [0.5, 1., 2., 5.]:
@@ -142,16 +191,23 @@ class WavePlayFrame(LabelFrame):
             )
             self.wave_len_options[-1].pack(anchor=W)
         self.buttonFrame = Frame(self)
-        self.scaleSpinbox = Spinbox(self.buttonFrame, from_=1, to=255, increment=1)
+        Label(self.buttonFrame, text='Scale Used for Playing').pack(side=TOP)
+        Label(self.buttonFrame, text='(1 ~ 255)').pack(side=TOP, pady=(0, 5))
+        self.scaleSpinbox = Spinbox(self.buttonFrame, from_=1, to=255, increment=1,
+                                    textvariable=self.wave_scale)
         self.playButton = Button(self.buttonFrame, text='Play')
 
-        self.playButton.pack(side=RIGHT)
+        self.scaleSpinbox.pack(side=TOP, pady=(0, 5))
+        self.playButton.pack(side=BOTTOM)
 
         self.radioFrame.pack(side=TOP, padx=5)
         self.buttonFrame.pack(side=TOP)
 
     def get_duration(self):
         return self.wave_len.get()
+
+    def get_scale(self):
+        return self.wave_scale.get()
        
 class AtomicWaveFrame(Frame):
     def __init__(self, root=None):
@@ -159,6 +215,7 @@ class AtomicWaveFrame(Frame):
 
         self.data = load_database()
 
+        self.plotFrame = WavePlotFrame(self)
         self.sliderFrame = SliderFrame(self, height=400)
         self.controlFrame = Frame(self)
         self.waveDBFrame = WaveDBFrame(self.controlFrame, database=self.data, height=200)
@@ -171,11 +228,12 @@ class AtomicWaveFrame(Frame):
         self.waveDBFrame.waveOptions.bind('<Double-1>', self.__update_sliders)
         self.playFrame.playButton.bind('<Button-1>', self.__launch_vibration)
 
-        self.waveDBFrame.pack(side=LEFT, padx=10)
-        self.playFrame.pack(side=RIGHT, fill=Y, expand=NO)
+        self.waveDBFrame.pack(side=LEFT, padx=10, fill=X, expand=YES)
+        self.playFrame.pack(side=RIGHT, padx=10, fill=X, expand=NO)
 
-        self.sliderFrame.pack(side=TOP, pady=(0, 10), padx=10)
-        self.controlFrame.pack(side=TOP, fill=Y, pady=(0, 10))
+        self.plotFrame.pack(side=TOP, pady=5, fill=BOTH, expand=YES)
+        self.sliderFrame.pack(side=TOP, pady=5, padx=10)
+        self.controlFrame.pack(side=TOP, fill=X, pady=5, padx=10)
 
     def __update_sliders(self, event):
         dbName = self.waveDBFrame.get_wave_database_selection()
@@ -186,9 +244,12 @@ class AtomicWaveFrame(Frame):
 
     def __launch_vibration(self, event):
         duration = self.playFrame.get_duration()
+        scale = self.playFrame.get_scale()
         wave = self.sliderFrame.get_values()
+
         print(f'Duration {duration}')
         print(f'waveform {wave}')
+        print(f'scale {scale}')
 
 if __name__ == '__main__':
     root = Tk()
