@@ -43,33 +43,6 @@ class WavePlotFrame(LabelFrame):
         ydata = x[np.floor(xdata).astype(np.int64)]
         return xdata, ydata
 
-
-class SliderPanel(LabelFrame):
-    def __init__(self, master=None, **args):
-        LabelFrame.__init__(self, master=master, text='Atomic Wave Sliders', **args)
-
-        self.vars = []
-        self.sliders = []
-        self.labels = []
-
-        for i in range(24):
-            self.vars.append(DoubleVar(value=0.05))
-            self.sliders.append(Scale(self, from_=1., to=0., digits=3, resolution=0.01,
-                orient=VERTICAL, showvalue=False, sliderlength=30, variable=self.vars[-1]))
-            self.labels.append(Label(self, textvariable=self.vars[-1]))
-        
-        for i, (s, l) in enumerate(zip(self.sliders, self.labels)):
-            # s.grid(row=0, column=i, padx=10, pady=10)
-            s.grid(row=0, column=i, padx=1)
-            l.grid(row=1, column=i, padx=1)
-
-    def get_values(self):
-        return np.array([v.get() for v in self.vars])
-    
-    def set_values(self, values):
-        for v, val in zip(self.vars, values[:24]):
-            v.set(val)
-
 class WaveDBFrame(LabelFrame):
     def __init__(self, master=None, database={}, **args):
         LabelFrame.__init__(self, master=master, text='Atomic Wave Database', **args)
@@ -77,6 +50,7 @@ class WaveDBFrame(LabelFrame):
         self.database = database
 
         self.newDBName = StringVar()
+        self.newWaveName = StringVar()
         self.dbNames = sorted(list(self.database.keys()))
         self.waveNames = []
 
@@ -91,6 +65,8 @@ class WaveDBFrame(LabelFrame):
         self.btnFrame = Frame(self)
         self.newDB = Button(self.btnFrame, text='New Database', command=self.__add_wave_database)
         self.newDBName = Entry(self.btnFrame, textvariable=self.newDBName)
+        self.newWave = Button(self.btnFrame, text='New Wave')
+        self.newWaveName = Entry(self.btnFrame, textvariable=self.newWaveName)
 
         self.dbOptions.bind('<Double-1>', self.__on_database_selected)
         # self.waveOptions.bind('<Double-1>', self.__on_waveform_selected)
@@ -104,6 +80,8 @@ class WaveDBFrame(LabelFrame):
 
         self.newDB.pack(side=LEFT, padx=5, expand=NO)
         self.newDBName.pack(side=LEFT, fill=X, padx=5, expand=YES)
+        self.newWave.pack(side=LEFT, padx=5, expand=NO)
+        self.newWaveName.pack(side=LEFT, fill=X, padx=5, expand=YES)
 
         self.selFrame.pack(side=TOP, fill=X, expand=YES, padx=5)
         self.btnFrame.pack(side=TOP, fill=X, expand=YES, padx=5, pady=5)
@@ -125,6 +103,9 @@ class WaveDBFrame(LabelFrame):
     def get_waveform_selection(self):
         sel = self.waveOptions.curselection()
         return self.waveOptions.get(sel)
+
+    def get_new_waveform_name(self):
+        return self.newWaveName.get()
    
     def __on_database_selected(self, event):
         dbName = self.get_wave_database_selection()
@@ -133,13 +114,40 @@ class WaveDBFrame(LabelFrame):
     
     def __add_wave_database(self):
         name = self.newDBName.get()
-        print(name)
+        if len(name) == 0: return
         if name not in self.database:
             self.database.setdefault(name, {})
             self.set_wave_database_list(
                 sorted(list(self.database.keys()))
             )
         #TODO: save new name here...
+
+
+class SliderPanel(LabelFrame):
+    def __init__(self, master=None, **args):
+        LabelFrame.__init__(self, master=master, text='Atomic Wave Sliders', **args)
+
+        self.vars = []
+        self.sliders = []
+        self.labels = []
+
+        for i in range(24):
+            self.vars.append(DoubleVar(value=0.05))
+            self.sliders.append(Scale(self, from_=1., to=0., digits=3, resolution=0.01,
+                                      orient=VERTICAL, showvalue=False, sliderlength=30, variable=self.vars[-1]))
+            self.labels.append(Label(self, textvariable=self.vars[-1]))
+
+        for i, (s, l) in enumerate(zip(self.sliders, self.labels)):
+            # s.grid(row=0, column=i, padx=10, pady=10)
+            s.grid(row=0, column=i, padx=1)
+            l.grid(row=1, column=i, padx=1)
+
+    def get_values(self):
+        return np.array([v.get() for v in self.vars])
+
+    def set_values(self, values):
+        for v, val in zip(self.vars, values[:24]):
+            v.set(val)
 
 class SliderFrame(Frame):
     def __init__(self, root=None, **args):
@@ -226,6 +234,7 @@ class AtomicWaveFrame(Frame):
         )
 
         self.waveDBFrame.waveOptions.bind('<Double-1>', self.__update_sliders)
+        self.waveDBFrame.newWave.bind('<Button-1>', self.__save_atomic_wave)
         self.playFrame.playButton.bind('<Button-1>', self.__launch_vibration)
 
         self.waveDBFrame.pack(side=LEFT, padx=10, fill=X, expand=YES)
@@ -250,6 +259,18 @@ class AtomicWaveFrame(Frame):
         print(f'Duration {duration}')
         print(f'waveform {wave}')
         print(f'scale {scale}')
+
+    def __save_atomic_wave(self, event):
+        name = self.waveDBFrame.get_new_waveform_name()
+        if len(name) == 0: return
+
+        dbName = self.waveDBFrame.get_wave_database_selection()
+        if name not in self.data[dbName]:
+            arr = self.sliderFrame.get_values()
+            self.data[dbName].update({name: arr})
+            self.waveDBFrame.set_waveform_list(
+                sorted(list(self.data[dbName].keys()))
+            )
 
 if __name__ == '__main__':
     root = Tk()
