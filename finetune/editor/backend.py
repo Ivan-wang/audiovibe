@@ -10,6 +10,7 @@ FRAME_TIME = 0.0116
 
 def launch_atomicwave_vibration(atomicwave, duration, scale=1):
     atomicwave *= scale
+    print('Atomic Wave:', atomicwave)
     MAGIC_NUM = 1.4
     num_frame = int(duration / FRAME_TIME * MAGIC_NUM)
     est_time = FRAME_TIME * num_frame 
