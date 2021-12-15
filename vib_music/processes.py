@@ -62,7 +62,7 @@ class BoardProcess(multiprocessing.Process):
     def run(self):
         # driver starting before creating the board process
         # self.driver.on_start()
-        if self.sem in None:
+        if self.sem is None:
             print('Running in stand-alone mode')
             while self.driver.on_running(True):
                 pass

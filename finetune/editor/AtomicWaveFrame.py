@@ -9,13 +9,18 @@ import threading
 import pickle
 import time
 
-from numpy.core.arrayprint import DatetimeFormat
+from backend import launch_atomicwave_vibration
 
 def load_database():
     with open('atomic-wave.pkl', 'rb') as f:
         data = pickle.load(f)
 
     return data 
+
+def save_database(data):
+    with open('atomic-wave.pkl', 'wb') as f:
+        pickle.dump(data, f)
+
 
 class WavePlotFrame(LabelFrame):
     def __init__(self, master=None, **args):
@@ -128,7 +133,7 @@ class WaveDBFrame(LabelFrame):
             self.set_wave_database_list(
                 sorted(list(self.database.keys()))
             )
-        np.save('atomic-wave.pkl', self.database)
+        save_database(self.database)
 
 
 class SliderPanel(LabelFrame):
@@ -231,7 +236,7 @@ def show_playing_dialog(duration, scale):
     msgbox = Toplevel()
     msgbox.title('Playing Atomic Wave')
     Label(msgbox, text=f'Duration {duration}, Scale {scale}' + "Do not close this window!").pack()
-    time.sleep(duration+1)
+    time.sleep(duration)
     msgbox.destroy()
 
 class AtomicWaveFrame(Frame):
@@ -294,6 +299,7 @@ class AtomicWaveFrame(Frame):
         t = threading.Thread(target=show_playing_dialog, args=(duration, scale))
         t.start()
 
+        launch_atomicwave_vibration(wave, duration, scale)
 
     def __save_atomic_wave(self, event):
         name = self.waveDBFrame.get_new_waveform_name()
@@ -306,7 +312,7 @@ class AtomicWaveFrame(Frame):
             self.waveDBFrame.set_waveform_list(
                 sorted(list(self.data[dbName].keys()))
             )
-        np.save('atomic-wave.pkl', self.data)
+        save_database(self.data)
 
 if __name__ == '__main__':
     root = Tk()
