@@ -1,18 +1,20 @@
 from tkinter import *
 import tkinter.ttk as ttk
+import tkinter.messagebox
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
 
-
 import numpy as np
+import threading
 import pickle
+import time
 
 from numpy.core.arrayprint import DatetimeFormat
 
 def load_database():
     with open('atomic-wave.pkl', 'rb') as f:
         data = pickle.load(f)
-    
+
     return data 
 
 class WavePlotFrame(LabelFrame):
@@ -126,7 +128,7 @@ class WaveDBFrame(LabelFrame):
             self.set_wave_database_list(
                 sorted(list(self.database.keys()))
             )
-        #TODO: save new name here...
+        np.save('atomic-wave.pkl', self.database)
 
 
 class SliderPanel(LabelFrame):
@@ -201,10 +203,11 @@ class WavePlayFrame(LabelFrame):
         self.wave_len_options = []
         for t in [0.5, 1., 2., 5.]:
             self.wave_len_options.append(
-                Radiobutton(self.radioFrame, text=f'{t} Sec.', variable=self.wave_len,
-                value=t)
+                Radiobutton(self.radioFrame, text=f'{t} Sec.',
+                            variable=self.wave_len, value=t)
             )
             self.wave_len_options[-1].pack(anchor=W)
+        self.wave_len.set(0.5)
         self.buttonFrame = Frame(self)
         Label(self.buttonFrame, text='Scale Used for Playing').pack(side=TOP)
         Label(self.buttonFrame, text='(1 ~ 255)').pack(side=TOP, pady=(0, 5))
@@ -223,7 +226,14 @@ class WavePlayFrame(LabelFrame):
 
     def get_scale(self):
         return self.wave_scale.get()
-       
+
+def show_playing_dialog(duration, scale):
+    msgbox = Toplevel()
+    msgbox.title('Playing Atomic Wave')
+    Label(msgbox, text=f'Duration {duration}, Scale {scale}' + "Do not close this window!").pack()
+    time.sleep(duration+1)
+    msgbox.destroy()
+
 class AtomicWaveFrame(Frame):
     def __init__(self, root=None):
         Frame.__init__(self, root, height=600, width=800)
@@ -281,10 +291,9 @@ class AtomicWaveFrame(Frame):
         duration = self.playFrame.get_duration()
         scale = self.playFrame.get_scale()
         wave = self.sliderFrame.get_values()
+        t = threading.Thread(target=show_playing_dialog, args=(duration, scale))
+        t.start()
 
-        print(f'Duration {duration}')
-        print(f'waveform {wave}')
-        print(f'scale {scale}')
 
     def __save_atomic_wave(self, event):
         name = self.waveDBFrame.get_new_waveform_name()
@@ -297,6 +306,7 @@ class AtomicWaveFrame(Frame):
             self.waveDBFrame.set_waveform_list(
                 sorted(list(self.data[dbName].keys()))
             )
+        np.save('atomic-wave.pkl', self.data)
 
 if __name__ == '__main__':
     root = Tk()

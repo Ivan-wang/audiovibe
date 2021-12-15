@@ -22,3 +22,9 @@ def launch_vibration(sequence):
     vib_proc = BoardProcess(driver, None)
     vib_proc.start()
     vib_proc.join()
+
+if __name__ == '__main__':
+    waveform = np.array([0.01] * 8 + [0.99] * 4 + [0.01] * 8 + [0.99] * 4),
+    scale = 100
+    duration = 2.0
+    launch_atomicwave_vibration(waveform, duration, scale)
