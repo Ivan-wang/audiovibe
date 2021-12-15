@@ -19,12 +19,12 @@ class WavePlotFrame(LabelFrame):
     def __init__(self, master=None, **args):
         LabelFrame.__init__(self, master=master, text='Atomic Wave Plot', **args)
 
-        data = np.clip(np.random.randn(24), 0., 1)
+        data = np.ones((24,)) * 0.05
         x, y = self.__make_plot_data(data)
 
         self.figure = Figure(figsize=(6, 3))
         self.ax = self.figure.subplots(1, 1)
-        self.ax.plot(x, y)
+        self.line, = self.ax.plot(x, y)
         self.ax.set_xticks(np.arange(0, 25, 1))
         self.ax.set_yticks(np.arange(0, 1.01, 0.2))
         self.ax.set_yticks(np.arange(0, 1.01, 0.1), minor=True)
@@ -42,6 +42,12 @@ class WavePlotFrame(LabelFrame):
         xdata = np.linspace(0, 24, num=1000, endpoint=False)
         ydata = x[np.floor(xdata).astype(np.int64)]
         return xdata, ydata
+    
+    def update_wave_values(self, data):
+        x, y = self.__make_plot_data(data)
+        self.line.set_xdata(x)
+        self.line.set_ydata(y)
+        self.canvas.draw()
 
 class WaveDBFrame(LabelFrame):
     def __init__(self, master=None, database={}, **args):
@@ -139,8 +145,8 @@ class SliderPanel(LabelFrame):
 
         for i, (s, l) in enumerate(zip(self.sliders, self.labels)):
             # s.grid(row=0, column=i, padx=10, pady=10)
-            s.grid(row=0, column=i, padx=1)
-            l.grid(row=1, column=i, padx=1)
+            s.grid(row=0, column=i, padx=1, sticky=E+W)
+            l.grid(row=1, column=i, padx=1, sticky=E+W)
 
     def get_values(self):
         return np.array([v.get() for v in self.vars])
@@ -156,12 +162,13 @@ class SliderFrame(Frame):
         Frame.__init__(self, root, **args)
 
         self.waveScaleVar = DoubleVar()
+        self.waveScaleVar.set(1.)
 
         self.sliderPanel = SliderPanel(self, height=400, width=800)
         self.controlPanel = LabelFrame(self, text='Wave Scale')
 
         Label(self.controlPanel, textvariable=self.waveScaleVar).pack(side=LEFT, padx=5)
-        self.scaleSlider = Scale(self.controlPanel, from_=0., to=1., resolution=0.1,
+        self.scaleSlider = Scale(self.controlPanel, from_=0., to=2., resolution=0.1,
                                  orient=HORIZONTAL, showvalue=False, tickinterval=0.1,
                                  variable=self.waveScaleVar)
 
@@ -178,10 +185,10 @@ class SliderFrame(Frame):
     def get_values(self):
         return self.sliderPanel.get_values()
 
-    def sel_scale(self, value):
+    def set_scale(self, value):
         self.waveScaleVar.set(value)
 
-    def get_scale(self, value):
+    def get_scale(self):
         return self.waveScaleVar.get()
 
 class WavePlayFrame(LabelFrame):
@@ -237,12 +244,29 @@ class AtomicWaveFrame(Frame):
         self.waveDBFrame.newWave.bind('<Button-1>', self.__save_atomic_wave)
         self.playFrame.playButton.bind('<Button-1>', self.__launch_vibration)
 
+        for s in self.sliderFrame.sliderPanel.sliders:
+            s.bind('<ButtonRelease-1>', self.__on_slider_change)
+        self.sliderFrame.scaleSlider.bind('<ButtonRelease-1>', self.__on_wave_scale_change)
+
         self.waveDBFrame.pack(side=LEFT, padx=10, fill=X, expand=YES)
         self.playFrame.pack(side=RIGHT, padx=10, fill=X, expand=NO)
 
         self.plotFrame.pack(side=TOP, pady=5, fill=BOTH, expand=YES)
         self.sliderFrame.pack(side=TOP, pady=5, padx=10)
         self.controlFrame.pack(side=TOP, fill=X, pady=5, padx=10)
+    
+    def __on_slider_change(self, event):
+        arr = self.sliderFrame.get_values()
+        self.plotFrame.update_wave_values(arr)
+        self.sliderFrame.set_scale(1.)
+    
+    def __on_wave_scale_change(self, event):
+        arr = self.sliderFrame.get_values()
+        scale = self.sliderFrame.get_scale()
+        arr *= scale
+        arr = np.clip(np.round(arr, 2), 0, 1)
+        self.sliderFrame.set_values(arr)
+        self.plotFrame.update_wave_values(arr)
 
     def __update_sliders(self, event):
         dbName = self.waveDBFrame.get_wave_database_selection()
@@ -250,6 +274,8 @@ class AtomicWaveFrame(Frame):
 
         arr = self.data[dbName][waveName]
         self.sliderFrame.set_values(arr)
+        self.plotFrame.update_wave_values(arr)
+        self.sliderFrame.set_scale(1.)
 
     def __launch_vibration(self, event):
         duration = self.playFrame.get_duration()
