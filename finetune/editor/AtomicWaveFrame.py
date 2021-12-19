@@ -62,7 +62,7 @@ class WaveDBFrame(LabelFrame):
         
         self.database = database
 
-        self.newDBName = StringVar()
+        self.newDBNameEntry = StringVar()
         self.newWaveName = StringVar()
         self.dbNames = sorted(list(self.database.keys()))
         self.waveNames = []
@@ -77,7 +77,7 @@ class WaveDBFrame(LabelFrame):
 
         self.btnFrame = Frame(self)
         self.newDB = Button(self.btnFrame, text='New Database', command=self.__add_wave_database)
-        self.newDBName = Entry(self.btnFrame, textvariable=self.newDBName)
+        self.newDBNameEntry = Entry(self.btnFrame, textvariable=self.newDBNameEntry)
         self.newWave = Button(self.btnFrame, text='New Wave')
         self.newWaveName = Entry(self.btnFrame, textvariable=self.newWaveName)
 
@@ -92,7 +92,7 @@ class WaveDBFrame(LabelFrame):
         self.waveFrame.pack(side=LEFT, fill=X, padx=5, expand=YES)
 
         self.newDB.pack(side=LEFT, padx=5, expand=NO)
-        self.newDBName.pack(side=LEFT, fill=X, padx=5, expand=YES)
+        self.newDBNameEntry.pack(side=LEFT, fill=X, padx=5, expand=YES)
         self.newWave.pack(side=LEFT, padx=5, expand=NO)
         self.newWaveName.pack(side=LEFT, fill=X, padx=5, expand=YES)
 
@@ -126,7 +126,7 @@ class WaveDBFrame(LabelFrame):
         self.set_waveform_list(waves)
     
     def __add_wave_database(self):
-        name = self.newDBName.get()
+        name = self.newDBNameEntry.get()
         if len(name) == 0: return
         if name not in self.database:
             self.database.setdefault(name, {})

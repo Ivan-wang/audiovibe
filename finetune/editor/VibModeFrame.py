@@ -4,195 +4,236 @@ from matplotlib.lines import Line2D
 from matplotlib.backends.backend_tkagg import FigureCanvasAgg, FigureCanvasTkAgg
 from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
 
+import librosa
+import pickle
+import numpy as np
 from tkinter import *
-window = Tk()
-window.title('Plotting in Tkinter')
-window.geometry('500x500')
-plot_button = Button(master=window, height=2, width=10, text='Plot')
-plot_button.pack()
+from tkinter import filedialog
+from matplotlib.figure import Figure
+from backend import load_music
+# from AtomicWaveFrame import WaveDBFrame
+# from AtomicWaveFrame import load_database
+
+class MusicFrame(LabelFrame):
+    def __init__(self, root=None, **args):
+        LabelFrame.__init__(self, root, text='Load music', **args)
+
+        self.musicName = StringVar()
+
+        self.musicPathEntry = Entry(self, textvariable=self.musicName)
+        self.browseBtn = Button(self, text='Browse...', command=self.__ask_music_name)
+        self.loadBtn = Button(self, text='Load')
+
+        self.musicPathEntry.pack(side=LEFT, fill=X, expand=YES, padx=5)
+        self.browseBtn.pack(side=LEFT, padx=5)
+        self.loadBtn.pack(side=LEFT, padx=5)
+
+    def __ask_music_name(self):
+        self.musicName.set(filedialog.askopenfilename(
+            initialdir='.'
+        ))
+
+from backend import draw_rmse
+
+class MusicRMSEFrame(LabelFrame):
+    def __init__(self, root=None, **args):
+        LabelFrame.__init__(self, root, text='RMSE Waveform', **args)
+
+        self.figure = Figure(figsize=(12, 3))
+        self.ax = self.figure.subplots(1, 1)
+        self.canvas = FigureCanvasTkAgg(self.figure, self)
+        self.toolbar = NavigationToolbar2Tk(self.canvas, self)
+        self.toolbar.update()
+
+        self.canvas.get_tk_widget().pack(side=TOP, fill=BOTH, expand=YES)
+
+    def draw_rmse(self, audio, fm):
+        draw_rmse(audio, fm, self.ax)
+
+class _CurveFrame(LabelFrame):
+    def __init__(self, root=None, text='', **args):
+        LabelFrame.__init__(self, root, text=text, **args)
+
+        self.figure = Figure(figsize=(3, 3))
+        self.ax = self.figure.subplots(1, 1)
+        self.ax.set_xlim(0, 1)
+        self.ax.set_ylim(0, 1)
+
+        self.canvas = FigureCanvasTkAgg(self.figure, self)
+        self.canvas.get_tk_widget().pack(side=TOP, fill=BOTH, expand=YES, padx=5)
+
+class VibHistFrame(_CurveFrame):
+    def __init__(self, root=None, **args):
+        _CurveFrame.__init__(self, root, text='Histogram', **args)
+
+    def draw_hist(self, data):
+        self.ax.cla()
+        bins, _, _ = self.ax.hist(data, bins=256, range=(0., 1), density=False)
+
+        self.ax.set_xlim((0, 1))
+        self.ax.set_xticks(np.linspace(0, 1, 5), labels=np.linspace(0, 1, 5))
+        self.ax.set_xticks(np.linspace(0, 1, 50), minor=True)
+        self.ax.set_ylim((0, max(bins)//10 * 10))
+        self.ax.set_yticks(np.linspace(0, (max(bins)+9)//10 * 10, 5),
+                           labels=np.linspace(0, (max(bins)+9)//10 * 10, 5))
+        self.ax.set_yticks(np.linspace(0, (max(bins)+9)//10 * 10, 50), minor=True)
+        self.ax.set_xticklabels(self.ax.get_xticklabels(), fontsize=8)
+        self.ax.set_xticklabels(self.ax.get_xticklabels(), fontsize=8)
+        self.ax.set_yticklabels(self.ax.get_yticklabels(), fontsize=8)
+
+        self.ax.grid(which='both')
+        self.ax.grid(which='minor', alpha=0.2)
+        self.ax.grid(which='major', alpha=0.5)
+
+class CurveFrame(_CurveFrame):
+    def __init__(self, root=None, **args):
+        _CurveFrame.__init__(self, root, text='Curve', **args)
+
+        self.line, = self.ax.plot(np.linspace(0, 1, 1000), np.linspace(0, 1, 1000))
+
+        self.ax.set_xticks(np.linspace(0, 1, 5), labels=np.linspace(0, 1, 5))
+        self.ax.set_xticks(np.linspace(0, 1, 50), minor=True)
+        self.ax.set_yticks(np.linspace(0, 1, 5), labels=np.linspace(0, 1, 5))
+        self.ax.set_yticks(np.linspace(0, 1, 50), minor=True)
+        self.ax.set_xticklabels(self.ax.get_xticklabels(), fontsize=8)
+        self.ax.set_yticklabels(self.ax.get_xticklabels(), fontsize=8)
+
+        self.ax.grid(which='both')
+        self.ax.grid(which='minor', alpha=0.2)
+        self.ax.grid(which='major', alpha=0.5)
+
+    def draw_curve(self, data):
+        self.line.set_ydata(data)
+        self.canvas.draw()
+
+from backend import TransformQueue, Transform
+
+class TransformParamFrame(LabelFrame):
+    def __init__(self, root=None, text='', params=[], **args):
+        LabelFrame.__init__(self, root, text=text, **args)
+
+        self.paramVars = []
+        self.paramSpinBox = []
+        self.paramLabels = []
+        self.enableBtn = Radiobutton(self, value=text)
+
+        for p, r in params:
+            self.paramVars.append(DoubleVar())
+            self.paramLabels.append(
+                Label(self, text=p)
+            )
+            self.paramSpinBox.append(
+                Spinbox(self, from_=r[0], to=r[1], increment=r[2],
+                        width=6, textvariable=self.paramVars[-1])
+            )
+
+        self.enableBtn.pack(side=LEFT)
+        for l, s in zip(self.paramLabels, self.paramSpinBox):
+            l.pack(side=LEFT, padx=5, pady=5)
+            s.pack(side=LEFT, padx=5, pady=5)
+
+    def set_params(self, *args):
+        for v, arg in zip(self.paramVars, args):
+            v.set(arg)
+
+    def get_params(self):
+        return [v.get() for v in self.paramVars]
+
+    def enable_frame(self):
+        for s in self.paramSpinBox:
+            s.config(state='enable')
+
+    def disable_frame(self):
+        for s in self.paramSpinBox:
+            s.config(state='disable')
+
+class TransformFrame(LabelFrame):
+    def __init__(self, root=None, **args):
+        LabelFrame.__init__(self, root, text='Transforms', **args)
+
+        self.opQueueFrame = LabelFrame(self, text='Trans. Queue')
+        self.opQueueListbox = Listbox(self.opQueueFrame, selectmode=SINGLE, exportselection=False)
+        buttonFrame = Frame(self.opQueueFrame)
+        self.addBtn = Button(buttonFrame, text='add')
+        self.delBtn = Button(buttonFrame, text='del')
+        self.moveUpBtn = Button(buttonFrame, text='up')
+        self.moveDownBtn = Button(buttonFrame, text='down')
+
+        self.transEditFrame = LabelFrame(self, text='Trans. Params')
+        self.transParamFrames = []
+        params = [
+            ('linear', [('start', (0, 1, 0.01)), ('end', (0, 1, 0.01))]),
+            ('norm', [('mean', (0, 1, 0.01)), ('std', (0, 1, 0.001))]),
+            ('power', [('power', (0, 2, 0.01))]),
+            ('shift', [('shift', (0, 1, 0.01))])
+        ]
+        for t, p in params:
+            self.transParamFrames.append(TransformParamFrame(self.transEditFrame, t, p))
+        applyFrame = Frame(self.transEditFrame)
+        self.applyBtn = Button(applyFrame, text='Apply Transform')
+
+        self.addBtn.grid(row=0, column=0, sticky=EW)
+        self.delBtn.grid(row=0, column=1, sticky=EW)
+        self.moveUpBtn.grid(row=1, column=0, sticky=EW)
+        self.moveDownBtn.grid(row=1, column=1, sticky=EW)
+        buttonFrame.grid_columnconfigure(0, weight=1)
+        buttonFrame.grid_columnconfigure(1, weight=1)
+        buttonFrame.grid_rowconfigure(0, weight=1)
+        buttonFrame.grid_rowconfigure(1, weight=1)
+
+        self.opQueueListbox.pack(side=TOP, fill=BOTH, expand=YES, padx=5)
+        buttonFrame.pack(side=TOP, fill=BOTH, pady=5, padx=5)
+        self.opQueueFrame.pack(side=LEFT, fill=BOTH, expand=YES, padx=5)
+
+        for f in self.transParamFrames:
+            f.pack(side=TOP, fill=X, expand=YES, pady=5, padx=5)
+        self.applyBtn.pack(side=RIGHT, padx=5, pady=5)
+        applyFrame.pack(side=TOP, fill=X, expand=YES)
+        self.transEditFrame.pack(side=LEFT, padx=5, pady=5)
 
 
-#------------------------------------------------
-listLabelPoints = []
-point_alpha_default = 0.8
-mousepress = None
-currently_dragging = False
-current_artist = None
-offset = [0,0]
-n = 0
-line_object = None
+class VibTuneFrame(LabelFrame):
+    def __init__(self, root=None, **args):
+        LabelFrame.__init__(self, root, text='Tune Vibration Mode', **args)
 
-#------------------------------------------------
-def on_press(event):
-    global currently_dragging
-    global mousepress
-    currently_dragging = True
-    if event.button == 3:
-        mousepress = "right"
-    elif event.button == 1:
-        mousepress = "left"
+        self.histFrame = VibHistFrame(self)
+        self.curveFrame = CurveFrame(self)
+        self.transFrame = TransformFrame(self)
 
-#------------------------------------------------
-def on_release(event):
-    global current_artist, currently_dragging
-    current_artist = None
-    currently_dragging = False
+        self.histFrame.pack(side=LEFT, fill=BOTH, padx=5, pady=5)
+        self.curveFrame.pack(side=LEFT, fill=BOTH, padx=5, pady=5)
+        self.transFrame.pack(side=LEFT, fill=BOTH, padx=5, pady=5, expand=YES)
 
-#------------------------------------------------
-def on_pick(event):
-    global current_artist, offset, n
-    global listLabelPoints
-    if current_artist is None:
-        current_artist = event.artist
-        #print("pick ", current_artist)
-        if isinstance(event.artist, patches.Circle):
-            if event.mouseevent.dblclick:
-                if mousepress == "right":
-                    #print("double click right")
-                    if len(ax.patches) > 2:
-                        #print("\ndelete", event.artist.get_label())
-                        event.artist.remove()
-                        xdata = list(line_object[0].get_xdata())
-                        ydata = list(line_object[0].get_ydata())
-                        for i in range(0,len(xdata)):
-                            if event.artist.get_label() == listLabelPoints[i]:
-                                xdata.pop(i) 
-                                ydata.pop(i) 
-                                listLabelPoints.pop(i)
-                                break
-                        #print('--->', listLabelPoints)
-                        line_object[0].set_data(xdata, ydata)
-                        plt.draw()
-            else:
-                x0, y0 = current_artist.center
-                x1, y1 = event.mouseevent.xdata, event.mouseevent.ydata
-                offset = [(x0 - x1), (y0 - y1)]
-        elif isinstance(event.artist, Line2D):
-            if event.mouseevent.dblclick:
-                if mousepress == "left":
-                    #print("double click left")
-                    n = n+1
-                    x, y = event.mouseevent.xdata, event.mouseevent.ydata
-                    newPointLabel = "point"+str(n)
-                    point_object = patches.Circle([x, y], radius=50, color='r', fill=False, lw=2,
-                            alpha=point_alpha_default, transform=ax.transData, label=newPointLabel)
-                    point_object.set_picker(5)
-                    ax.add_patch(point_object)
-                    xdata = list(line_object[0].get_xdata())
-                    ydata = list(line_object[0].get_ydata())
-                    #print('\ninit', listLabelPoints)
-                    pointInserted = False
-                    for i in range(0,len(xdata)-1):
-                        #print("--> testing inclusion %s in [%s-%s]" 
-                        #        %(newPointLabel, listLabelPoints[i], listLabelPoints[i+1]))
-                        #print('----->', min(xdata[i],xdata[i+1]), '<', x, '<', max(xdata[i],xdata[i+1]))
-                        #print('----->', min(ydata[i],ydata[i+1]), '<', y, '<', max(ydata[i],ydata[i+1]))
-                        if x > min(xdata[i],xdata[i+1]) and x < max(xdata[i],xdata[i+1]) and \
-                           y > min(ydata[i],ydata[i+1]) and y < max(ydata[i],ydata[i+1]) :
-                            xdata.insert(i+1, x)
-                            ydata.insert(i+1, y)
-                            listLabelPoints.insert(i+1, newPointLabel)
-                            pointInserted = True
-                            #print("include", newPointLabel)
-                            break
-                    line_object[0].set_data(xdata, ydata)
-                    #print('final', listLabelPoints)
-                    plt.draw()
-                    if not pointInserted:
-                        print("Error: point not inserted")
-            else:
-                xdata = event.artist.get_xdata()
-                ydata = event.artist.get_ydata()
-                x1, y1 = event.mouseevent.xdata, event.mouseevent.ydata
-                offset = xdata[0] - x1, ydata[0] - y1
+    def draw_data(self, data):
+        self.histFrame.draw_hist(data)
 
-#------------------------------------------------
-def on_motion(event):
-    global current_artist
-    if not currently_dragging:
-        return
-    if current_artist == None:
-        return
-    if event.xdata == None:
-        return
-    dx, dy = offset
-    if isinstance(current_artist, patches.Circle):
-        cx, cy =  event.xdata + dx, event.ydata + dy
-        current_artist.center = cx, cy
-        #print("moving", current_artist.get_label())
-        xdata = list(line_object[0].get_xdata())
-        ydata = list(line_object[0].get_ydata())
-        for i in range(0,len(xdata)): 
-            if listLabelPoints[i] == current_artist.get_label():
-                xdata[i] = cx
-                ydata[i] = cy
-                break
-        line_object[0].set_data(xdata, ydata)
-    elif isinstance(current_artist, Line2D):
-        xdata = list(line_object[0].get_xdata())
-        ydata = list(line_object[0].get_ydata())
-        xdata0 = xdata[0]
-        ydata0 = ydata[0]
-        for i in range(0,len(xdata)): 
-                xdata[i] = event.xdata + dx + xdata[i] - xdata0
-                ydata[i] = event.ydata + dy + ydata[i] - ydata0 
-        line_object[0].set_data(xdata, ydata)
-        for p in ax.patches:
-            pointLabel = p.get_label()
-            i = listLabelPoints.index(pointLabel) 
-            p.center = xdata[i], ydata[i]
-    plt.draw()
 
-#------------------------------------------------
-def on_click(event):
-    global n, line_object
-    if event and event.dblclick:
-        if len(listLabelPoints) < 2:
-            n = n+1
-            x, y = event.xdata, event.ydata
-            newPointLabel = "point"+str(n)
-            point_object = patches.Circle([x, y], radius=50, color='r', fill=False, lw=2,
-                    alpha=point_alpha_default, transform=ax.transData, label=newPointLabel)
-            point_object.set_picker(5)
-            ax.add_patch(point_object)
-            listLabelPoints.append(newPointLabel)
-            if len(listLabelPoints) == 2:
-                xdata = []
-                ydata = []
-                for p in ax.patches:
-                    cx, cy = p.center
-                    xdata.append(cx)
-                    ydata.append(cy)
-                line_object = ax.plot(xdata, ydata, alpha=0.5, c='r', lw=2, picker=True)
-                line_object[0].set_pickradius(5)
-            plt.draw()
+class VibModeFrame(Frame):
+    def __init__(self, root):
+        Frame.__init__(self, root)
 
-#================================================
-fig, ax = plt.subplots()
+        self.audio, self.fm = self.__load_music()
+        self.loadMusicFrame = MusicFrame(self)
+        self.rmseFrame = MusicRMSEFrame(self)
+        self.tuneFrame = VibTuneFrame(self)
+        # self.waveDB = load_database()
 
-ax.set_title("Double click left button to create draggable point\nDouble click right to remove a point", loc="left")
-ax.set_xlim(0, 4000)
-ax.set_ylim(0, 3000)
-ax.set_aspect('equal')
+        # self.waveDFrame = WaveDBFrame(self, self.waveDB, height=200)
 
-fig.canvas.mpl_connect('button_press_event', on_click)
-fig.canvas.mpl_connect('button_press_event', on_press)
-fig.canvas.mpl_connect('button_release_event', on_release)
-fig.canvas.mpl_connect('pick_event', on_pick)
-fig.canvas.mpl_connect('motion_notify_event', on_motion)
+        self.loadMusicFrame.pack(side=TOP, fill=X, pady=5, padx=5)
+        self.rmseFrame.pack(side=TOP, fill=X, pady=5, padx=5)
+        self.tuneFrame.pack(side=TOP, fill=X, expand=YES, pady=5, padx=5)
 
-plt.grid(True)
-# plt.show()
+        self.rmseFrame.draw_rmse(self.audio, self.fm)
+        self.tuneFrame.draw_data(self.fm.feature_data('rmse'))
 
-#==================================================
-def callback(event):
-    print(f'clicked at {event.x}, {event.y}')
-canvas = FigureCanvasTkAgg(fig, master=window)
-canvas.draw()
-canvas.get_tk_widget().pack()
-canvas.get_tk_widget().bind('<Double-1>', callback)
-toolbar = NavigationToolbar2Tk(canvas, window)
-toolbar.update()
-# toolbar.get_tk_widget().pack()
+    def __load_music(self):
+        audio, fm = load_music()
+        return audio, fm
 
-window.mainloop()
+
+if __name__ == '__main__':
+    root = Tk()
+    f = VibModeFrame(root)
+    f.pack()
+    root.mainloop()
