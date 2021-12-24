@@ -67,8 +67,17 @@ class AudioRMSEFrame(LabelFrame):
 
         self.canvas.get_tk_widget().pack(side=TOP, fill=BOTH, expand=YES)
 
-    def draw_rmse(self, audio, fm):
-        draw_rmse(audio, fm, self.ax)
+    def draw_rmse(self, audio, fm, rmse=None):
+        sr = fm.sample_rate()
+        hop_len = fm.frame_len()
+        if rmse is None:
+            rmse = fm.feature_data('rmse')
+        draw_rmse(audio, sr, hop_len, rmse, self.ax)
+
+        self.ax.grid(which='both')
+        self.ax.grid(which='minor', alpha=0.2)
+        self.ax.grid(which='major', alpha=0.5)
+
         self.canvas.draw()
 
 
@@ -278,7 +287,6 @@ class VibModeFrame(Frame):
         Frame.__init__(self, root)
 
         self.audio, self.fm = None, None
-        self.rmseCopy = None
         self.transformQueue = TransformQueue()
         self.inPlaceEdit = None
 
@@ -299,6 +307,9 @@ class VibModeFrame(Frame):
         self.audioPathFrame.pack(side=TOP, fill=X, pady=5, padx=5)
         self.rmseFrame.pack(side=TOP, fill=X, pady=5, padx=5)
         self.tuneFrame.pack(side=TOP, fill=X, expand=YES, pady=5, padx=5)
+
+        self.__lock_load_vib_mode()
+        self.__lock_transform_queue()
 
     def __on_add_transform(self):
         trans = self.tuneFrame.get_active_transform()
@@ -326,6 +337,16 @@ class VibModeFrame(Frame):
         self.transformQueue.move_down(idx[0])
         self.tuneFrame.list_transforms(self.transformQueue.transform_list())
         self.__on_transform_param_change(ignore_active=True)
+
+    def __lock_load_vib_mode(self):
+        self.audioPathFrame.browseBtn2.configure(state='disable')
+        self.audioPathFrame.loadBtn2.configure(state='disable')
+        self.audioPathFrame.saveBtn.configure(state='disable')
+
+    def __unlock_load_vib_mode(self):
+        self.audioPathFrame.browseBtn2.configure(state='normal')
+        self.audioPathFrame.loadBtn2.configure(state='normal')
+        self.audioPathFrame.saveBtn.configure(state='normal')
 
     def __lock_transform_queue(self):
         self.tuneFrame.transFrame.addBtn.configure(state='disable')
@@ -361,9 +382,10 @@ class VibModeFrame(Frame):
         self.tuneFrame.draw_curve(curve)
 
         if self.fm is not None:
-            data = self.transformQueue.apply_all(self.rmseCopy.copy(), curve=False)
-            self.fm.set_feature_data('rmse', data)
-            self.__draw_audio_data()
+            rmse = self.fm.feature_data('rmse').copy()
+            vib = self.transformQueue.apply_all(rmse, curve=False)
+            self.fm.set_vibration_sequence(vib)
+            self.__draw_audio_data(vib)
 
         self.inPlaceEdit = None
         self.__unlock_transform_queue()
@@ -371,25 +393,36 @@ class VibModeFrame(Frame):
     def __load_music(self):
         self.audio, self.fm = None, None
         audioPath = self.audioPathFrame.get_audio_path()
+        if len(audioPath) == 0:
+            return
+
         self.audio, self.fm = load_audio(audioPath)
-        self.rmseCopy = self.fm.feature_data('rmse').copy()
         self.__draw_audio_data()
+        self.__unlock_load_vib_mode()
+        self.__unlock_transform_queue()
 
     def __play_music(self):
         pass
 
     def __load_vib_mode(self):
         vibModePath = self.audioPathFrame.get_vibmode_path()
+        if len(vibModePath) == 0:
+            return
         self.transformQueue.load_transforms(vibModePath)
-        self.__on_transform_param_change()
+        self.__on_transform_param_change(ignore_active=True)
 
     def __save_vib_mode(self):
         vibModePath = self.audioPathFrame.get_vibmode_path()
+        if len(vibModePath) == 0:
+            return
+
         self.transformQueue.save_transforms(vibModePath)
 
-    def __draw_audio_data(self):
-        self.rmseFrame.draw_rmse(self.audio, self.fm)
-        self.tuneFrame.draw_histogram(self.fm.feature_data('rmse'))
+    def __draw_audio_data(self, rmse=None):
+        self.rmseFrame.draw_rmse(self.audio, self.fm, rmse)
+        if rmse is None:
+            rmse = self.fm.feature_data('rmse')
+        self.tuneFrame.draw_histogram(rmse)
 
 if __name__ == '__main__':
     root = Tk()

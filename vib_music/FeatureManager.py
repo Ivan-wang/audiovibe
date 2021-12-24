@@ -11,8 +11,18 @@ class FeatureManager(object):
         self.meta = meta
         self.features = features
         self.mode = mode
+        self.vib_sequence = None
+
+    def set_vibration_sequence(self, seq):
+        if seq.dtype != np.uint8:
+            seq = (np.clip(seq, 0, 1) * 255).astype(np.uint8)
+        self.vib_sequence = seq
+
 
     def vibration_sequence(self):
+        if self.vib_sequence is not None:
+            return self.vib_sequence
+
         if self.mode in FeatureManager.vibration_mode_func:
             return FeatureManager.vibration_mode_func[self.mode](self)
         else:

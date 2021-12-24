@@ -1,5 +1,6 @@
 import sys
 sys.path.append('../..')
+sys.path.append('..')
 
 import os
 import pickle
@@ -9,7 +10,6 @@ from vib_music import AdcDriver
 from vib_music import BoardProcess
 from vib_music import FeatureManager
 from vib_music import FeatureExtractionManager
-from vib_music import PlotManager
 import time
 
 FRAME_TIME = 0.0116
@@ -39,6 +39,41 @@ def launch_vibration(sequence):
     vib_proc = BoardProcess(driver, None)
     vib_proc.start()
     vib_proc.join()
+
+import multiprocessing
+from vib_music.utils import get_audio_process
+from vib_music.utils import get_board_process
+from vib_music.utils import show_proc_bar
+
+
+def launch_vibmode(fm):
+    driver = AdcDriver(fm.vibration_sequence())
+
+    audio_sem = multiprocessing.Semaphore()
+    vib_sem = multiprocessing.Semaphore()
+
+    frame_len = fm.frame_len()
+    audio_proc = get_audio_process(audio, frame_len, audio_sem, vib_sem)
+    if audio_proc is None:
+        print('initial audio process failed. exit...')
+        return
+
+    board_proc = get_board_process(driver, audio_sem)
+    if board_proc is None:
+        print('initial board process failed. exit...')
+        return
+
+    # show prograss bar here
+    sample_len = fm.sample_len()
+    num_frame = (sample_len + frame_len - 1) // frame_len
+
+    board_proc.start()
+    audio_proc.start()
+
+    show_proc_bar(num_frame, vib_sem)
+
+    board_proc.join()
+    audio_proc.join()
 
 from vib_music.misc import init_vibration_extraction_config
 def load_audio(audio_path, use_cache=False):
@@ -75,16 +110,11 @@ def load_audio(audio_path, use_cache=False):
     return audio, fm
 
 #TODO: reuse plot manager for drawing
-def draw_rmse(audio, fm, ax):
+def draw_rmse(audio, sr, hop_len, rmse, ax):
     ax.cla()
-    sr = fm.sample_rate()
-    hop_len = fm.frame_len()
 
     librosa.display.waveplot(audio, sr=sr, ax=ax)
-
-    rmse = fm.feature_data('rmse')
     times = librosa.times_like(rmse, sr=sr, hop_length=hop_len)
-
     ax.plot(times, rmse, 'r')
     ax.set_xlim(xmin=0, xmax=times[-1])
 
