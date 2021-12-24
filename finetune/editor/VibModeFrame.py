@@ -127,9 +127,9 @@ class CurveFrame(_CurveFrame):
 
         self.line, = self.ax.plot(np.linspace(0, 1, 1000), np.linspace(0, 1, 1000))
 
-        self.ax.set_xticks(np.linspace(0, 1, 5), labels=np.linspace(0, 1, 5))
+        self.ax.set_xticks(np.linspace(0, 1, 5))
         self.ax.set_xticks(np.linspace(0, 1, 50), minor=True)
-        self.ax.set_yticks(np.linspace(0, 1, 5), labels=np.linspace(0, 1, 5))
+        self.ax.set_yticks(np.linspace(0, 1, 5))
         self.ax.set_yticks(np.linspace(0, 1, 50), minor=True)
         self.ax.set_xticklabels(self.ax.get_xticklabels(), fontsize=8)
         self.ax.set_yticklabels(self.ax.get_xticklabels(), fontsize=8)
