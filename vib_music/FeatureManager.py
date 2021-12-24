@@ -42,6 +42,10 @@ class FeatureManager(object):
         else:
             return None
 
+    def set_feature_data(self, name, data):
+        if name in self.features:
+            self.features[name]['data'] = data
+
     @classmethod
     def vibration_mode(cls, mode_func):
         if mode_func.__name__ in cls.vibration_mode_func:
