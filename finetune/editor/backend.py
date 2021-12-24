@@ -46,7 +46,7 @@ from vib_music.utils import get_board_process
 from vib_music.utils import show_proc_bar
 
 
-def launch_vibmode(fm):
+def launch_vib_mode(audio, fm):
     driver = AdcDriver(fm.vibration_sequence())
 
     audio_sem = multiprocessing.Semaphore()

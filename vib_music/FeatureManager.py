@@ -24,7 +24,8 @@ class FeatureManager(object):
             return self.vib_sequence
 
         if self.mode in FeatureManager.vibration_mode_func:
-            return FeatureManager.vibration_mode_func[self.mode](self)
+            self.vib_sequence = FeatureManager.vibration_mode_func[self.mode](self)
+            return self.vib_sequence
         else:
             raise KeyError('unknown vibration mode')
 

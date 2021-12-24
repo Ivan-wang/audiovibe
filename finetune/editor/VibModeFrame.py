@@ -9,11 +9,12 @@ from matplotlib.figure import Figure
 from backend import load_audio
 from backend import draw_rmse
 from backend import TransformQueue, Transform
+from backend import launch_vib_mode
 
 
 class LibLoadFrame(LabelFrame):
     def __init__(self, root=None, **args):
-        LabelFrame.__init__(self, root, text='Load Library', **args)
+        LabelFrame.__init__(self, root, text='Load Data', **args)
 
         self.audioPath = StringVar()
         self.vibModePath = StringVar()
@@ -294,15 +295,15 @@ class VibModeFrame(Frame):
         self.rmseFrame = AudioRMSEFrame(self)
         self.tuneFrame = VibTuneFrame(self)
 
-        self.audioPathFrame.loadBtn.bind('<Button-1>', lambda e: self.__load_music())
-        self.audioPathFrame.loadBtn2.bind('<Button-1>', lambda e: self.__load_vib_mode())
-        self.audioPathFrame.saveBtn.bind('<Button-1>', lambda  e: self.__save_vib_mode())
-        self.tuneFrame.transFrame.addBtn.bind('<Button-1>', lambda e: self.__on_add_transform())
-        self.tuneFrame.transFrame.delBtn.bind('<Button-1>', lambda e: self.__on_delete_transform())
-        self.tuneFrame.transFrame.moveUpBtn.bind('<Button-1>', lambda e: self.__on_move_up_transform())
-        self.tuneFrame.transFrame.moveDownBtn.bind('<Button-1>', lambda e: self.__on_move_down_transform())
+        self.audioPathFrame.loadBtn.bind('<ButtonRelease-1>', lambda e: self.__load_music())
+        self.audioPathFrame.loadBtn2.bind('<ButtonRelease-1>', lambda e: self.__load_vib_mode())
+        self.audioPathFrame.saveBtn.bind('<ButtonRelease-1>', lambda  e: self.__save_vib_mode())
+        self.tuneFrame.transFrame.addBtn.bind('<ButtonRelease-1>', lambda e: self.__on_add_transform())
+        self.tuneFrame.transFrame.delBtn.bind('<ButtonRelease-1>', lambda e: self.__on_delete_transform())
+        self.tuneFrame.transFrame.moveUpBtn.bind('<ButtonRelease-1>', lambda e: self.__on_move_up_transform())
+        self.tuneFrame.transFrame.moveDownBtn.bind('<ButtonRelease-1>', lambda e: self.__on_move_down_transform())
         self.tuneFrame.transFrame.opQueueListbox.bind('<Double-1>', lambda e: self.__on_transform_selected())
-        self.tuneFrame.transFrame.applyBtn.bind('<Button-1>', lambda e: self.__on_transform_param_change())
+        self.tuneFrame.transFrame.applyBtn.bind('<ButtonRelease-1>', lambda e: self.__on_transform_param_change())
 
         self.audioPathFrame.pack(side=TOP, fill=X, pady=5, padx=5)
         self.rmseFrame.pack(side=TOP, fill=X, pady=5, padx=5)
@@ -378,12 +379,15 @@ class VibModeFrame(Frame):
         x = np.linspace(0, 1, 1000)
         curve = self.transformQueue.apply_all(x, curve=True)
         if self.inPlaceEdit is None and not ignore_active:
+            print('apply active transform')
             curve = self.transformQueue.apply_transform(curve, trans)
         self.tuneFrame.draw_curve(curve)
 
         if self.fm is not None:
             rmse = self.fm.feature_data('rmse').copy()
             vib = self.transformQueue.apply_all(rmse, curve=False)
+            if self.inPlaceEdit is None and not ignore_active:
+                vib = self.transformQueue.apply_transform(vib, trans)
             self.fm.set_vibration_sequence(vib)
             self.__draw_audio_data(vib)
 
@@ -402,7 +406,8 @@ class VibModeFrame(Frame):
         self.__unlock_transform_queue()
 
     def __play_music(self):
-        pass
+        audioPath = self.audioPathFrame.get_audio_path()
+        launch_vib_mode(audioPath, self.fm)
 
     def __load_vib_mode(self):
         vibModePath = self.audioPathFrame.get_vibmode_path()
