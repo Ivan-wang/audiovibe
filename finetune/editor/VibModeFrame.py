@@ -104,11 +104,11 @@ class VibHistFrame(_CurveFrame):
         bins, _, _ = self.ax.hist(data, bins=256, range=(0., 1), density=False)
 
         self.ax.set_xlim((0, 1))
-        self.ax.set_xticks(np.linspace(0, 1, 5), labels=np.linspace(0, 1, 5))
+        self.ax.set_xticks(np.linspace(0, 1, 5))
         self.ax.set_xticks(np.linspace(0, 1, 50), minor=True)
         self.ax.set_ylim((0, max(bins) // 10 * 10))
-        self.ax.set_yticks(np.linspace(0, (max(bins) + 9) // 10 * 10, 5),
-                           labels=np.linspace(0, (max(bins) + 9) // 10 * 10, 5))
+        self.ax.set_yticks(np.linspace(0, (max(bins) + 9) // 10 * 10, 5))
+        self.ax.set_yticklabels(np.linspace(0, (max(bins) + 9) // 10 * 10, 5))
         self.ax.set_yticks(np.linspace(0, (max(bins) + 9) // 10 * 10, 50), minor=True)
         self.ax.set_xticklabels(self.ax.get_xticklabels(), fontsize=8)
         self.ax.set_xticklabels(self.ax.get_xticklabels(), fontsize=8)
