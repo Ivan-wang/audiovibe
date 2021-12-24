@@ -10,12 +10,9 @@ import pickle
 import time
 
 from backend import launch_atomicwave_vibration
+from backend import load_atomic_wave_database
+from backend import save_atomic_wave_database
 
-def load_database():
-    with open('atomic-wave.pkl', 'rb') as f:
-        data = pickle.load(f)
-
-    return data 
 
 def save_database(data):
     with open('atomic-wave.pkl', 'wb') as f:
@@ -243,7 +240,7 @@ class AtomicWaveFrame(Frame):
     def __init__(self, root=None):
         Frame.__init__(self, root, height=600, width=800)
 
-        self.data = load_database()
+        self.data = load_atomic_wave_database('atomic-wave.pkl')
 
         self.plotFrame = WavePlotFrame(self)
         self.sliderFrame = SliderFrame(self, height=400)
@@ -312,7 +309,7 @@ class AtomicWaveFrame(Frame):
             self.waveDBFrame.set_waveform_list(
                 sorted(list(self.data[dbName].keys()))
             )
-        save_database(self.data)
+        save_atomic_wave_database(self.data, 'atomic-wave.pkl')
 
 if __name__ == '__main__':
     root = Tk()

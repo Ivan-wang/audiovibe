@@ -14,6 +14,16 @@ import time
 
 FRAME_TIME = 0.0116
 
+def load_atomic_wave_database(path):
+    with open(path, 'rb') as f:
+        data = pickle.load(f)
+
+    return data
+
+def save_atomic_wave_database(data, path):
+    with open(path, 'wb') as f:
+        pickle.dump(data, f)
+
 def launch_atomicwave_vibration(atomicwave, duration, scale=1):
     atomicwave *= scale
     print('Atomic Wave:', atomicwave)
