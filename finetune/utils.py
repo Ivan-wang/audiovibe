@@ -7,7 +7,7 @@ sys.path.append('..')
 import argparse
 
 def _base_arg_parser():
-    p = argparse.ArgumentParser()
+    p = argparse.ArgumentParser(conflict_handler='resolve')
     p.add_argument('--audio', type=str)
     p.add_argument('--task', type=str, default='run', choices=['run', 'build', 'play'])
     p.add_argument('--len-hop', type=int, default=512)
@@ -17,8 +17,7 @@ def _base_arg_parser():
     return p
 
 def tune_melspec_parser(base_parser=None):
-    if base_parser is None:
-        p = _base_arg_parser()
+    p = _base_arg_parser() if base_parser is None else base_parser
     p.add_argument('--len-window', type=int, default=2048)
     p.add_argument('--n-mels', type=int, default=128)
     p.add_argument('--fmax', type=int, default=-1)
@@ -26,15 +25,13 @@ def tune_melspec_parser(base_parser=None):
     return p
 
 def tune_rmse_parser(base_parser=None):
-    if base_parser is None:
-        p = _base_arg_parser()
+    p = _base_arg_parser() if base_parser is None else base_parser
     p.add_argument('--len-window', type=int, default=2048)
 
     return p
 
 def tune_beat_parser(base_parser=None):
-    if base_parser is None:
-        p = _base_arg_parser()
+    p = _base_arg_parser() if base_parser is None else base_parser
 
     p.add_argument('--len-frame', type=int, default=300)
     p.add_argument('--min-tempo', type=int, default=150)
@@ -43,8 +40,7 @@ def tune_beat_parser(base_parser=None):
     return p
 
 def tune_pitch_parser(base_parser=None):
-    if base_parser is None:
-        p = _base_arg_parser()
+    p = _base_arg_parser() if base_parser is None else base_parser
 
     p.add_argument('--pitch', action='store_true')
     p.add_argument('--pitch-alg', type=str, default='pyin', choices=['pyin', 'yin'])

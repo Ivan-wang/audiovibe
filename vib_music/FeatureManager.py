@@ -6,15 +6,27 @@ import numpy as np
 
 class FeatureManager(object):
     vibration_mode_func = {}
-    # def __init__(self, num_frame, vib_iterators, motors):
     def __init__(self, meta, features, mode):
         self.meta = meta
         self.features = features
         self.mode = mode
+        self.vib_sequence = None
 
-    def vibration_sequence(self):
+    def set_vibration_sequence(self, seq):
+        if seq.dtype != np.uint8:
+            seq = (np.clip(seq, 0, 1) * 255).astype(np.uint8)
+        self.vib_sequence = seq
+
+    def clear_vibration_sequence(self):
+        self.vib_sequence = None
+
+    def vibration_sequence(self, cached=True):
+        if self.vib_sequence is not None and cached:
+            return self.vib_sequence
+
         if self.mode in FeatureManager.vibration_mode_func:
-            return FeatureManager.vibration_mode_func[self.mode](self)
+            self.vib_sequence = FeatureManager.vibration_mode_func[self.mode](self)
+            return self.vib_sequence
         else:
             raise KeyError('unknown vibration mode')
 
@@ -42,14 +54,21 @@ class FeatureManager(object):
         else:
             return None
 
+    def set_feature_data(self, name, data):
+        if name in self.features:
+            self.features[name]['data'] = data
+
     @classmethod
-    def vibration_mode(cls, mode_func):
-        if mode_func.__name__ in cls.vibration_mode_func:
-            raise KeyError('Cannot register duplicated vibration mode {mode_func.__name__}')
-        cls.vibration_mode_func.update({
-            mode_func.__name__: mode_func
-        })
-        return mode_func
+    def vibration_mode(cls, over_ride=False):
+    # def vibration_mode(cls, mode_func):
+        def register_vibration_mode(mode_func):
+            if mode_func.__name__ in cls.vibration_mode_func and not over_ride:
+                raise KeyError('Cannot register duplicated vibration mode {mode_func.__name__}')
+            cls.vibration_mode_func.update({
+                mode_func.__name__: mode_func
+            })
+            return mode_func
+        return register_vibration_mode
 
     @classmethod
     def from_folder(cls, folder, mode):
@@ -75,3 +94,7 @@ class FeatureManager(object):
                 features[vib] = pickle.load(f)
 
         return cls(meta, features, mode)
+
+@FeatureManager.vibration_mode
+def power_sequence_mode(fm:FeatureManager) -> np.ndarray:
+    power = fm.feature_data('rmse')

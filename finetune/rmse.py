@@ -11,7 +11,6 @@ def rmse_voltage(fm:FeatureManager) -> np.ndarray:
 
     rmse = (rmse-rmse.min()) / (rmse.max()-rmse.min())
     rmse  = rmse ** 2
-    # rmse = rmse * 0.5 + 0.5
 
     bins = np.linspace(0., 1., 150, endpoint=True)
     level = np.digitize(rmse, bins).astype(np.uint8)
