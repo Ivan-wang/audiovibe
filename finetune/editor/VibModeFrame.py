@@ -15,8 +15,8 @@ from backend import load_atomic_wave_database
 
 
 class LibLoadFrame(LabelFrame):
-    def __init__(self, root=None, **args):
-        LabelFrame.__init__(self, root, text='Load Data', **args)
+    def __init__(self, master=None, **args):
+        LabelFrame.__init__(self, master, text='Load Data', **args)
 
         self.audioPath = StringVar()
         self.vibModePath = StringVar()
@@ -25,7 +25,7 @@ class LibLoadFrame(LabelFrame):
         self.browseBtn = Button(self, text='Browse...', command=self.__ask_audio_path)
         self.loadBtn = Button(self, text='Load')
         self.vibModeEntry = Entry(self, textvariable=self.vibModePath)
-        self.browseBtn2 = Button(self, text='Browse...', command=self.__ask_vibmode_path)
+        self.browseBtn2 = Button(self, text='Browse...', command=self.__ask_vib_mode_path)
         self.loadBtn2 = Button(self, text='Load')
         self.saveBtn = Button(self, text='save')
 
@@ -45,7 +45,7 @@ class LibLoadFrame(LabelFrame):
             initialdir='.'
         ))
 
-    def __ask_vibmode_path(self):
+    def __ask_vib_mode_path(self):
         self.vibModePath.set(filedialog.askopenfilename(
             initialdir='.'
         ))
@@ -53,12 +53,13 @@ class LibLoadFrame(LabelFrame):
     def get_audio_path(self):
         return self.audioPath.get()
 
-    def get_vibmode_path(self):
+    def get_vib_mode_path(self):
         return self.vibModePath.get()
 
+
 class AudioPlayFrame(LabelFrame):
-    def __init__(self, root=None, **args):
-        LabelFrame.__init__(self, root, text='Audio Play', **args)
+    def __init__(self, master=None, **args):
+        LabelFrame.__init__(self, master, text='Audio Play', **args)
 
         self.atomicDbPath = StringVar()
         self.atomicDbname = StringVar()
@@ -69,7 +70,7 @@ class AudioPlayFrame(LabelFrame):
         self.atomicWaveNames = ['none']
 
         self.atomicDbEntry = Entry(self, textvariable=self.atomicDbPath)
-        self.browseBtn = Button(self, text='Brower...', command=self.__ask_atomic_db_path)
+        self.browseBtn = Button(self, text='Browse...', command=self.__ask_atomic_db_path)
         self.loadBtn = Button(self, text='Load', command=self.__on_load_atomic_db)
         self.playBtn = Button(self, text='Play')
         self.atomicDataBaseOptMenu = OptionMenu(self, self.atomicDbname, *self.atomicDbNames)
@@ -112,16 +113,16 @@ class AudioPlayFrame(LabelFrame):
         self.__unlock_atomic_wave_options()
         self.__on_atomic_db_load()
 
-    def __on_atomic_db_change(self, dbName):
-        self.atomicDbname.set(dbName)
+    def __on_atomic_db_change(self, db):
+        self.atomicDbname.set(db)
 
         self.atomicWaveOptMenu['menu'].delete(0, END)
         self.atomicWaveName.set('')
-        if dbName == 'none':
+        if db == 'none':
             self.atomicWaveNames = ['none']
             self.playBtn.configure(state='disable')
         else:
-            self.atomicWaveNames = sorted(list(self.atomicDB[dbName].keys()))
+            self.atomicWaveNames = sorted(list(self.atomicDB[db].keys()))
         for c in self.atomicWaveNames:
             self.atomicWaveOptMenu['menu'].add_command(label=c, command=tk._setit(self.atomicWaveName, c))
             self.playBtn.configure(state='normal')
@@ -135,13 +136,13 @@ class AudioPlayFrame(LabelFrame):
         self.__on_atomic_db_change(self.atomicDbNames[0])
 
     def get_atomic_wave(self):
-        dbName = self.atomicDbname.get()
-        waveName = self.atomicWaveName.get()
+        db = self.atomicDbname.get()
+        wave = self.atomicWaveName.get()
 
-        if dbName == 'none' or waveName == 'none':
+        if db == 'none' or wave == 'none':
             return None
         else:
-            return self.atomicDB[dbName][waveName]
+            return self.atomicDB[db][wave]
 
 
 class AudioRMSEFrame(LabelFrame):
@@ -171,8 +172,8 @@ class AudioRMSEFrame(LabelFrame):
 
 
 class _CurveFrame(LabelFrame):
-    def __init__(self, root=None, text='', **args):
-        LabelFrame.__init__(self, root, text=text, **args)
+    def __init__(self, master=None, text='', **args):
+        LabelFrame.__init__(self, master, text=text, **args)
 
         self.figure = Figure(figsize=(3, 3))
         self.ax = self.figure.subplots(1, 1)
@@ -184,8 +185,8 @@ class _CurveFrame(LabelFrame):
 
 
 class VibHistFrame(_CurveFrame):
-    def __init__(self, root=None, **args):
-        _CurveFrame.__init__(self, root, text='Histogram', **args)
+    def __init__(self, master=None, **args):
+        _CurveFrame.__init__(self, master, text='Histogram', **args)
 
     def draw_hist(self, data):
         self.ax.cla()
@@ -210,15 +211,17 @@ class VibHistFrame(_CurveFrame):
 
 
 class CurveFrame(_CurveFrame):
-    def __init__(self, root=None, **args):
-        _CurveFrame.__init__(self, root, text='Curve', **args)
+    def __init__(self, master=None, **args):
+        _CurveFrame.__init__(self, master, text='Curve', **args)
 
         self.line, = self.ax.plot(np.linspace(0, 1, 1000), np.linspace(0, 1, 1000))
 
         self.ax.set_xticks(np.linspace(0, 1, 5))
         self.ax.set_xticks(np.linspace(0, 1, 50), minor=True)
+        self.ax.set_xticklabels(np.linspace(0, 1, 5))
         self.ax.set_yticks(np.linspace(0, 1, 5))
         self.ax.set_yticks(np.linspace(0, 1, 50), minor=True)
+        self.ax.set_yticklabels(np.linspace(0, 1, 5))
         self.ax.set_xticklabels(self.ax.get_xticklabels(), fontsize=8)
         self.ax.set_yticklabels(self.ax.get_xticklabels(), fontsize=8)
 
@@ -232,8 +235,8 @@ class CurveFrame(_CurveFrame):
 
 
 class TransformFrame(LabelFrame):
-    def __init__(self, root=None, **args):
-        LabelFrame.__init__(self, root, text='Transforms', **args)
+    def __init__(self, master=None, **args):
+        LabelFrame.__init__(self, master, text='Transforms', **args)
 
         self.transName = StringVar()
 
@@ -242,9 +245,10 @@ class TransformFrame(LabelFrame):
         self.transParamVars = {}
         params = [
             ('linear', [('slope', (0, 1, 0.01)), ('bias', (0, 1, 0.01))]),
-            ('norm', [('mean', (0, 1, 0.01)), ('std', (0, 1, 0.001))]),
+            ('norm-std', [('mean', (0, 1, 0.01)), ('std', (0, 1, 0.001))]),
             ('power', [('power', (0, 2, 0.01))]),
-            ('log', [('gamma', (0, 1, 0.01))])
+            ('log', [('gamma', (0, 1, 0.01))]),
+            ('norm-min-max', [('min', (0, 1, 0.01)), ('max', (0, 1, 0.01))])
         ]
         for t, p in params:
             frame, vars = self.__build_trans_param_frame(name=t, params=p)
@@ -298,7 +302,7 @@ class TransformFrame(LabelFrame):
             paramVars.append(DoubleVar())
             paramLabels.append(Label(frame, text=p))
             paramSpinBox.append(Spinbox(frame, from_=r[0], to=r[1], increment=r[2],
-                        width=6, textvariable=paramVars[-1]))
+                                        width=6, textvariable=paramVars[-1]))
 
         enableBtn.pack(side=LEFT)
         for l, s in zip(paramLabels, paramSpinBox):
@@ -340,6 +344,7 @@ class TransformFrame(LabelFrame):
             p.set(v)
         self.__on_transform_selection_change()
 
+
 class VibTuneFrame(LabelFrame):
     def __init__(self, root=None, **args):
         LabelFrame.__init__(self, root, text='Tune Vibration Mode', **args)
@@ -371,6 +376,7 @@ class VibTuneFrame(LabelFrame):
     def list_transforms(self, transforms):
         self.transFrame.list_transforms(transforms)
 
+
 class VibModeFrame(Frame):
     def __init__(self, root):
         Frame.__init__(self, root)
@@ -386,7 +392,7 @@ class VibModeFrame(Frame):
 
         self.audioPathFrame.loadBtn.bind('<ButtonRelease-1>', lambda e: self.__load_music())
         self.audioPathFrame.loadBtn2.bind('<ButtonRelease-1>', lambda e: self.__load_vib_mode())
-        self.audioPathFrame.saveBtn.bind('<ButtonRelease-1>', lambda  e: self.__save_vib_mode())
+        self.audioPathFrame.saveBtn.bind('<ButtonRelease-1>', lambda e: self.__save_vib_mode())
         self.tuneFrame.transFrame.addBtn.bind('<ButtonRelease-1>', lambda e: self.__on_add_transform())
         self.tuneFrame.transFrame.delBtn.bind('<ButtonRelease-1>', lambda e: self.__on_delete_transform())
         self.tuneFrame.transFrame.moveUpBtn.bind('<ButtonRelease-1>', lambda e: self.__on_move_up_transform())
@@ -399,7 +405,6 @@ class VibModeFrame(Frame):
         self.rmseFrame.pack(side=TOP, fill=X, pady=5, padx=5)
         self.tuneFrame.pack(side=TOP, fill=X, expand=YES, pady=5, padx=5)
         self.playFrame.pack(side=TOP, fill=X, expand=YES, pady=5, padx=5)
-
 
         self.__lock_load_vib_mode()
         self.__lock_transform_queue()
@@ -414,19 +419,19 @@ class VibModeFrame(Frame):
         if len(self.transformQueue) == 0:
             return
 
-        idx = self.tuneFrame.get_selected_transform_idx() # tuple
+        idx = self.tuneFrame.get_selected_transform_idx()  # tuple
         self.transformQueue.delete(pos=idx[0])
         self.tuneFrame.list_transforms(self.transformQueue.transform_list())
         self.__on_transform_param_change()
 
     def __on_move_up_transform(self):
-        idx = self.tuneFrame.get_selected_transform_idx() # tuple
+        idx = self.tuneFrame.get_selected_transform_idx()  # tuple
         self.transformQueue.move_up(idx[0])
         self.tuneFrame.list_transforms(self.transformQueue.transform_list())
         self.__on_transform_param_change()
 
     def __on_move_down_transform(self):
-        idx = self.tuneFrame.get_selected_transform_idx() # tuple
+        idx = self.tuneFrame.get_selected_transform_idx()  # tuple
         self.transformQueue.move_down(idx[0])
         self.tuneFrame.list_transforms(self.transformQueue.transform_list())
         self.__on_transform_param_change()
@@ -454,7 +459,7 @@ class VibModeFrame(Frame):
         self.tuneFrame.transFrame.moveDownBtn.configure(state='normal')
 
     def __on_transform_selected(self):
-        idx = self.tuneFrame.get_selected_transform_idx() # tuple
+        idx = self.tuneFrame.get_selected_transform_idx()  # tuple
         trans = self.transformQueue.get_transform(idx[0])
         if trans is not None:
             self.tuneFrame.set_active_transform(trans)
@@ -480,7 +485,7 @@ class VibModeFrame(Frame):
             vib = self.transformQueue.apply_all(rmse, curve=False)
             if self.inPlaceEdit is None and include_active:
                 vib = self.transformQueue.apply_transform(vib, trans, curve=False)
-            self.fm.set_vibration_sequence(vib)
+            # self.fm.set_vibration_sequence(vib)
             self.__draw_audio_data(vib)
 
         self.inPlaceEdit = None
@@ -500,18 +505,18 @@ class VibModeFrame(Frame):
     def __play_music(self):
         atomic_wave = self.playFrame.get_atomic_wave()
         print(atomic_wave)
-        # audioPath = self.audioPathFrame.get_audio_path()
-        # launch_vib_mode(audioPath, self.fm)
+        audioPath = self.audioPathFrame.get_audio_path()
+        launch_vib_mode(audioPath, self.fm, self.transformQueue, atomic_wave)
 
     def __load_vib_mode(self):
-        vibModePath = self.audioPathFrame.get_vibmode_path()
+        vibModePath = self.audioPathFrame.get_vib_mode_path()
         if len(vibModePath) == 0:
             return
         self.transformQueue.load_transforms(vibModePath)
         self.__on_transform_param_change()
 
     def __save_vib_mode(self):
-        vibModePath = self.audioPathFrame.get_vibmode_path()
+        vibModePath = self.audioPathFrame.get_vib_mode_path()
         if len(vibModePath) == 0:
             return
 
@@ -522,6 +527,7 @@ class VibModeFrame(Frame):
         if rmse is None:
             rmse = self.fm.feature_data('rmse')
         self.tuneFrame.draw_histogram(rmse)
+
 
 if __name__ == '__main__':
     root = Tk()
