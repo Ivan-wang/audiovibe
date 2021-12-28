@@ -14,9 +14,10 @@ from backend import load_atomic_wave_database
 from backend import save_atomic_wave_database
 
 
-def save_database(data):
-    with open('atomic-wave.pkl', 'wb') as f:
-        pickle.dump(data, f)
+def build_wave_plot_data(data):
+    xdata = np.linspace(0, 24, num=1000, endpoint=False)
+    ydata = data[np.floor(xdata).astype(np.int64)]
+    return xdata, ydata
 
 
 class WavePlotFrame(LabelFrame):
@@ -24,7 +25,7 @@ class WavePlotFrame(LabelFrame):
         LabelFrame.__init__(self, master=master, text='Atomic Wave Plot', **args)
 
         data = np.ones((24,)) * 0.05
-        x, y = self.__make_plot_data(data)
+        x, y = build_wave_plot_data(data)
 
         self.figure = Figure(figsize=(6, 3))
         self.ax = self.figure.subplots(1, 1)
@@ -42,21 +43,17 @@ class WavePlotFrame(LabelFrame):
 
         self.canvas.get_tk_widget().pack(side=TOP, fill=BOTH, expand=YES)
 
-    def __make_plot_data(self, x):
-        xdata = np.linspace(0, 24, num=1000, endpoint=False)
-        ydata = x[np.floor(xdata).astype(np.int64)]
-        return xdata, ydata
-    
     def update_wave_values(self, data):
-        x, y = self.__make_plot_data(data)
+        x, y = build_wave_plot_data(data)
         self.line.set_xdata(x)
         self.line.set_ydata(y)
         self.canvas.draw()
 
+
 class WaveDBFrame(LabelFrame):
     def __init__(self, master=None, database={}, **args):
         LabelFrame.__init__(self, master=master, text='Atomic Wave Database', **args)
-        
+
         self.database = database
 
         self.newDBNameEntry = StringVar()
@@ -78,14 +75,12 @@ class WaveDBFrame(LabelFrame):
         self.newWave = Button(self.btnFrame, text='New Wave')
         self.newWaveName = Entry(self.btnFrame, textvariable=self.newWaveName)
 
-        self.dbOptions.bind('<Double-1>', self.__on_database_selected)
-        # self.waveOptions.bind('<Double-1>', self.__on_waveform_selected)
+        self.dbOptions.bind('<Double-1>', lambda e: self.__on_database_selected())
 
         self.dbOptions.pack(side=TOP, fill=X, padx=5, expand=YES)
         self.waveOptions.pack(side=TOP, fill=X, padx=5, expand=YES)
 
         self.dBframe.pack(side=LEFT, fill=X, padx=5, expand=YES)
-        # ttk.Separator(self.selFrame, orient=VERTICAL).pack(side=LEFT, fill=Y, expand=YES)
         self.waveFrame.pack(side=LEFT, fill=X, padx=5, expand=YES)
 
         self.newDB.pack(side=LEFT, padx=5, expand=NO)
@@ -95,7 +90,7 @@ class WaveDBFrame(LabelFrame):
 
         self.selFrame.pack(side=TOP, fill=X, expand=YES, padx=5)
         self.btnFrame.pack(side=TOP, fill=X, expand=YES, padx=5, pady=5)
-    
+
     def set_wave_database_list(self, dbs):
         self.dbOptions.delete(0, END)
         for d in dbs:
@@ -105,23 +100,23 @@ class WaveDBFrame(LabelFrame):
         self.waveOptions.delete(0, END)
         for w in waves:
             self.waveOptions.insert(END, w)
-    
+
     def get_wave_database_selection(self):
         sel = self.dbOptions.curselection()
         return self.dbOptions.get(sel)
-    
+
     def get_waveform_selection(self):
         sel = self.waveOptions.curselection()
         return self.waveOptions.get(sel)
 
     def get_new_waveform_name(self):
         return self.newWaveName.get()
-   
-    def __on_database_selected(self, event):
+
+    def __on_database_selected(self):
         dbName = self.get_wave_database_selection()
         waves = sorted(list(self.database[dbName].keys()))
         self.set_waveform_list(waves)
-    
+
     def __add_wave_database(self):
         name = self.newDBNameEntry.get()
         if len(name) == 0: return
@@ -130,7 +125,7 @@ class WaveDBFrame(LabelFrame):
             self.set_wave_database_list(
                 sorted(list(self.database.keys()))
             )
-        save_database(self.database)
+        save_atomic_wave_database(self.database, 'atomic-wave.pkl')
 
 
 class SliderPanel(LabelFrame):
@@ -149,8 +144,8 @@ class SliderPanel(LabelFrame):
 
         for i, (s, l) in enumerate(zip(self.sliders, self.labels)):
             # s.grid(row=0, column=i, padx=10, pady=10)
-            s.grid(row=0, column=i, padx=1, sticky=E+W)
-            l.grid(row=1, column=i, padx=1, sticky=E+W)
+            s.grid(row=0, column=i, padx=1, sticky=E + W)
+            l.grid(row=1, column=i, padx=1, sticky=E + W)
 
     def get_values(self):
         return np.array([v.get() for v in self.vars])
@@ -158,6 +153,7 @@ class SliderPanel(LabelFrame):
     def set_values(self, values):
         for v, val in zip(self.vars, values[:24]):
             v.set(val)
+
 
 class SliderFrame(Frame):
     def __init__(self, root=None, **args):
@@ -180,12 +176,12 @@ class SliderFrame(Frame):
 
         self.sliderPanel.pack(side=TOP, fill=X, padx=5, pady=5, expand=NO)
         self.controlPanel.pack(side=TOP, fill=X, padx=5, pady=5, expand=NO)
-        self.sliderPanel.pack_propagate(0) # keep the panel size
+        self.sliderPanel.pack_propagate(0)  # keep the panel size
         ttk.Separator(self, orient=HORIZONTAL).pack(side=BOTTOM, fill=X, expand=YES)
-    
+
     def set_values(self, values):
         self.sliderPanel.set_values(values)
-    
+
     def get_values(self):
         return self.sliderPanel.get_values()
 
@@ -194,6 +190,7 @@ class SliderFrame(Frame):
 
     def get_scale(self):
         return self.waveScaleVar.get()
+
 
 class WavePlayFrame(LabelFrame):
     def __init__(self, master=None, **args):
@@ -229,12 +226,14 @@ class WavePlayFrame(LabelFrame):
     def get_scale(self):
         return self.wave_scale.get()
 
+
 def show_playing_dialog(duration, scale):
     msgbox = Toplevel()
     msgbox.title('Playing Atomic Wave')
     Label(msgbox, text=f'Duration {duration}, Scale {scale}' + "Do not close this window!").pack()
     time.sleep(duration)
     msgbox.destroy()
+
 
 class AtomicWaveFrame(Frame):
     def __init__(self, root=None):
@@ -252,13 +251,13 @@ class AtomicWaveFrame(Frame):
             sorted(list(self.data.keys()))
         )
 
-        self.waveDBFrame.waveOptions.bind('<Double-1>', self.__update_sliders)
-        self.waveDBFrame.newWave.bind('<Button-1>', self.__save_atomic_wave)
-        self.playFrame.playButton.bind('<Button-1>', self.__launch_vibration)
+        self.waveDBFrame.waveOptions.bind('<Double-1>', lambda e: self.__update_sliders())
+        self.waveDBFrame.newWave.bind('<Button-1>', lambda e: self.__save_atomic_wave())
+        self.playFrame.playButton.bind('<Button-1>', lambda e: self.__launch_vibration())
 
         for s in self.sliderFrame.sliderPanel.sliders:
-            s.bind('<ButtonRelease-1>', self.__on_slider_change)
-        self.sliderFrame.scaleSlider.bind('<ButtonRelease-1>', self.__on_wave_scale_change)
+            s.bind('<ButtonRelease-1>', lambda e :self.__on_slider_change())
+        self.sliderFrame.scaleSlider.bind('<ButtonRelease-1>', lambda e : self.__on_wave_scale_change())
 
         self.waveDBFrame.pack(side=LEFT, padx=10, fill=X, expand=YES)
         self.playFrame.pack(side=RIGHT, padx=10, fill=X, expand=NO)
@@ -266,13 +265,13 @@ class AtomicWaveFrame(Frame):
         self.plotFrame.pack(side=TOP, pady=5, fill=BOTH, expand=YES)
         self.sliderFrame.pack(side=TOP, pady=5, padx=10)
         self.controlFrame.pack(side=TOP, fill=X, pady=5, padx=10)
-    
-    def __on_slider_change(self, event):
+
+    def __on_slider_change(self):
         arr = self.sliderFrame.get_values()
         self.plotFrame.update_wave_values(arr)
         self.sliderFrame.set_scale(1.)
-    
-    def __on_wave_scale_change(self, event):
+
+    def __on_wave_scale_change(self):
         arr = self.sliderFrame.get_values()
         scale = self.sliderFrame.get_scale()
         arr *= scale
@@ -280,7 +279,7 @@ class AtomicWaveFrame(Frame):
         self.sliderFrame.set_values(arr)
         self.plotFrame.update_wave_values(arr)
 
-    def __update_sliders(self, event):
+    def __update_sliders(self):
         dbName = self.waveDBFrame.get_wave_database_selection()
         waveName = self.waveDBFrame.get_waveform_selection()
 
@@ -289,7 +288,7 @@ class AtomicWaveFrame(Frame):
         self.plotFrame.update_wave_values(arr)
         self.sliderFrame.set_scale(1.)
 
-    def __launch_vibration(self, event):
+    def __launch_vibration(self):
         duration = self.playFrame.get_duration()
         scale = self.playFrame.get_scale()
         wave = self.sliderFrame.get_values()
@@ -298,7 +297,7 @@ class AtomicWaveFrame(Frame):
 
         launch_atomicwave_vibration(wave, duration, scale)
 
-    def __save_atomic_wave(self, event):
+    def __save_atomic_wave(self):
         name = self.waveDBFrame.get_new_waveform_name()
         if len(name) == 0: return
 
@@ -310,6 +309,7 @@ class AtomicWaveFrame(Frame):
                 sorted(list(self.data[dbName].keys()))
             )
         save_atomic_wave_database(self.data, 'atomic-wave.pkl')
+
 
 if __name__ == '__main__':
     root = Tk()
