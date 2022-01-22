@@ -56,3 +56,5 @@ configs/*
 **/*.pkl
 **/*.jpg
 **/*.png
+**/*.bin
+**/*.txt
