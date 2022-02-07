@@ -1,6 +1,10 @@
 cd finetune \
-    && python3 rmse.py --audio ../audio/test_beat_short_1.wav --task build --plot \
-    --len-window 2048 && cd ..
+    && python3 rmse.py --audio ../audio/m1.wav --task run \
+    && cd ..
+#cd finetune \
+#    && python3 rmse.py --audio ../audio/test_beat_short_1.wav --task build --plot \
+#    --len-window 2048 && cd ..
+
 # cd finetune \
 #     && python3 melspec.py --audio ../audio/test_beat_short_1.wav --task build --plot \
 #     --len-hop 512 --len-window 2048 --n-mels 128 --fmax 512 \

@@ -5,7 +5,7 @@ from utils import _main
 from vib_music import FeatureManager
 from vib_music.misc import init_vibration_extraction_config
 
-@FeatureManager.vibration_mode
+@FeatureManager.vibration_mode(over_ride=False)
 def rmse_voltage(fm:FeatureManager) -> np.ndarray:
     rmse = fm.feature_data('rmse')
 
