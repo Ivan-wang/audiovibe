@@ -56,8 +56,6 @@
    python -c "import librosa; print(librosa.__version__)" # 0.8.0
    ```
 
-   
-
 5. Install pyaudio
 
    ```bash
