@@ -18,8 +18,11 @@ from vib_music.utils import get_audio_process
 from vib_music.utils import get_board_process
 from vib_music.utils import show_proc_bar
 from vib_music.misc import init_vibration_extraction_config
+from exp_utils import periodic_rectangle_generator
 
-FRAME_TIME = 0.0116
+AUDIO_SR = 44100
+AUDIO_FRAME_LEN = 512
+FRAME_TIME = AUDIO_FRAME_LEN / AUDIO_SR
 VIB_TUNE_MODE = 'vibration_tune_mode'
 
 
@@ -48,6 +51,33 @@ def launch_atomicwave_vibration(atomicwave, duration, scale=1):
     end = time.time()
     act_time = end - start
     print(f'Running time {end - start:.3f} seconds.')
+    print(f'Playing Done')
+
+
+def exp_launch_atomicwave_vibration(duration, freq, scale=1, duty_ratio=0.5):
+    """
+    launch vibration for experiment
+    :param duration: sequence duration
+    :param freq: vibration frequency
+    :param scale: vibration magnitude
+    :param duty_ratio: duty ratio in each vibration period
+    :return:
+    """
+    MAGIC_NUM = 1.4
+    num_frame = int(duration / FRAME_TIME * MAGIC_NUM)
+    est_time = FRAME_TIME * num_frame
+    sequence = periodic_rectangle_generator(scale, duty_ratio, freq, num_frame,
+                                 frame_time=FRAME_TIME, frame_len=24)
+    # print(f'estimated duration {FRAME_TIME * num_frame:.3f}')
+    start = time.time()
+    launch_vibration(sequence)
+    end = time.time()
+    act_time = end - start
+    print(f'Running parameters:')
+    print(f'frequency: {freq} Hz')
+    print(f'magnitude: {scale}')
+    print(f'duty ratio: {duty_ratio}')
+    print(f'duration: {end - start:.3f} seconds.')
     print(f'Playing Done')
 
 
@@ -248,7 +278,10 @@ class TransformQueue(object):
 
 
 if __name__ == '__main__':
-    waveform = np.array([0.01] * 8 + [0.99] * 4 + [0.01] * 8 + [0.99] * 4)
-    scale = 75
+    # waveform = np.array([0.01] * 8 + [0.99] * 4 + [0.01] * 8 + [0.99] * 4)
+    scale = 95
     duration = 1.0
-    launch_atomicwave_vibration(waveform, duration, scale)
+    freq = 40
+    duty_ratio = 0.5
+    # launch_atomicwave_vibration(waveform, duration, scale)
+    exp_launch_atomicwave_vibration(duration, freq, scale, duty_ratio)
