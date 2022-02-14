@@ -18,7 +18,7 @@ from vib_music.utils import get_audio_process
 from vib_music.utils import get_board_process
 from vib_music.utils import show_proc_bar
 from vib_music.misc import init_vibration_extraction_config
-from exp_utils import periodic_rectangle_generator
+from exp_utils import periodic_rectangle_generator, sine_wave_generator
 
 AUDIO_SR = 44100
 AUDIO_FRAME_LEN = 512
@@ -54,20 +54,22 @@ def launch_atomicwave_vibration(atomicwave, duration, scale=1):
     print(f'Playing Done')
 
 
-def exp_launch_atomicwave_vibration(duration, freq, scale=1, duty_ratio=0.5):
+def exp_basic_launch_vibration(duration, freq, scale=1, duty=0.5):
     """
     launch vibration for experiment
     :param duration: sequence duration
     :param freq: vibration frequency
-    :param scale: vibration magnitude
-    :param duty_ratio: duty ratio in each vibration period
+    :param scale: a list of magnitude max and min, e.g. [75,25]; if mag is a number, min is set to 0 automatically
+    :param duty: if <1, duty ratio in each vibration period; if >=1, number of 1s at the center of period
     :return:
     """
     MAGIC_NUM = 1.4
     num_frame = int(duration / FRAME_TIME * MAGIC_NUM)
     est_time = FRAME_TIME * num_frame
-    sequence = periodic_rectangle_generator(scale, duty_ratio, freq, num_frame,
+    sequence = sine_wave_generator(scale, freq, num_frame,
                                  frame_time=FRAME_TIME, frame_len=24)
+    # sequence = periodic_rectangle_generator(scale, duty, freq, num_frame,
+    #                              frame_time=FRAME_TIME, frame_len=24)
     # print(f'estimated duration {FRAME_TIME * num_frame:.3f}')
     start = time.time()
     launch_vibration(sequence)
@@ -76,10 +78,43 @@ def exp_launch_atomicwave_vibration(duration, freq, scale=1, duty_ratio=0.5):
     print(f'Running parameters:')
     print(f'frequency: {freq} Hz')
     print(f'magnitude: {scale}')
-    print(f'duty ratio: {duty_ratio}')
+    print(f'duty: {duty}')
     print(f'duration: {end - start:.3f} seconds.')
     print(f'Playing Done')
 
+
+def exp_masking_launch_vibration(duration, freq, scale=1, duty=0.5):
+    """
+    launch vibration for experiment
+    :param duration: sequence duration
+    :param freq: vibration frequency
+    :param scale: a list of magnitude max and min, e.g. [75,25]; if mag is a number, min is set to 0 automatically
+    :param duty: if <1, duty ratio in each vibration period; if >=1, number of 1s at the center of period
+    :return:
+    """
+    MAGIC_NUM = 1.4
+    num_frame = int(duration / FRAME_TIME * MAGIC_NUM)
+    est_time = FRAME_TIME * num_frame
+    sequence_1 = periodic_rectangle_generator(scale, duty, freq, num_frame,
+                                 frame_time=FRAME_TIME, frame_len=24)
+    sequence_2 = periodic_rectangle_generator([max(scale)*2, min(scale)*2], duty, freq/10, num_frame,
+                                 frame_time=FRAME_TIME, frame_len=24)
+    # sequence_3 = periodic_rectangle_generator(scale, duty, freq/4, num_frame,
+    #                              frame_time=FRAME_TIME, frame_len=24)
+    sequence = sequence_1 +sequence_2
+    # print(f'estimated duration {FRAME_TIME * num_frame:.3f}')
+    start = time.time()
+    launch_vibration(sequence)
+    end = time.time()
+    act_time = end - start
+    print(f'Running parameters:')
+    print(f'frequency: {freq} Hz')
+    print(f'magnitude: {scale}')
+    print(f'duty: {duty}')
+    print(f'duration: {end - start:.3f} seconds.')
+    print(f'seq max: {np.max(sequence):.2f}')
+    print(f'seq min: {np.min(sequence):.2f}')
+    print(f'Playing Done')
 
 def launch_vibration(sequence):
     driver = AdcDriver(sequence)
@@ -266,7 +301,7 @@ class TransformQueue(object):
         out = np.log(1 + data) * gamma
         out = np.clip(out, 0, 1)
         return out
-
+    # 
     def __norm_min_max_transform(self, data, min_val, max_val):
         if (min_val >= max_val):
             print('Min value is greater than max value')
@@ -278,10 +313,9 @@ class TransformQueue(object):
 
 
 if __name__ == '__main__':
-    # waveform = np.array([0.01] * 8 + [0.99] * 4 + [0.01] * 8 + [0.99] * 4)
-    scale = 95
+    scale = [50, 0]
     duration = 1.0
-    freq = 40
-    duty_ratio = 0.5
-    # launch_atomicwave_vibration(waveform, duration, scale)
-    exp_launch_atomicwave_vibration(duration, freq, scale, duty_ratio)
+    freq = 1
+    duty = 1
+    exp_basic_launch_vibration(duration, freq, scale, duty)
+    # exp_masking_launch_vibration(duration, freq, scale, duty)
