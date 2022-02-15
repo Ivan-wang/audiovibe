@@ -4,6 +4,7 @@ sys.path.append('../..')
 sys.path.append('..')
 
 import os
+import argparse
 import time
 import pickle
 import librosa
@@ -18,12 +19,14 @@ from vib_music.utils import get_audio_process
 from vib_music.utils import get_board_process
 from vib_music.utils import show_proc_bar
 from vib_music.misc import init_vibration_extraction_config
-from exp_utils import periodic_rectangle_generator, sine_wave_generator
+from exp_utils import periodic_rectangle_generator, sine_wave_generator, rectangle_generator
 
 AUDIO_SR = 44100
 AUDIO_FRAME_LEN = 512
 FRAME_TIME = AUDIO_FRAME_LEN / AUDIO_SR
+FRAME_LEN = 24
 VIB_TUNE_MODE = 'vibration_tune_mode'
+MAGIC_NUM = 1.4
 
 
 def load_atomic_wave_database(path):
@@ -54,28 +57,40 @@ def launch_atomicwave_vibration(atomicwave, duration, scale=1):
     print(f'Playing Done')
 
 
-def exp_basic_launch_vibration(duration, freq, scale=1, duty=0.5):
+def exp_basic_launch_vibration(duration, freq, scale=[1,0], duty=0.5, wave_mode="periodic_rectangle", debug=0):
     """
     launch vibration for experiment
     :param duration: sequence duration
     :param freq: vibration frequency
-    :param scale: a list of magnitude max and min, e.g. [75,25]; if mag is a number, min is set to 0 automatically
     :param duty: if <1, duty ratio in each vibration period; if >=1, number of 1s at the center of period
+    :param scale: a list of magnitude max and min, e.g. [75,25]; if mag is a number, min is set to 0 automatically
+    :param wave_mode: (str) if "periodic_rectangle", use periodic_rectangle generator
+    :param debug: (int) if 0, no debug; if 1, no vibration
     :return:
     """
-    MAGIC_NUM = 1.4
     num_frame = int(duration / FRAME_TIME * MAGIC_NUM)
     est_time = FRAME_TIME * num_frame
-    sequence = sine_wave_generator(scale, freq, num_frame,
-                                 frame_time=FRAME_TIME, frame_len=24)
-    # sequence = periodic_rectangle_generator(scale, duty, freq, num_frame,
-    #                              frame_time=FRAME_TIME, frame_len=24)
+    output_sr = FRAME_TIME / FRAME_LEN
+    if wave_mode=="periodic_rectangle":
+        sequence = periodic_rectangle_generator(scale, duty, freq, num_frame,
+                                     frame_time=FRAME_TIME, frame_len=FRAME_LEN)
+    elif wave_mode=="rectangle":
+        sequence = rectangle_generator(scale, duty, num_frame,
+                                     frame_time=FRAME_TIME, frame_len=FRAME_LEN)
+    # sequence = sine_wave_generator(scale, freq, num_frame,
+    #                              frame_time=FRAME_TIME, frame_len=24, zero_inserted_mode=1)
+    else:
+        print("wrong wave mode")
+        sys.exit()
     # print(f'estimated duration {FRAME_TIME * num_frame:.3f}')
-    start = time.time()
-    launch_vibration(sequence)
-    end = time.time()
-    act_time = end - start
+    end = 0
+    start = 0
+    if debug==0:
+        start = time.time()
+        launch_vibration(sequence)
+        end = time.time()
     print(f'Running parameters:')
+    print(f'output sample rate: {output_sr}')
     print(f'frequency: {freq} Hz')
     print(f'magnitude: {scale}')
     print(f'duty: {duty}')
@@ -92,13 +107,12 @@ def exp_masking_launch_vibration(duration, freq, scale=1, duty=0.5):
     :param duty: if <1, duty ratio in each vibration period; if >=1, number of 1s at the center of period
     :return:
     """
-    MAGIC_NUM = 1.4
     num_frame = int(duration / FRAME_TIME * MAGIC_NUM)
     est_time = FRAME_TIME * num_frame
     sequence_1 = periodic_rectangle_generator(scale, duty, freq, num_frame,
-                                 frame_time=FRAME_TIME, frame_len=24)
+                                 frame_time=FRAME_TIME, frame_len=FRAME_LEN)
     sequence_2 = periodic_rectangle_generator([max(scale)*2, min(scale)*2], duty, freq/10, num_frame,
-                                 frame_time=FRAME_TIME, frame_len=24)
+                                 frame_time=FRAME_TIME, frame_len=FRAME_LEN)
     # sequence_3 = periodic_rectangle_generator(scale, duty, freq/4, num_frame,
     #                              frame_time=FRAME_TIME, frame_len=24)
     sequence = sequence_1 +sequence_2
@@ -313,9 +327,62 @@ class TransformQueue(object):
 
 
 if __name__ == '__main__':
-    scale = [50, 0]
-    duration = 1.0
-    freq = 1
-    duty = 1
-    exp_basic_launch_vibration(duration, freq, scale, duty)
+    # scale = [200, 0]
+    # duration = 10.0
+    # freq = 1
+    # duty = [[1,1.2], [4.2, 9.0]]
+    # exp_basic_launch_vibration(duration, freq, scale, duty, wave_mode="rectangle")
+    # time.sleep(5.0)
+    # scale = [200, 0]
+    # duration = 1.0
+    # freq = 1
+    # duty = 1500
+    # exp_basic_launch_vibration(duration, freq, scale, duty)
     # exp_masking_launch_vibration(duration, freq, scale, duty)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--scale", help="max and min magnitude, delimitered by ':'")
+    parser.add_argument("--freq", type=float, help="frequency for periodic signal")
+    parser.add_argument("--duty", help="duty information of signal. Within list, delimitered by ':'; Between list, "
+                                       "delimitered by ';'. E.G 1:1.2;2.0:3.0 => [[1,1.2],[2.0,3.0]")
+    parser.add_argument("--duration", help="signal duration")
+    parser.add_argument("--mode", help="experiment mode")
+    args = parser.parse_args()
+    scale = args.scale
+    freq = args.freq
+    duty = args.duty
+    dura = args.duration
+    mode = args.mode
+
+    # process arguments
+    # scale
+    scale = scale.split(":")
+    if isinstance(scale, list):
+        if len(scale)>1:
+            scale = [float(scale[0]), float(scale[1])]
+        else:
+            scale = float(scale[0])
+    else:
+        scale = float(scale)
+    # frequence
+    freq = float(freq)
+    # duration
+    dura = float(dura)
+    # duty
+    if ";" in duty:
+        raw_duty = duty.split(";")
+        duty = []
+        for s in raw_duty:
+            tmp = s.split(":")
+            duty.append([float(tmp[0]), float(tmp[1])])
+    else:
+        duty = float(duty)
+    # print args
+    print(f'--scale: {scale}')
+    print(f'--freq: {freq}')
+    print(f'--duty: {duty}')
+    print(f'--duration: {dura}')
+    print(f'--mode: {mode}')
+
+    # run experiment
+    if mode == "periodic_rectangle":
+        exp_basic_launch_vibration(dura, freq, scale, duty, wave_mode="periodic_rectangle")
