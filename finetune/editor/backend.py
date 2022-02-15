@@ -63,14 +63,15 @@ def exp_basic_launch_vibration(duration, freq, scale=[1,0], duty=0.5, wave_mode=
     :param duration: sequence duration
     :param freq: vibration frequency
     :param duty: if <1, duty ratio in each vibration period; if >=1, number of 1s at the center of period
-    :param scale: a list of magnitude max and min, e.g. [75,25]; if mag is a number, min is set to 0 automatically
-    :param wave_mode: (str) if "periodic_rectangle", use periodic_rectangle generator
+    :param scale: a list of magnitude max and min, e.g. [75,25]; if mag is a number, min is set to 0 automatically (
+    between 0 and 255)
+    :param wave_mode: (str) if "periodic_rectangle", use periodic_rectangle generator; if "rectangle", use
     :param debug: (int) if 0, no debug; if 1, no vibration
     :return:
     """
     num_frame = int(duration / FRAME_TIME * MAGIC_NUM)
     est_time = FRAME_TIME * num_frame
-    output_sr = FRAME_TIME / FRAME_LEN
+    output_sr = FRAME_LEN / FRAME_TIME
     if wave_mode=="periodic_rectangle":
         sequence = periodic_rectangle_generator(scale, duty, freq, num_frame,
                                      frame_time=FRAME_TIME, frame_len=FRAME_LEN)
@@ -95,23 +96,28 @@ def exp_basic_launch_vibration(duration, freq, scale=[1,0], duty=0.5, wave_mode=
     print(f'magnitude: {scale}')
     print(f'duty: {duty}')
     print(f'duration: {end - start:.3f} seconds.')
+    print(f'seq max: {np.max(sequence):.2f}')
+    print(f'seq min: {np.min(sequence):.2f}')
     print(f'Playing Done')
 
 
-def exp_masking_launch_vibration(duration, freq, scale=1, duty=0.5):
+def exp_masking_launch_vibration(duration, freq, scale=1, duty=0.5, second_freq=10, second_scale=1, second_duty=1):
     """
     launch vibration for experiment
     :param duration: sequence duration
     :param freq: vibration frequency
-    :param scale: a list of magnitude max and min, e.g. [75,25]; if mag is a number, min is set to 0 automatically
+    :param second_freq: (float) vibration frequency of second audio for masking
+    :param scale: (list or float) a list of magnitude max and min, e.g. [75,25]; if mag is a number, min is set to 0
+    automatically (between 0 and 255)
+    :param second_scale: (list or float) a list of magnitude max and min of second audio for masking
     :param duty: if <1, duty ratio in each vibration period; if >=1, number of 1s at the center of period
+    :param second_duty: (float or int) duty of second audio for masking
     :return:
     """
     num_frame = int(duration / FRAME_TIME * MAGIC_NUM)
-    est_time = FRAME_TIME * num_frame
     sequence_1 = periodic_rectangle_generator(scale, duty, freq, num_frame,
                                  frame_time=FRAME_TIME, frame_len=FRAME_LEN)
-    sequence_2 = periodic_rectangle_generator([max(scale)*2, min(scale)*2], duty, freq/10, num_frame,
+    sequence_2 = periodic_rectangle_generator(second_scale, second_duty, second_freq, num_frame,
                                  frame_time=FRAME_TIME, frame_len=FRAME_LEN)
     # sequence_3 = periodic_rectangle_generator(scale, duty, freq/4, num_frame,
     #                              frame_time=FRAME_TIME, frame_len=24)
@@ -125,6 +131,9 @@ def exp_masking_launch_vibration(duration, freq, scale=1, duty=0.5):
     print(f'frequency: {freq} Hz')
     print(f'magnitude: {scale}')
     print(f'duty: {duty}')
+    print(f'second frequency: {second_freq} Hz')
+    print(f'second magnitude: {second_scale}')
+    print(f'second duty: {second_duty}')
     print(f'duration: {end - start:.3f} seconds.')
     print(f'seq max: {np.max(sequence):.2f}')
     print(f'seq min: {np.min(sequence):.2f}')
@@ -340,13 +349,21 @@ if __name__ == '__main__':
     # exp_basic_launch_vibration(duration, freq, scale, duty)
     # exp_masking_launch_vibration(duration, freq, scale, duty)
 
-    # sys.argv = ["backend.py", "--scale", "100:0", "--freq", "5", "--duty", "1", "--duration", "2.0"]
+    sys.argv = ["backend.py", "--scale", "80:0", "--freq", "100", "--duty", "1", "--duration", "2.0",
+                "--second-scale", "80:0", "--second-freq", "80", "--second-duty", "3",
+                "--mode", "complex_rectangle"]
+    # sys.argv = ["backend.py", "--scale", "80:0", "--freq", "20", "--duty", "30", "--duration", "2.0",
+    #             "--mode", "periodic_rectangle"]
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--scale", help="max and min magnitude, delimitered by ':'")
     parser.add_argument("--freq", type=float, help="frequency for periodic signal")
     parser.add_argument("--duty", help="duty information of signal. Within list, delimitered by ':'; Between list, "
                                        "delimitered by ';'. E.G 1:1.2;2.0:3.0 => [[1,1.2],[2.0,3.0]")
+    parser.add_argument("--second-scale", default="100:0", help="scale for second audio, if mode is 'complex_rectangle'")
+    parser.add_argument("--second-freq", default="50", type=float, help="frequency for second audio, if mode is "
+                                                                        "'complex_rectangle'")
+    parser.add_argument("--second-duty", default="0.5", help="duty for second audio, if mode is 'complex_rectangle'")
     parser.add_argument("--duration", help="signal duration")
     parser.add_argument("--mode", default="periodic_rectangle", help="experiment mode")
     args = parser.parse_args()
@@ -355,37 +372,57 @@ if __name__ == '__main__':
     duty = args.duty
     dura = args.duration
     mode = args.mode
+    second_freq = args.second_freq
+    second_duty = args.second_duty
+    second_scale = args.second_scale
 
     # process arguments
     # scale
-    scale = scale.split(":")
-    if isinstance(scale, list):
-        if len(scale)>1:
-            scale = [float(scale[0]), float(scale[1])]
+    def process_scale(scale):
+        scale = scale.split(":")
+        if isinstance(scale, list):
+            if len(scale)>1:
+                scale = [float(scale[0]), float(scale[1])]
+            else:
+                scale = float(scale[0])
         else:
-            scale = float(scale[0])
-    else:
-        scale = float(scale)
+            scale = float(scale)
+        return scale
+    scale = process_scale(scale)
+    second_scale = process_scale(second_scale)
     # frequence
     freq = float(freq)
+    second_freq = float(second_freq)
     # duration
     dura = float(dura)
     # duty
-    if ";" in duty:
-        raw_duty = duty.split(";")
-        duty = []
-        for s in raw_duty:
-            tmp = s.split(":")
-            duty.append([float(tmp[0]), float(tmp[1])])
-    else:
-        duty = float(duty)
+    def process_duty(duty):
+        if ";" in duty:
+            raw_duty = duty.split(";")
+            duty = []
+            for s in raw_duty:
+                tmp = s.split(":")
+                duty.append([float(tmp[0]), float(tmp[1])])
+        else:
+            duty = float(duty)
+        return duty
+    duty = process_duty(duty)
+    second_duty = process_duty(second_duty)
     # print args
     print(f'--scale: {scale}')
     print(f'--freq: {freq}')
     print(f'--duty: {duty}')
+    print(f'--second-scale: {second_scale}')
+    print(f'--second-freq: {second_freq}')
+    print(f'--second-duty: {second_duty}')
     print(f'--duration: {dura}')
     print(f'--mode: {mode}')
 
     # run experiment
     if mode == "periodic_rectangle":
         exp_basic_launch_vibration(dura, freq, scale, duty, wave_mode="periodic_rectangle")
+    elif mode == "rectangle":
+        exp_basic_launch_vibration(dura, freq, scale, duty, wave_mode="rectangle")
+    elif mode == "complex_rectangle":
+        exp_masking_launch_vibration(dura, freq, scale, duty,
+                                     second_freq=second_freq, second_scale=second_scale, second_duty=second_duty)

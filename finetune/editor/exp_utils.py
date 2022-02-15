@@ -92,8 +92,8 @@ def rectangle_generator(mag, duty, frame_num,
     # scale output
     final_seq *= max(mag)
     # # display waveform (TODO commented out when run)
-    # plt.plot(final_seq)
-    # plt.show()
+    plt.plot(final_seq)
+    plt.show()
     # turn 1-D sequence to 2-D for output
     final_array = np.reshape(final_seq,(frame_num, frame_len)).astype(np.uint8)
 
