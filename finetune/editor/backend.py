@@ -339,13 +339,16 @@ if __name__ == '__main__':
     # duty = 1500
     # exp_basic_launch_vibration(duration, freq, scale, duty)
     # exp_masking_launch_vibration(duration, freq, scale, duty)
+
+    # sys.argv = ["backend.py", "--scale", "100:0", "--freq", "5", "--duty", "1", "--duration", "2.0"]
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--scale", help="max and min magnitude, delimitered by ':'")
     parser.add_argument("--freq", type=float, help="frequency for periodic signal")
     parser.add_argument("--duty", help="duty information of signal. Within list, delimitered by ':'; Between list, "
                                        "delimitered by ';'. E.G 1:1.2;2.0:3.0 => [[1,1.2],[2.0,3.0]")
     parser.add_argument("--duration", help="signal duration")
-    parser.add_argument("--mode", help="experiment mode")
+    parser.add_argument("--mode", default="periodic_rectangle", help="experiment mode")
     args = parser.parse_args()
     scale = args.scale
     freq = args.freq
