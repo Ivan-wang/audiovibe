@@ -73,7 +73,7 @@ def launch_vib_mode(audio, fm, transforms, atomic_wave):
         vib_seq = rmse.reshape((-1, 1))
         wave = atomic_wave.reshape((1, -1))
 
-        vib_seq = vib_seq * wave
+        vib_seq = (vib_seq * wave).round().astype(np.uint8)
         return vib_seq
     # vib_seq = fm.vibration_sequence(cached=False)
     # print(vib_seq[:10])
