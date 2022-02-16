@@ -195,11 +195,13 @@ class VibHistFrame(_CurveFrame):
         self.ax.set_xlim((0, 1))
         self.ax.set_xticks(np.linspace(0, 1, 5))
         self.ax.set_xticks(np.linspace(0, 1, 50), minor=True)
+        self.ax.set_xticklabels(['0', '64', '128', '191', '255'])
+
         self.ax.set_ylim((0, max(bins) // 10 * 10))
         self.ax.set_yticks(np.linspace(0, (max(bins) + 9) // 10 * 10, 5))
         self.ax.set_yticklabels(np.linspace(0, (max(bins) + 9) // 10 * 10, 5))
         self.ax.set_yticks(np.linspace(0, (max(bins) + 9) // 10 * 10, 50), minor=True)
-        self.ax.set_xticklabels(self.ax.get_xticklabels(), fontsize=8)
+
         self.ax.set_xticklabels(self.ax.get_xticklabels(), fontsize=8)
         self.ax.set_yticklabels(self.ax.get_yticklabels(), fontsize=8)
 
@@ -219,9 +221,11 @@ class CurveFrame(_CurveFrame):
         self.ax.set_xticks(np.linspace(0, 1, 5))
         self.ax.set_xticks(np.linspace(0, 1, 50), minor=True)
         self.ax.set_xticklabels(np.linspace(0, 1, 5))
+        # self.ax.set_xticklabels(['0', '64', '128', '191', '255'])
         self.ax.set_yticks(np.linspace(0, 1, 5))
         self.ax.set_yticks(np.linspace(0, 1, 50), minor=True)
         self.ax.set_yticklabels(np.linspace(0, 1, 5))
+        # self.ax.set_xticklabels(['0', '64', '128', '191', '255'])
         self.ax.set_xticklabels(self.ax.get_xticklabels(), fontsize=8)
         self.ax.set_yticklabels(self.ax.get_xticklabels(), fontsize=8)
 

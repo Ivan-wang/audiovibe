@@ -68,6 +68,7 @@ def launch_vib_mode(audio, fm, transforms, atomic_wave):
     def vibration_tune_mode(featManager:FeatureManager):
         rmse = featManager.feature_data('rmse').copy()
         rmse = transforms.apply_all(rmse, curve=False)
+        rmse = np.clip((rmse*255).round(), a_min=0, a_max=255)
 
         vib_seq = rmse.reshape((-1, 1))
         wave = atomic_wave.reshape((1, -1))
