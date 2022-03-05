@@ -1,12 +1,16 @@
+# 3/2/22
+# Fei Tao
+# taofei@feathervibe.com
+
 import numpy as np
 from utils import tune_rmse_parser
 from utils import _main
-import sys
+
 from vib_music import FeatureManager
 from vib_music.misc import init_vibration_extraction_config
 
 @FeatureManager.vibration_mode(over_ride=False)
-def rmse_voltage(fm:FeatureManager) -> np.ndarray:
+def band_split(fm:FeatureManager) -> np.ndarray:
     rmse = fm.feature_data('rmse')
 
     rmse = (rmse-rmse.min()) / (rmse.max()-rmse.min())
@@ -24,7 +28,6 @@ def rmse_voltage(fm:FeatureManager) -> np.ndarray:
     level_seq = np.concatenate([level_seq]*3, axis=-1)
 
     return level_seq
-
 
 def main():
     p = tune_rmse_parser()
@@ -49,10 +52,6 @@ def main():
 
     _main(opt, 'rmse_voltage', 'adc', librosa_config, plot_config)
 
-
-# debug part
-sys.argv = ["rmse.py", "--audio", "../audio/m1.wav", "--task", "run"]
-print("DEBUG...")
-###
-
 main()
+
+

@@ -1,5 +1,5 @@
 import multiprocessing
-from .features import FeatureExtractionManager
+from .FeatureExtractionManager import FeatureExtractionManager
 
 def list_librosa_context():
     ks = list(FeatureExtractionManager.stg_funcs.keys())

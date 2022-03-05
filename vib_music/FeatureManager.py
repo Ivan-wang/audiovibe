@@ -5,6 +5,9 @@ import math
 import numpy as np
 
 class FeatureManager(object):
+    """
+    this class mainly takes care acoustic feature save and read, vibration signal generation
+    """
     vibration_mode_func = {}
     def __init__(self, meta, features, mode):
         self.meta = meta

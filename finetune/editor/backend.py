@@ -349,9 +349,9 @@ if __name__ == '__main__':
     # exp_basic_launch_vibration(duration, freq, scale, duty)
     # exp_masking_launch_vibration(duration, freq, scale, duty)
 
-    sys.argv = ["backend.py", "--scale", "80:0", "--freq", "100", "--duty", "1", "--duration", "2.0",
-                "--second-scale", "80:0", "--second-freq", "80", "--second-duty", "3",
-                "--mode", "complex_rectangle"]
+    # sys.argv = ["backend.py", "--scale", "80:0", "--freq", "100", "--duty", "1", "--duration", "2.0",
+    #             "--second-scale", "80:0", "--second-freq", "80", "--second-duty", "3",
+    #             "--mode", "complex_rectangle"]
     # sys.argv = ["backend.py", "--scale", "80:0", "--freq", "20", "--duty", "30", "--duration", "2.0",
     #             "--mode", "periodic_rectangle"]
 
