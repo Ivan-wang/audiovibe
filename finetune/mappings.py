@@ -26,17 +26,20 @@ def bandSplit(fm:FeatureManager, duty=0.5, recep_field=3, vib_freq=[50,500], vib
     feats = fm.feature_data('melspec')
     sr = fm.meta["sr"]
     frame_len = fm.feature_data('len_window')
+    n_mels = fm.feature_data('n_mels')
     feat_dim, feat_time = feats.shape
 
     # split features
     seg_num = len(vib_freq)
     split_bins = []
-    split_step = int(round(feat_dim / seg_num))
+    split_step = int(round(n_mels[-1] / seg_num))    # uniformly split in Hz
     for s in range(1, seg_num):
-        split_bins.append(split_step*s)
+        split_ind = (np.abs(n_mels-split_step*s)).argmin()    # find conrresponding split index in mel scale
+        split_bins.append(split_ind)
     split_feats = vanilla_split(feats, split_bin_nums=split_bins)
 
     # generate vibration
+    final_vibration = 0
     for sf_ind in range(len(split_feats)):
         curr_feats = split_feats[sf_ind]
         # compute current band power
@@ -66,4 +69,5 @@ def bandSplit(fm:FeatureManager, duty=0.5, recep_field=3, vib_freq=[50,500], vib
         else:
             final_vibration += scaled_vib_signal    # accumulate vibration signals in bands
 
+    assert final_vibration!=0, "final_vibration is not assigned!"
     return final_vibration
