@@ -1,18 +1,20 @@
 import numpy as np
-from utils import tune_rmse_parser
-from utils import _main
+from runutils import tune_rmse_parser
+from runutils import _main
 import sys
 from vib_music import FeatureManager
 from vib_music.misc import init_vibration_extraction_config
 
 @FeatureManager.vibration_mode(over_ride=False)
-def rmse_voltage(fm:FeatureManager) -> np.ndarray:
+def rmse_voltage(fm:FeatureManager, scale=150) -> np.ndarray:
     rmse = fm.feature_data('rmse')
 
     rmse = (rmse-rmse.min()) / (rmse.max()-rmse.min())
     rmse  = rmse ** 2
 
-    bins = np.linspace(0., 1., 150, endpoint=True)
+    print("the scale is %d" % (scale))
+
+    bins = np.linspace(0., 1., scale, endpoint=True)
     level = np.digitize(rmse, bins).astype(np.uint8)
 
     # mimic a square wave for each frame [x, x, x, x, 0, 0, 0, 0]
@@ -47,7 +49,8 @@ def main():
             'plots': ['waveform', 'wavermse', 'vibration_adc']
         }
 
-    _main(opt, 'rmse_voltage', 'adc', librosa_config, plot_config)
+    vib_kwargs_dict = {"scale":100}
+    _main(opt, 'rmse_voltage', 'adc', librosa_config, plot_config, vib_kwargs_dict)
 
 
 # debug part

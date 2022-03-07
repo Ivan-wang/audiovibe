@@ -7,14 +7,10 @@ from vib_music import FeatureManager
 import numpy as np
 from featprocs.band_split import vanilla_split
 from utils.wave_generator import periodic_rectangle_generator
-from vib_music import VIB_FRAME_LEN
 
-def linear_to_log(x):
-    return x
 
 @FeatureManager.vibration_mode(over_ride=False)
-def bandSplit(fm:FeatureManager, duty=0.5, recep_field=3, vib_freq=[50,500], vib_scale=[1,1.5],
-              frame_len=VIB_FRAME_LEN) -> np.ndarray:
+def bandSplit(fm:FeatureManager, duty=0.5, recep_field=3, vib_freq=[50,500], vib_scale=[1,1.5]) -> np.ndarray:
     """
     split melspectrogram into bands, use specific vibration for each band, conbimed together in output
     :param fm:

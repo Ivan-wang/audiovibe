@@ -23,12 +23,12 @@ class FeatureManager(object):
     def clear_vibration_sequence(self):
         self.vib_sequence = None
 
-    def vibration_sequence(self, cached=True):
+    def vibration_sequence(self, cached=True, **kwargs):
         if self.vib_sequence is not None and cached:
             return self.vib_sequence
 
         if self.mode in FeatureManager.vibration_mode_func:
-            self.vib_sequence = FeatureManager.vibration_mode_func[self.mode](self)
+            self.vib_sequence = FeatureManager.vibration_mode_func[self.mode](self,**kwargs)
             return self.vib_sequence
         else:
             raise KeyError('unknown vibration mode')

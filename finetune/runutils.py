@@ -59,7 +59,7 @@ from vib_music import FeatureExtractionManager
 from vib_music import launch_vibration
 from vib_music import launch_plotting
 
-def _main(opt, mode, driver, librosa_cfg, plot_cfg):
+def _main(opt, mode, driver, librosa_cfg, plot_cfg, vib_kwargs_dict):
     if opt.task == 'run' or opt.task == 'build':
         ctx = FeatureExtractionManager.from_config(librosa_cfg)
         ctx.save_features(root=opt.data_dir)
@@ -70,4 +70,4 @@ def _main(opt, mode, driver, librosa_cfg, plot_cfg):
         launch_plotting(opt.audio, feature_folder, mode, plot_cfg['plots'])
 
     if opt.task == 'run' or opt.task == 'play':
-        launch_vibration(opt.audio, feature_folder, mode, driver)
+        launch_vibration(opt.audio, feature_folder, mode, driver, vib_kwargs_dict)
