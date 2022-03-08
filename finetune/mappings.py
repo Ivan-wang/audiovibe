@@ -13,14 +13,17 @@ import librosa.display
 
 
 @FeatureManager.vibration_mode(over_ride=False)
-def band_split(fm:FeatureManager, duty=0.5, recep_field=3, vib_freq=[50,500], vib_scale=[1,1.5], vib_frame_len=24,
-               **kwargs) -> np.ndarray:
+def band_split(fm:FeatureManager, duty=0.5, recep_field=3, split_aud=None, vib_freq=[50,500], vib_scale=[1,1.5],
+               vib_frame_len=24, **kwargs) -> np.ndarray:
     """
     split melspectrogram into bands, use specific vibration for each band, conbimed together in output
     :param fm:
     :return:
     """
     assert len(vib_freq)==len(vib_scale), "lengths of vib_scale and vib_freq must match!"
+    if split_aud:
+        assert isinstance(split_aud, list), "split_aud should be a list"
+        assert len(split_aud)+1==len(vib_scale), "length of split_aud should 1 more than length of vib_scale!"
     assert recep_field%2==1, "recep_field must be odd integer"
     recep_field = int(recep_field)
     feats = fm.feature_data('melspec')
@@ -28,8 +31,6 @@ def band_split(fm:FeatureManager, duty=0.5, recep_field=3, vib_freq=[50,500], vi
     frame_len = fm.feature_data('melspec',prop='len_window')
     mel_freq = fm.feature_data('melspec', prop='mel_freq')
     feat_dim, feat_time = feats.shape
-    max_power = np.max(feats)
-    min_power = np.min(feats)
     # ### debug ###
     # fig, ax = plt.subplots()
     # S_dB = librosa.power_to_db(feats, ref=np.max)
@@ -39,12 +40,18 @@ def band_split(fm:FeatureManager, duty=0.5, recep_field=3, vib_freq=[50,500], vi
     # ######
 
     # split features
-    seg_num = len(vib_freq)
     split_bins = []
-    split_step = int(round(mel_freq[-1] / seg_num))    # uniformly split in Hz
-    for s in range(1, seg_num):
-        split_ind = (np.abs(mel_freq-split_step*s)).argmin()    # find conrresponding split index in mel scale
-        split_bins.append(split_ind)
+    if not split_aud:
+        seg_num = len(vib_freq)
+        split_step = int(round(mel_freq[-1] / seg_num))    # uniformly split in Hz
+        for s in range(1, seg_num):
+            split_ind = (np.abs(mel_freq-split_step*s)).argmin()    # find conrresponding split index in mel scale
+            split_bins.append(split_ind)
+    else:
+        for s in split_aud:
+            split_ind = (np.abs(mel_freq-s)).argmin()    # find conrresponding split index in mel scale
+            split_bins.append(split_ind)
+    print(f"split on {split_bins}")
     split_feats = vanilla_split(feats, split_bin_nums=split_bins)
 
     # generate vibration
@@ -62,6 +69,8 @@ def band_split(fm:FeatureManager, duty=0.5, recep_field=3, vib_freq=[50,500], vi
         # max_power = max(context_power)
         # min_power = min(context_power)
         # combine receptive field
+        max_power = np.max(curr_band_power)
+        min_power = np.min(curr_band_power)
         comb_power = np.mean(context_power, axis=0)
         comb_power = (comb_power - min_power) / (max_power - min_power)    # noramlize
         comb_power = comb_power * vib_scale[sf_ind]    # band scale

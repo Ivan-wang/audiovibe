@@ -91,7 +91,7 @@ def launch_vibration(audio, feature_dir, mode, driver, vib_kwargs_dict):
     board_proc.start()
     audio_proc.start()
 
-    show_proc_bar(num_frame, vib_sem)
+    # show_proc_bar(num_frame, vib_sem)
 
     board_proc.join()
     audio_proc.join()
