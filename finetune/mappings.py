@@ -5,7 +5,7 @@
 
 from vib_music import FeatureManager
 import numpy as np
-from featprocs.band_split import vanilla_split
+from sigprocs.signal_separation import band_separate, hrps
 from utils.wave_generator import periodic_rectangle_generator
 import matplotlib.pyplot as plt
 import librosa
@@ -17,8 +17,15 @@ def band_split(fm:FeatureManager, duty=0.5, recep_field=3, split_aud=None, vib_f
                vib_frame_len=24, **kwargs) -> np.ndarray:
     """
     split melspectrogram into bands, use specific vibration for each band, conbimed together in output
-    :param fm:
-    :return:
+    :param fm: (FeatureManager) FM object
+    :param duty: (float) duty ratio
+    :param recep_field: (int) receptive field length of melspectrogram used in generating vibration
+    :param split_aud: (list) list of split audio frequency, used to split bands. If none, use uniformly split
+    :param vib_freq: (list) vibration frequency for corresponding band
+    :param vib_scale: (list) scale number for corresponding band
+    :param vib_frame_len: (int) sample number of vibration in each frame
+    :param kwargs: other kwargs
+    :return: 2d vibration sequence (frame_num, vib_frame_len)
     """
     assert len(vib_freq)==len(vib_scale), "lengths of vib_scale and vib_freq must match!"
     if split_aud:
@@ -52,7 +59,7 @@ def band_split(fm:FeatureManager, duty=0.5, recep_field=3, split_aud=None, vib_f
             split_ind = (np.abs(mel_freq-s)).argmin()    # find conrresponding split index in mel scale
             split_bins.append(split_ind)
     print(f"split on {split_bins}")
-    split_feats = vanilla_split(feats, split_bin_nums=split_bins)
+    split_feats = band_separate(feats, split_bin_nums=split_bins)
 
     # generate vibration
     final_vibration = 0
@@ -88,4 +95,30 @@ def band_split(fm:FeatureManager, duty=0.5, recep_field=3, split_aud=None, vib_f
             final_vibration += scaled_vib_signal    # accumulate vibration signals in bands
 
     assert not isinstance(final_vibration,int), "final_vibration is not assigned!"
+    return final_vibration
+
+
+@FeatureManager.vibration_mode(over_ride=False)
+def hrps_split(fm:FeatureManager, len_harmonic_filt=0.1, len_percusive_filt=10, beta=2.0, duty=0.5,
+               vib_frame_len=24, **kwargs) -> np.ndarray:
+    """
+    split melspectrogram into bands, use specific vibration for each band, conbimed together in output
+    :param fm:
+    :return:
+    """
+    specs = fm.feature_data('stft')
+    pitch = fm.feature_data('pitchpyin')
+    sr = fm.meta["sr"]
+    len_hop = fm.meta["len_hop"]
+    len_window = fm.feature_data('stft',prop='len_window')
+    power_spec = np.abs(specs)**2.0
+    power_spec_h, power_spec_p, power_spec_r, M_h, M_p, M_r = hrps(power_spec, sr, len_harmonic_filt=len_harmonic_filt,
+                                                                   len_percusive_filt=len_percusive_filt, beta=beta,
+                                                                   len_window=len_window, len_hop=len_hop)
+    ### debug plot ###
+    print("plot...")
+    plt.imshow(M_p, aspect="auto")
+    plt.show()
+    # generate vibration
+    final_vibration = 0
     return final_vibration

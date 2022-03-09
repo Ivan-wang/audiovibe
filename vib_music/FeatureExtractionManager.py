@@ -2,7 +2,7 @@ import os
 import pickle
 import librosa
 import numpy as np
-
+import time
 from .misc import BASE_HOP_LEN
 
 class FeatureExtractionManager(object):
@@ -62,34 +62,40 @@ class FeatureExtractionManager(object):
         self.stg_names = list(stg.keys())
         self.stg = [self._init_stg(s, v) for s, v in stg.items()]
 
-    def audio_features(self):
+    def audio_features(self, extract_list=[]):
         if self.audio is None: return {}
 
         features = {'audio': self.audio.copy(), 'sr': self.sr}
-        features.update({sname: func(self.audio, self.sr)
-            for sname, func in zip(self.stg_names, self.stg)})
+        for sname, func in zip(self.stg_names, self.stg):
+            # ### debug print ###
+            # print(f"preparing {sname}...")
+            # ######
+            if sname in extract_list:
+                features.update({sname: func(self.audio, self.sr)})
         return features
 
     def save_features(self, features=None, root=None):
-        if features is None:
-            features = self.audio_features()
-
         if root is None:
             feat_dir = os.path.join('data', self.audio_name)
         else:
             feat_dir = os.path.join(root, self.audio_name)
         os.makedirs(feat_dir, exist_ok=True)
-        # save meta
-        meta = {'audio_name': self.audio_name, 'sr': features['sr'],
-            'len_sample': self.audio.shape[0], 'len_hop': self.len_hop}
-        meta['vibrations'] = self.stg_names
-        with open(os.path.join(feat_dir, 'meta.pkl'), 'wb') as f:
-            pickle.dump(meta, f)
 
         # save features
         for n in self.stg_names:
-            with open(os.path.join(feat_dir, n+'.pkl'), 'wb') as f:
-                pickle.dump(features[n], f)
+            feat_file = os.path.join(feat_dir, n+'.pkl')
+            if not os.path.exists(feat_file):
+                if features is None:
+                    features = self.audio_features(extract_list=[n])
+                with open(feat_file, 'wb') as f:
+                    pickle.dump(features[n], f)
+
+        # save meta
+        meta = {"audio_name": self.audio_name, "sr": self.sr, "len_sample": self.audio.shape[0], "len_hop":
+            self.len_hop}
+        meta["feat_names"] = self.stg_names
+        with open(os.path.join(feat_dir, 'meta.pkl'), 'wb') as f:
+            pickle.dump(meta, f)
 
     @classmethod
     def from_config(cls, config):

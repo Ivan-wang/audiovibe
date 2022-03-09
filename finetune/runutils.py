@@ -1,6 +1,6 @@
 import os
 import sys
-
+import time
 from numpy import double
 sys.path.append('..')
 import re
@@ -22,10 +22,35 @@ def import_module_from_file(name, path):
     return m
 
 
-def print_module(module):
+def print_params_module(module):
     for o in dir(module):
-        if not re.search("__.*", o):
+        if not re.search("^__.*", o):
             print(o,"\t",getattr(module, o))
+
+
+def dictize_params_module(module, start_keyword=None, exclude_list=[]):
+    return_dict = {}
+    used_attr = []    # attributes used
+    for o in dir(module):
+        if not re.search("^__.*", o):
+            if not o in exclude_list:
+                if not start_keyword:
+                    return_dict[o] = getattr(module, o)
+                    used_attr.append(o)
+                else:
+                    if re.search(start_keyword+".*", o):
+                        new_o = re.sub(start_keyword, "", o)
+                        return_dict[new_o] = getattr(module, o)
+                        used_attr.append(o)
+    return return_dict, used_attr
+
+
+def delattr_params_module(key_list, module):
+    for k in key_list:
+        if k not in dir(module):
+            print(f"Warning: {k} is not in module!")
+        else:
+            delattr(module, k)
 
 
 def base_arg_parser():
@@ -39,6 +64,7 @@ def base_arg_parser():
     p.add_argument('--audmode', type=str, default="melspec")
     return p
 
+### will be removed in the future ! ###
 def tune_melspec_parser(base_parser=None):
     p = base_arg_parser() if base_parser is None else base_parser
     p.add_argument('--len-window', type=int, default=2048)
@@ -77,6 +103,7 @@ def tune_pitch_parser(base_parser=None):
     p.add_argument('--yin-thres', type=float, default=0.8)
 
     return p
+######
 
 from vib_music import FeatureExtractionManager
 from vib_music import launch_vibration

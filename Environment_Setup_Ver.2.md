@@ -3,7 +3,7 @@
 1. Create virtual Python environment
 
    ```bash
-   python3 -m audio
+   python3 -m venv audio
    ```
 
 2. Activate Python virtual environment

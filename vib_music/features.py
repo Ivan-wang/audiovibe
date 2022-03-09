@@ -7,6 +7,7 @@ import librosa
 import numpy as np
 from .FeatureExtractionManager import FeatureExtractionManager
 
+
 @FeatureExtractionManager.register_vib_meta_stg
 def melspec(audio, sr, len_hop, len_window=2048, n_mels=128, fmax=None):
     mel = librosa.feature.melspectrogram(y=audio,
@@ -16,6 +17,14 @@ def melspec(audio, sr, len_hop, len_window=2048, n_mels=128, fmax=None):
     ret = {'len_window': len_window, 'n_mels': n_mels,
         'fmax': fmax, 'mel_freq': mel_freq, 'data': mel
     }
+    return ret
+
+
+@FeatureExtractionManager.register_vib_meta_stg
+def stft(audio, sr, len_hop, len_window=512):
+    X = librosa.stft(audio, n_fft=len_window, hop_length=len_hop, win_length=len_hop, window='hann',
+                     center=True, pad_mode='constant')
+    ret = {'len_window': len_window, 'data': X}
     return ret
 
 @FeatureExtractionManager.register_vib_meta_stg
@@ -29,6 +38,7 @@ def contrastspec(audio, sr, len_hop, len_window=2048, n_bands=6, band_width=200,
     }
     return ret
 
+
 @FeatureExtractionManager.register_vib_meta_stg
 def centroidspec(audio, sr, len_hop, len_window=2048, freqs=None):
     centroid = librosa.feature.spectral_centroid(
@@ -40,6 +50,7 @@ def centroidspec(audio, sr, len_hop, len_window=2048, freqs=None):
         'data': centroid
     }
     return ret
+
 
 @FeatureExtractionManager.register_vib_meta_stg
 def beatplp(audio, sr, len_hop, len_frame=300, tempo_min=30, tempo_max=300):
@@ -58,6 +69,7 @@ def beatplp(audio, sr, len_hop, len_frame=300, tempo_min=30, tempo_max=300):
 
     return ret
 
+
 @FeatureExtractionManager.register_vib_meta_stg
 def rmse(audio, sr, len_hop, len_window=2048):
     len_window = int(len_window)
@@ -68,6 +80,7 @@ def rmse(audio, sr, len_hop, len_window=2048):
     ret = {'len_frame': len_window, 'data': mse}
 
     return ret
+
 
 @FeatureExtractionManager.register_vib_meta_stg
 def pitchyin(audio, sr, len_hop, len_window=2048, fmin='C2', fmax='C7', thres=0.8):
@@ -86,9 +99,13 @@ def pitchyin(audio, sr, len_hop, len_window=2048, fmin='C2', fmax='C7', thres=0.
         'thres': thres, 'data': f0}
     return ret
 
+
 @FeatureExtractionManager.register_vib_meta_stg
-def pitchpyin(audio, sr, len_hop, len_window=2048, fmin='C2', fmax='C7'):
-    len_window = int(len_window)
+def pitchpyin(audio, sr, len_hop, pitch_len_window=2048, fmin='C2', fmax='C7'):
+    ### debug print ###
+    print(f"pitch len window is {pitch_len_window}")
+    ######
+    len_window = int(pitch_len_window)
 
     if isinstance(fmin, str):
         fmin = librosa.note_to_hz('C2')
@@ -102,6 +119,7 @@ def pitchpyin(audio, sr, len_hop, len_window=2048, fmin='C2', fmax='C7'):
         'data': f0}
     return ret
 
+
 @FeatureExtractionManager.register_vib_meta_stg
 def chromastft(audio, sr, len_hop, len_window=2048, n_chroma=12, tuning=0.0):
     len_window = int(len_window)
@@ -111,6 +129,7 @@ def chromastft(audio, sr, len_hop, len_window=2048, n_chroma=12, tuning=0.0):
 
     ret = {'len_hop': len_hop, 'len_window': len_window, 'data': chroma}
     return ret
+
 
 @FeatureExtractionManager.register_vib_meta_stg
 def chromacqt(audio, sr, len_hop, fmin='C1', n_chroma=12, tuning=0.0):
