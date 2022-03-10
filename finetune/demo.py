@@ -42,8 +42,10 @@ def main():
 
 ### debug part ###
 curr_path = os.getcwd()
+# sys.argv = ["demo.py", "--audio", str(os.path.join(curr_path,"../audio/m1_22k.wav")), "--task", "run",
+#             "--vibmode", "hrps_split", "--audmode", "stft,pitchpyin", "--config", "configs/hrps_split_demo.py"]
 sys.argv = ["demo.py", "--audio", str(os.path.join(curr_path,"../audio/m1_22k.wav")), "--task", "run",
-            "--vibmode", "hrps_split", "--audmode", "stft,pitchpyin", "--config", "configs/hrps_split_demo.py"]
+            "--vibmode", "band_split"]
 print("DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!")
 ######
 

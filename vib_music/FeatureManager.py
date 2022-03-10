@@ -90,11 +90,11 @@ class FeatureManager(object):
             return None
 
         features = {}
-        # print("find %d in %s..." % (len(meta["feat_names"]), folder))
-        for vib in meta["feat_names"]:
-            with open(vibrations[vib], "rb") as f:
-                print(f"loading {vib}...")
-                features[vib] = pickle.load(f)
+        # print("find %d in %s..." % (len(meta["audfeats"]), folder))
+        for aud in meta["audfeats"]:
+            with open(vibrations[aud], "rb") as f:
+                print(f"loading {aud}...")
+                features[aud] = pickle.load(f)
 
         return cls(meta, features, mode)
 

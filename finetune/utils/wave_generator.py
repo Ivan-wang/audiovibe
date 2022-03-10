@@ -23,6 +23,10 @@ def periodic_rectangle_generator(mag, duty, freq, frame_num,
     assert isinstance(frame_len, int), "frame_len should be int"
     assert duty>0, "duty must be postive"
 
+    if freq==0:
+        final_signal = np.zeros((frame_num, frame_len)).astype(np.uint8)
+        return final_signal
+
     if not isinstance(mag, list):
         mag = [mag, 0]
 

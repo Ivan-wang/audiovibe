@@ -93,7 +93,7 @@ class FeatureExtractionManager(object):
         # save meta
         meta = {"audio_name": self.audio_name, "sr": self.sr, "len_sample": self.audio.shape[0], "len_hop":
             self.len_hop}
-        meta["feat_names"] = self.stg_names
+        meta["audfeats"] = self.stg_names
         with open(os.path.join(feat_dir, 'meta.pkl'), 'wb') as f:
             pickle.dump(meta, f)
 
