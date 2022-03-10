@@ -87,8 +87,10 @@ class FeatureExtractionManager(object):
             if not os.path.exists(feat_file):
                 if features is None:
                     features = self.audio_features(extract_list=[n])
+                dump_data = features[n]
                 with open(feat_file, 'wb') as f:
-                    pickle.dump(features[n], f)
+                    pickle.dump(dump_data, f)
+                    features = None    # reset feature for next update
 
         # save meta
         meta = {"audio_name": self.audio_name, "sr": self.sr, "len_sample": self.audio.shape[0], "len_hop":

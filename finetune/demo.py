@@ -40,13 +40,13 @@ def main():
     _main(opt, opt.vibmode, 'adc', librosa_config, plot_config, vib_kwargs_dict)
 
 
-### debug part ###
-curr_path = os.getcwd()
+# ### debug part ###
+# curr_path = os.getcwd()
 # sys.argv = ["demo.py", "--audio", str(os.path.join(curr_path,"../audio/m1_22k.wav")), "--task", "run",
 #             "--vibmode", "hrps_split", "--audmode", "stft,pitchpyin", "--config", "configs/hrps_split_demo.py"]
-sys.argv = ["demo.py", "--audio", str(os.path.join(curr_path,"../audio/m1_22k.wav")), "--task", "run",
-            "--vibmode", "band_split"]
-print("DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!")
-######
+# # sys.argv = ["demo.py", "--audio", str(os.path.join(curr_path,"../audio/m1_22k.wav")), "--task", "run",
+# #             "--vibmode", "band_split"]
+# print("DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!")
+# ######
 
 main()

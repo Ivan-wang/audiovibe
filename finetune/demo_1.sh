@@ -1,6 +1,11 @@
-cd finetune \
-    && python3 rmse.py --audio ../audio/m1.wav --task run \
-    && cd ..
+curr_path=`pwd`
+
+echo "python demo.py --audio ${curr_path}/../audio/m1_22k.wav --task run --vibmode band_split --audmode melspec \
+--config configs/band_split_demo.py"
+
+python demo.py --audio "${curr_path}/../audio/m1_22k.wav" --task run --vibmode band_split --audmode melspec \
+--config configs/band_split_demo.py
+
 #cd finetune \
 #    && python3 rmse.py --audio ../audio/test_beat_short_1.wav --task build --plot \
 #    --len-window 2048 && cd ..

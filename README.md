@@ -16,20 +16,7 @@
 
    `pi@raspberrypi:~$` $\rightarrow$ `(audio)pi@raspberrypi:~$`
 
-3. Install Python library
-
-   *when the environment is activate, run `python` is equivalent to run `python3`, and `pip` is equivalent to `pip3`. The following commands will use `python` and `pip`* for simplicity
-
-   ```bash
-   pip install matplotlib
-   pip install pandas
-   pip install pyyaml
-   pip install scikit-learn
-   pip install tqdm
-   pip install wheel
-   ```
-
-4. Install `librosa`. (Requires `llvm-lite`)
+3. Install `librosa`. (Requires `llvm-lite`)
 
    Install llvm and related libraries
 
@@ -54,6 +41,11 @@
 
    ```bash
    python -c "import librosa; print(librosa.__version__)" # 0.8.0
+   ```
+4. Configure environment
+   
+   ```bash
+   pip3 install -r pip_requirements.txt
    ```
 
 5. Install pyaudio
