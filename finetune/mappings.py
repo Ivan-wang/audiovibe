@@ -35,7 +35,7 @@ def band_split(fm:FeatureManager, duty=0.5, recep_field=3, split_aud=None, vib_f
     recep_field = int(recep_field)
     feats = fm.feature_data('melspec')
     sr = fm.meta["sr"]
-    frame_len = fm.feature_data('melspec',prop='len_window')
+    len_hop = fm.meta["len_hop"]
     mel_freq = fm.feature_data('melspec', prop='mel_freq')
     feat_dim, feat_time = feats.shape
     # ### debug ###
@@ -90,7 +90,7 @@ def band_split(fm:FeatureManager, duty=0.5, recep_field=3, split_aud=None, vib_f
         digit_power_matrix = np.tile(digit_power, (1, vib_frame_len))    # tile to form a matrix (frame_num, frame_len)
         # vibration signal
         vib_signal = periodic_rectangle_generator([1,0.], duty=duty, freq=vib_freq[sf_ind], frame_num=feat_time,
-                                                  frame_time=frame_len/float(sr), frame_len=vib_frame_len)
+                                                  frame_time=len_hop/float(sr), frame_len=vib_frame_len)
         scaled_vib_signal = vib_signal * digit_power_matrix    # pointwise scale vibration given power
         if sf_ind == 0:
             final_vibration = scaled_vib_signal
@@ -137,7 +137,7 @@ def hrps_split(fm:FeatureManager, len_harmonic_filt=0.1, len_percusive_filt=10, 
 
     # generate wave for percussion
     vib_signal_p = periodic_rectangle_generator([1,0.], duty=duty, freq=vib_freq["per"], frame_num=specs_time,
-                                              frame_time=stft_frame_len/float(sr), frame_len=vib_frame_len)
+                                              frame_time=len_hop/float(sr), frame_len=vib_frame_len)
     scaled_vib_signal_p = vib_signal_p * digit_power_matrix_p
 
     # process power for pitch
@@ -164,7 +164,7 @@ def hrps_split(fm:FeatureManager, len_harmonic_filt=0.1, len_percusive_filt=10, 
             raise ValueError('vib_freq["har"] is neither number nor function!')
         # generate 1 frame for current receptive field
         vib_signal_p = periodic_rectangle_generator([1, 0.], duty=duty, freq=curr_vib_freq, frame_num=1,
-                                                    frame_time=stft_frame_len / float(sr), frame_len=vib_frame_len)
+                                                    frame_time=len_hop / float(sr), frame_len=vib_frame_len)
         vib_signal_h[pi-(pitch_recep_field//2),:] = vib_signal_p[0,:]
     scaled_vib_signal_h = vib_signal_h * digit_power_matrix_h
 
