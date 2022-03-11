@@ -30,6 +30,9 @@
 #include "batt_service.h"
 #include "hid_service.h"
 
+#include "driver_iic.h" // to initialization iic channel
+
+static const uint8_t PCF8591_ADDR = (0x48 << 1); // addr 48
 static os_timer_t button_anti_shake_timer;  //Timer for button anti-sahke
 static uint32_t curr_button_before_anti_shake = 0;  //before anti-sahke timeout, store the pressed button value
 const struct jump_table_version_t _jump_table_version __attribute__((section("jump_table_3"))) =
@@ -245,16 +248,24 @@ void user_entry_after_ble_init(void)
     at_load_info_from_flash();
     at_init();
 
-//Set two button, PC5,PD6
+    //Set two button, PC5,PD6
     os_timer_init(&button_anti_shake_timer, button_anti_shake_timeout_handler, NULL);
     pmu_set_pin_pull(GPIO_PORT_D, BIT(6), true);     //PD6, disconnect,
     pmu_set_pin_pull(GPIO_PORT_C, BIT(5), true);     //PC5 wakeup
     pmu_port_wakeup_func_set(GPIO_PD6|GPIO_PC5);
+    
+    // set up IIC channels
+    co_printf("Setup IIC in bluetooth demo for speed testing...\r\n");
+    system_set_port_mux(GPIO_PORT_D, GPIO_BIT_6, PORTD6_FUNC_I2C1_CLK);// PD6
+    system_set_port_mux(GPIO_PORT_D, GPIO_BIT_7, PORTD7_FUNC_I2C1_DAT);// PD7
+    system_set_port_pull( (GPIO_PD6|GPIO_PD7), true); // pull up clk and data lines
+    
+    iic_init(IIC_CHANNEL_1, 100, PCF8591_ADDR);
 
     ADV_LED_INIT;
     LINK_LED_INIT;
-	
-	os_timer_init(&send_data_timer,send_data_tim_fn,NULL);
+
+    os_timer_init(&send_data_timer,send_data_tim_fn,NULL);
 
 #if 1
 //stop sleep
@@ -280,17 +291,17 @@ void user_entry_after_ble_init(void)
         .bond_auth = true,
         .password = 0,
     };
-//initialize bonding configuration
+    //initialize bonding configuration
     gap_security_param_init(&param);
 
     at_init_gap_cb_func();
     at_init_advertising_parameter();
 
-//Add AT service and client profile
-//    at_profile_spsc_init();
+    //Add AT service and client profile
+    //at_profile_spsc_init();
     at_profile_spss_init();
 
-//Add OTA, Device info, batt, hid profile
+    //Add OTA, Device info, batt, hid profile
     ota_gatt_add_service();
     //dis_gatt_add_service();
     //batt_gatt_add_service();

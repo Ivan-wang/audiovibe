@@ -14,6 +14,10 @@
 #include "driver_uart.h"
 #include "at_profile_spss.h"
 
+#include "driver_iic.h"
+
+static const uint8_t PCF8591_ADDR = (0x48 << 1); // addr 48
+
 #define AT_ASSERT(v) do { \
     if (!(v)) {             \
         co_printf("%s %s \n", __FILE__, __LINE__); \
@@ -82,76 +86,60 @@ void send_data_tim_fn(void *arg)
  *
  * @return  response data len for profile read operation, meanless for other operation
  */
-uint16_t spss_svc_msg_handler(gatt_msg_t *p_msg)
-{
+uint16_t spss_svc_msg_handler(gatt_msg_t *p_msg) {
     //co_printf("spss_svc,op:%d,att_idx:%d\r\n",p_msg->msg_evt,p_msg->att_idx);
-    switch(p_msg->msg_evt)
-    {
+    switch(p_msg->msg_evt) {
         case GATTC_MSG_READ_REQ:
-            if(p_msg->att_idx == 2)
-            {
+            if(p_msg->att_idx == 2) {
                 memcpy(p_msg->param.msg.p_msg_data, "ntf_uuid", strlen("ntf_uuid"));
                 return strlen("ntf_uuid");
             }
-            else if(p_msg->att_idx == 3)
-            {
+            else if(p_msg->att_idx == 3) {
                 memcpy(p_msg->param.msg.p_msg_data, &ntf_enable_flag[p_msg->conn_idx], 2);
                 return 2;
             }
-            else if(p_msg->att_idx == 4)
-            {
+            else if(p_msg->att_idx == 4) {
                 memcpy(p_msg->param.msg.p_msg_data, "spss_tx_desc", 12);
                 return 12;
             }
-            else if(p_msg->att_idx == 8)
-            {
+            else if(p_msg->att_idx == 8) {
                 memcpy(p_msg->param.msg.p_msg_data, "spss_rx_desc", 12);
                 return 12;
             }
-            else if(p_msg->att_idx == 12)
-            {
+            else if(p_msg->att_idx == 12) {
                 memcpy(p_msg->param.msg.p_msg_data, "spss_fl_desc", 12);
                 return 12;
             }
             break;
         case GATTC_MSG_WRITE_REQ:
-            if(p_msg->att_idx == 6)
-            {
-//                if(spss_recv_data_ind_func != NULL)
-//                    spss_recv_data_ind_func(p_msg->param.msg.p_msg_data,p_msg->param.msg.msg_len);
-//                else
-                {
-#if 0
-                    co_printf("RX: ");
-                    show_reg(p_msg->param.msg.p_msg_data,p_msg->param.msg.msg_len,1);
-#else
-                    //uint8_t at_rsp[20] = {0};
-                    //sprintf((char *)at_rsp,"\r\n+DATA,%d,%d:",p_msg->conn_idx,p_msg->param.msg.msg_len);
-					if((p_msg->param.msg.msg_len == 2) &&
-					(p_msg->param.msg.p_msg_data[0] == 0x01) &&
-					(p_msg->param.msg.p_msg_data[1] == 0x01))
-					{
-						uint8_t data[2] = {0};
-						
-						data[0] = 0x02;
-						data[1] = 0x01;
-						
-						log_printf("up first\n");
-						at_spss_send_data(gAT_ctrl_env.transparent_conidx, data,2);
-						os_timer_start(&send_data_timer,500,1);		//500ms
-					}
-					else if((p_msg->param.msg.msg_len == 2) &&
-					(p_msg->param.msg.p_msg_data[0] == 0x01) &&
-					(p_msg->param.msg.p_msg_data[1] == 0x02))
-					{
-						os_timer_stop(&send_data_timer);
-					}
-					else 
-					{
-						uart_put_data_noint(UART0,p_msg->param.msg.p_msg_data,p_msg->param.msg.msg_len);
+            if(p_msg->att_idx == 6) {
+                // initial data transfer
+                if((p_msg->param.msg.msg_len == 2) && (p_msg->param.msg.p_msg_data[0] == 0x01)
+                    && (p_msg->param.msg.p_msg_data[1] == 0x01)) {
+                    uint8_t data[2] = {0};
+                    data[0] = 0x02;
+                    data[1] = 0x01;
+                    
+                    log_printf("up first\n");
+                    at_spss_send_data(gAT_ctrl_env.transparent_conidx, data,2);
+                    os_timer_start(&send_data_timer,500,1); //500ms
+                }
+                // terminate data transfer
+                else if((p_msg->param.msg.msg_len == 2) && (p_msg->param.msg.p_msg_data[0] == 0x01) &&
+                    (p_msg->param.msg.p_msg_data[1] == 0x02)) {
+                    os_timer_stop(&send_data_timer);
+                }
+                // receive a frame of data
+                else {
+                    uart_put_data_noint(UART0,p_msg->param.msg.p_msg_data,p_msg->param.msg.msg_len);
+                    
+                    // IIC simulations - square wavefrom
+                    uint8_t wave[2] = {0x40, 0x00};
+                    for (uint16_t i = 0; i < p_msg->param.msg.msg_len; ++i) {
+                        wave[1] ^= 0xFF;
+                        iic_write_bytes(IIC_CHANNEL_1, PCF8591_ADDR, 0x00, wave, 2);
                     }
-					//at_spss_recv_data_ind_func(p_msg->param.msg.p_msg_data,p_msg->param.msg.msg_len);
-#endif
+                    
                 }
             }
             else if(p_msg->att_idx == 3)
