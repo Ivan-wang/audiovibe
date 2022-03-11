@@ -1,0 +1,86 @@
+<html>
+<body>
+<pre>
+<h1>µVision Build Log</h1>
+<h2>Tool Versions:</h2>
+IDE-Version: µVision V5.36.0.0
+Copyright (C) 2021 ARM Ltd and ARM Germany GmbH. All rights reserved.
+License Information: Yifan Wang, UTD, LIC=65ISZ-JDT22-TGR7T-RC9IX-U6XJJ-SUQ66
+ 
+Tool Versions:
+Toolchain:       MDK-ARM Plus  Version: 5.36.0.0
+Toolchain Path:  C:\Keil_v5\ARM\ARMCC\Bin
+C Compiler:      Armcc.exe V5.06 update 7 (build 960)
+Assembler:       Armasm.exe V5.06 update 7 (build 960)
+Linker/Locator:  ArmLink.exe V5.06 update 7 (build 960)
+Library Manager: ArmAr.exe V5.06 update 7 (build 960)
+Hex Converter:   FromElf.exe V5.06 update 7 (build 960)
+CPU DLL:         SARMCM3.DLL V5.36.0.0
+Dialog DLL:      DCM.DLL V1.17.3.0
+Target DLL:      Segger\JL2CM3.dll V2.99.40.0
+Dialog DLL:      TCM.DLL V1.53.0.0
+ 
+<h2>Project:</h2>
+C:\Users\ivanw\Workspace\uvision_proj\demos\examples\none_evm\ble_drivers_demo\proj\ble_drivers_demo.uvprojx
+Project File Date:  03/08/2022
+
+<h2>Output:</h2>
+*** Using Compiler 'V5.06 update 7 (build 960)', folder: 'C:\Keil_v5\ARM\ARMCC\Bin'
+Rebuild target 'drivers_demo'
+compiling demo_peripheral.c...
+compiling time_rtc.c...
+compiling proj_main.c...
+compiling ota_service.c...
+compiling driver_iic.c...
+compiling ota.c...
+compiling driver_pmu_qdec.c...
+compiling driver_pmu_pwm.c...
+compiling driver_pmu.c...
+compiling driver_timer.c...
+compiling driver_keyscan.c...
+compiling driver_wdt.c...
+compiling driver_ssp.c...
+compiling driver_codec.c...
+compiling driver_i2s.c...
+compiling driver_efuse.c...
+compiling driver_uart.c...
+compiling driver_rtc.c...
+compiling driver_pwm.c...
+compiling driver_pdm.c...
+compiling driver_exti.c...
+assembling app_boot_vectors.s...
+compiling driver_adc.c...
+compiling core_cm3_isr.c...
+..\..\..\..\components\modules\platform\source\core_cm3_isr.c(13): warning:  #223-D: function "co_delay_100us" declared implicitly
+      co_delay_100us(500);
+..\..\..\..\components\modules\platform\source\core_cm3_isr.c: 1 warning, 0 errors
+compiling patch.c...
+linking...
+.\ble_5_0_host_app.sct(36): warning: L6314W: No section matches pattern *(stack_space).
+.\ble_5_0_host_app.sct(56): warning: L6314W: No section matches pattern *(heap_user).
+Program Size: Code=87656 RO-data=4280 RW-data=1004 ZI-data=3236  
+Finished: 0 information, 2 warning and 0 error messages.
+After Build - User command #1: fromelf.exe  --text  -c -o host_app.txt  Objects/ble_5_stack.axf
+After Build - User command #2: fromelf.exe  --bin -o host_app.bin  Objects/ble_5_stack.axf
+".\Objects\ble_5_stack.axf" - 0 Error(s), 3 Warning(s).
+
+<h2>Software Packages used:</h2>
+
+Package Vendor: ARM
+                http://www.keil.com/pack/ARM.CMSIS.5.8.0.pack
+                ARM.CMSIS.5.8.0
+                CMSIS (Common Microcontroller Software Interface Standard)
+   * Component: CORE Version: 5.5.0
+
+<h2>Collection of Component include folders:</h2>
+  .\RTE\_drivers_demo
+  C:\Users\ivanw\AppData\Local\Arm\Packs\ARM\CMSIS\5.8.0\CMSIS\Core\Include
+  C:\Users\ivanw\AppData\Local\Arm\Packs\ARM\CMSIS\5.8.0\Device\ARM\ARMCM3\Include
+
+<h2>Collection of Component Files used:</h2>
+
+   * Component: ARM::CMSIS:CORE:5.5.0
+Build Time Elapsed:  00:00:05
+</pre>
+</body>
+</html>
