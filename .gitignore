@@ -58,3 +58,4 @@ configs/*
 **/*.png
 **/*.bin
 **/*.txt
+**/*.o
