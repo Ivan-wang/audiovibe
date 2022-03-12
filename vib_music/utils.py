@@ -1,5 +1,5 @@
 import multiprocessing
-from .features import FeatureExtractionManager
+from .FeatureExtractionManager import FeatureExtractionManager
 
 def list_librosa_context():
     ks = list(FeatureExtractionManager.stg_funcs.keys())
@@ -59,13 +59,13 @@ def show_proc_bar(num_frame, sem):
             bar.update()
     bar.close()
 
-def launch_vibration(audio, feature_dir, mode, driver):
+def launch_vibration(audio, feature_dir, mode, driver, vib_kwargs_dict):
     fm = FeatureManager.from_folder(feature_dir, mode)
 
     if driver == 'drv2605':
-        driver = DR2605Driver(fm.vibration_sequence())
+        driver = DR2605Driver(fm.vibration_sequence(**vib_kwargs_dict))
     elif driver == 'adc':
-        driver = AdcDriver(fm.vibration_sequence())
+        driver = AdcDriver(fm.vibration_sequence(**vib_kwargs_dict))
     else:
         print(f'unknown driver {driver}. exit...')
         return
@@ -91,7 +91,7 @@ def launch_vibration(audio, feature_dir, mode, driver):
     board_proc.start()
     audio_proc.start()
 
-    show_proc_bar(num_frame, vib_sem)
+    # show_proc_bar(num_frame, vib_sem)
 
     board_proc.join()
     audio_proc.join()
