@@ -52,7 +52,7 @@ class AudioProcess(multiprocessing.Process):
         print('audio playing exit...')
         self._clean_stream()
 
-from .drivers import VibrationDriver
+from .drivers import VibrationDriverBase
 class BoardProcess(multiprocessing.Process):
     def __init__(self, driver:VibrationDriver, sem:multiprocessing.Semaphore):
         super().__init__()
@@ -75,3 +75,11 @@ class BoardProcess(multiprocessing.Process):
                     update = False
 
         self.driver.on_close()
+
+class VibrationProcess(multiprocessing.Process):
+    def __init__(self, driver:VibrationDriverBase, event_queue:multiprocessing.Queue) -> None:
+        super().__init__()
+        self.driver = driver
+    
+    def run(self) -> None:
+        pass

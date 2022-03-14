@@ -39,7 +39,7 @@ def get_audio_process(audio, frame_len, sem, vib_sim=None):
     return AudioProcess(wf, frame_len, sem, vib_sim)
 
 from .processes import BoardProcess
-from .drivers import DR2605Driver, AdcDriver, VibrationDriver
+from .drivers import DR2605Driver, PCF8591Driver, VibrationDriver
 def get_board_process(driver:VibrationDriver, sem):
     if not driver.on_start():
         print('cannot initialize board.')
@@ -65,7 +65,7 @@ def launch_vibration(audio, feature_dir, mode, driver, vib_kwargs_dict):
     if driver == 'drv2605':
         driver = DR2605Driver(fm.vibration_sequence(**vib_kwargs_dict))
     elif driver == 'adc':
-        driver = AdcDriver(fm.vibration_sequence(**vib_kwargs_dict))
+        driver = PCF8591Driver(fm.vibration_sequence(**vib_kwargs_dict))
     else:
         print(f'unknown driver {driver}. exit...')
         return

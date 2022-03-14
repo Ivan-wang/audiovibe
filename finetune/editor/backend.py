@@ -10,7 +10,7 @@ import librosa
 import numpy as np
 import multiprocessing
 
-from vib_music import AdcDriver
+from vib_music import PCF8591Driver
 from vib_music import BoardProcess
 from vib_music import FeatureManager
 from vib_music import FeatureExtractionManager
@@ -52,7 +52,7 @@ def launch_atomicwave_vibration(atomicwave, duration, scale=1):
 
 
 def launch_vibration(sequence):
-    driver = AdcDriver(sequence)
+    driver = PCF8591Driver(sequence)
 
     if not driver.on_start():
         raise RuntimeError('Driver initializing failed.')
@@ -78,7 +78,7 @@ def launch_vib_mode(audio, fm, transforms, atomic_wave):
     # vib_seq = fm.vibration_sequence(cached=False)
     # print(vib_seq[:10])
 
-    driver = AdcDriver(fm.vibration_sequence(cached=False))
+    driver = PCF8591Driver(fm.vibration_sequence(cached=False))
 
     audio_sem = multiprocessing.Semaphore()
     vib_sem = multiprocessing.Semaphore()
