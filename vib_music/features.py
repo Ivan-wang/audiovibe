@@ -1,14 +1,9 @@
-# 3/2/22
-# Fei Tao
-# taofei@feathervibe.com
-# we define feature functions here
-
 import librosa
 import numpy as np
-from .FeatureExtractionManager import FeatureExtractionManager
 
+from .core import FeatureBuilder
 
-@FeatureExtractionManager.register_vib_meta_stg
+@FeatureBuilder.feature_build_stg
 def melspec(audio, sr, len_hop, len_window=2048, n_mels=128, fmax=None, **kwargs):
     mel = librosa.feature.melspectrogram(y=audio,
         sr=sr, n_fft=len_window, hop_length=len_hop, n_mels=n_mels, fmax=fmax, power=2.0)
@@ -20,14 +15,14 @@ def melspec(audio, sr, len_hop, len_window=2048, n_mels=128, fmax=None, **kwargs
     return ret
 
 
-@FeatureExtractionManager.register_vib_meta_stg
+@FeatureBuilder.feature_build_stg
 def stft(audio, sr, len_hop, len_window=512, **kwargs):
     X = librosa.stft(audio, n_fft=len_window, hop_length=len_hop, win_length=len_hop, window='hann',
                      center=True, pad_mode='constant')
     ret = {'len_window': len_window, 'data': X}
     return ret
 
-@FeatureExtractionManager.register_vib_meta_stg
+@FeatureBuilder.feature_build_stg
 def contrastspec(audio, sr, len_hop, len_window=2048, n_bands=6, band_width=200, use_linear=True, **kwargs):
     contrast = librosa.feature.spectral_contrast(
         y=audio, sr=sr, n_fft=len_window, hop_length=len_hop,
@@ -39,7 +34,7 @@ def contrastspec(audio, sr, len_hop, len_window=2048, n_bands=6, band_width=200,
     return ret
 
 
-@FeatureExtractionManager.register_vib_meta_stg
+@FeatureBuilder.feature_build_stg
 def centroidspec(audio, sr, len_hop, len_window=2048, freqs=None, **kwargs):
     centroid = librosa.feature.spectral_centroid(
         y=audio, sr=sr, n_fft=len_window, hop_length=len_hop,
@@ -52,7 +47,7 @@ def centroidspec(audio, sr, len_hop, len_window=2048, freqs=None, **kwargs):
     return ret
 
 
-@FeatureExtractionManager.register_vib_meta_stg
+@FeatureBuilder.feature_build_stg
 def beatplp(audio, sr, len_hop, len_frame=300, tempo_min=30, tempo_max=300, **kwargs):
     len_frame = int(len_frame)
     tempo_min = int(tempo_min)
@@ -70,7 +65,7 @@ def beatplp(audio, sr, len_hop, len_frame=300, tempo_min=30, tempo_max=300, **kw
     return ret
 
 
-@FeatureExtractionManager.register_vib_meta_stg
+@FeatureBuilder.feature_build_stg
 def rmse(audio, sr, len_hop, len_window=2048, **kwargs):
     len_window = int(len_window)
 
@@ -82,7 +77,7 @@ def rmse(audio, sr, len_hop, len_window=2048, **kwargs):
     return ret
 
 
-@FeatureExtractionManager.register_vib_meta_stg
+@FeatureBuilder.feature_build_stg
 def pitchyin(audio, sr, len_hop, len_window=2048, fmin='C2', fmax='C7', thres=0.8, **kwargs):
     len_window = int(len_window)
     thres = float(thres)
@@ -100,7 +95,7 @@ def pitchyin(audio, sr, len_hop, len_window=2048, fmin='C2', fmax='C7', thres=0.
     return ret
 
 
-@FeatureExtractionManager.register_vib_meta_stg
+@FeatureBuilder.feature_build_stg
 def pitchpyin(audio, sr, len_hop, pitch_len_window=2048, fmin='C2', fmax='C7', **kwargs):
     # ### debug print ###
     # print(f"pitch len window is {pitch_len_window}")
@@ -120,7 +115,7 @@ def pitchpyin(audio, sr, len_hop, pitch_len_window=2048, fmin='C2', fmax='C7', *
     return ret
 
 
-@FeatureExtractionManager.register_vib_meta_stg
+@FeatureBuilder.feature_build_stg
 def chromastft(audio, sr, len_hop, len_window=2048, n_chroma=12, tuning=0.0, **kwargs):
     len_window = int(len_window)
     chroma = librosa.feature.chroma_stft(y=audio, sr=sr, n_fft=len_window,
@@ -131,7 +126,7 @@ def chromastft(audio, sr, len_hop, len_window=2048, n_chroma=12, tuning=0.0, **k
     return ret
 
 
-@FeatureExtractionManager.register_vib_meta_stg
+@FeatureBuilder.feature_build_stg
 def chromacqt(audio, sr, len_hop, fmin='C1', n_chroma=12, tuning=0.0, **kwargs):
     # len_window = int(len_window)
     fmin = librosa.note_to_hz(fmin)
