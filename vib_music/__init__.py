@@ -1,16 +1,13 @@
-from .FeatureExtractionManager import FeatureExtractionManager
-from .FeatureManager import FeatureManager
-from .processes import AudioProcess
-from .processes import BoardProcess
+from .core import *
+
+from .processes import AudioProcess, VibrationProcess
 
 from .plot import PlotManager
 
-from .drivers import VibrationDriver
-from .drivers import DR2605Driver
 from .drivers import PCF8591Driver
 
 from .utils import launch_vibration
-from .utils import launch_plotting
+# from .utils import launch_plotting
 
 from .features import *
 

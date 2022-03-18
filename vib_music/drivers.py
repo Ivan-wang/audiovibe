@@ -3,10 +3,6 @@ from typing import Optional, Dict
 from .core import StreamEvent, StreamEventType
 from .core import StreamDriverBase, StreamError
 
-from .env import AUDIO_RUNTIME_READY
-if AUDIO_RUNTIME_READY:
-    from pyaudio import PyAudio
-
 class AudioDriver(StreamDriverBase):
     def __init__(self) -> None:
         super(AudioDriver, self).__init__()
@@ -15,6 +11,7 @@ class AudioDriver(StreamDriverBase):
         self.stream = None
     
     def on_init(self, what: Optional[Dict] = None) -> None:
+        from .dependency import PyAudio
         self.audio = PyAudio()
         self.stream = self.audio.open(
             format=self.audio.get_format_from_width(what['samplewidth']),
@@ -47,11 +44,6 @@ class AudioDriver(StreamDriverBase):
     def on_status_acq(self, what: Optional[Dict] = None) -> Optional[StreamEvent]:
         return None
 
-
-from .env import ADC_ENV_READY
-if ADC_ENV_READY:
-    import smbus
-
 # NOTE: each sample accept at most 8 operations
 class PCF8591Driver(StreamDriverBase):
     def __init__(self) -> None:
@@ -59,10 +51,9 @@ class PCF8591Driver(StreamDriverBase):
         self.stream = None
 
     def on_init(self, what: Optional[Dict] = None) -> None:
-        if ADC_ENV_READY:
-            self.stream = smbus.SMBus(1)
-        else:
-            raise StreamError('Init PCF8591 failed. SMBus not installed.')
+        from .dependency import smbus
+        self.stream = smbus.SMBus(1)
+        # raise StreamError('Init PCF8591 failed. SMBus not installed.')
 
     def on_next_frame(self, what: Optional[Dict] = None) -> None:
         for a in what['frame']:

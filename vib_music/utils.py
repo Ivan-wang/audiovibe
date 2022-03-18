@@ -15,18 +15,9 @@ def get_feature(features, k=None, prefix=None):
 
     return None
 
-from .env import AUDIO_RUNTIME_READY
+import wave
 from .processes import AudioProcess
-
-if AUDIO_RUNTIME_READY:
-    import pyaudio
-    import wave
-
 def get_audio_process(audio:str, len_frame:int) -> Optional[AudioProcess]:
-    if not AUDIO_RUNTIME_READY:
-        print('cannot import audio libs.')
-        return None
-
     try:
         wf = wave.open(audio, 'rb')
         audioHandler = AudioStreamHandler(WaveAudioStream(wf, len_frame), AudioDriver())

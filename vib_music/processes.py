@@ -6,11 +6,6 @@ from .streamhandler import StreamHandler, StreamState, AudioStreamState
 from .core import StreamEventType, StreamEvent
 from .core import StreamError
 
-from .env import AUDIO_RUNTIME_READY
-
-if AUDIO_RUNTIME_READY:
-    from pyaudio import PyAudio
-
 class StreamProcess(multiprocessing.Process):
     def __init__(self, stream_handler:StreamHandler) -> None:
         super(StreamProcess, self).__init__()
