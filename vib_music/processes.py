@@ -1,85 +1,121 @@
-import wave
 import multiprocessing
+from typing import Optional
+from queue import Empty
+
+from .streamhandler import StreamHandler, StreamState, AudioStreamState
+from .core import StreamEventType, StreamEvent
+from .core import StreamError
 
 from .env import AUDIO_RUNTIME_READY
 
 if AUDIO_RUNTIME_READY:
     from pyaudio import PyAudio
 
-class AudioProcess(multiprocessing.Process):
-    def __init__(self, wavefile, frame_len, vib_sem, proc_sem=None):
-        super(AudioProcess, self).__init__()
-        self.wavefile= wavefile
-        self.frame_len = frame_len
-        self.vib_sem = vib_sem
-        self.proc_sem = proc_sem
+class StreamProcess(multiprocessing.Process):
+    def __init__(self, stream_handler:StreamHandler) -> None:
+        super(StreamProcess, self).__init__()
 
-        self.stream = None
+        self.stream_handler = stream_handler
+        self.result_queue:Optional[multiprocessing.Queue] = None
+        self.task_queue:Optional[multiprocessing.Queue] = None
 
-    def _init_audio_stream(self):
-        from pyaudio import PyAudio
-        audio = PyAudio()
-        self.stream = audio.open(
-            format=audio.get_format_from_width(self.wavefile.getsampwidth()),
-            channels = self.wavefile.getnchannels(),
-            rate=self.wavefile.getframerate(),
-            output=True
-        )
+    def set_event_queues(self, task:multiprocessing.Queue, result:multiprocessing.Queue) -> None:
+        self.task_queue = task
+        self.result_queue = result
+    
+class VibrationProcess(StreamProcess):
+    def __init__(self, stream_hander:StreamHandler) -> None:
+        super(VibrationProcess, self).__init__(stream_hander)
 
-    def _clean_stream(self):
-        if self.stream is not None:
-            self.stream.stop_stream()
-            self.stream.close()
+    def run(self) -> None:
+        is_orphan = False
+        if self.task_queue is None or self.result_queue is None:
+            is_orphan = True
+        
+        if is_orphan:
+            self.stream_handler.on_init()
+            while True:
+                try:
+                    self.stream_handler.on_next_frame()
+                except StreamError:
+                    print('Stream Exausted.')
+                    break
+                except Exception as e:
+                    print(f'Stream Error {e}')
+                    break
+        else:
+            while True:
+                task = self.task_queue.get(block=True)
+                try:
+                    result = self.stream_handler.handle(task)
+                except Exception as e:
+                    print(f'for task {task}, vibration stream handler exception {e}')
+                    break
+                else:
+                    if result is not None:
+                        self.result_queue.put(result) 
+                finally:
+                    if task.head == StreamEventType.STREAM_CLOSE:
+                        break
+        
+        # before exit, check and try to close handler, no exception raised
+        if self.stream_handler.stream_state is StreamState.STREAM_ACTIVE:
+            try:
+                self.stream_handler.on_close()
+            except:
+                pass
 
+class AudioProcess(StreamProcess):
+    def __init__(self, stream_handler:StreamHandler) -> None:
+        super(AudioProcess, self).__init__(stream_handler)
+
+        # audio process initialize task and result queues for all vibration process
+        self.vibration_task_queue = multiprocessing.Queue()
+        self.vibration_result_queue = multiprocessing.Queue()
+
+
+        self.num_vibration_stream = 0
+
+    def attach_vibration_proc(self, proc:VibrationProcess) -> None:
+        proc.set_event_queues(self.task_queue, self.result_queue)
+        self.num_vibration_stream += 1
+    
     def run(self):
         # IMPORTANT: initialize the audio within one process
         # Don't share it across different processes
-        self._init_audio_stream()
+        # self.stream_handler.on_start()
+        # if self.vibration_queue is not None:
+            # self.vibration_queue.put(Message(header=MessageT.MSG_STREAM_RESET))
 
-        print('start to play audio...')
         while True:
-            data = self.wavefile.readframes(self.frame_len)
-            if len(data) > 0:
-                # release to vibration process
-                self.vib_sem.release()
-                # release to main process
-                if self.proc_sem is not None: self.proc_sem.release()
-                if self.stream is not None: self.stream.write(data)
+            try:
+                task = self.task_queue.get(
+                    block=self.stream_handler.stream_state == AudioStreamState.STREAM_INACTIVE
+                ) # when stream is inactive, wait for next control signal
+            except Empty:
+                pass # else run on next stream
             else:
-                break
+                # pass control signal to vibration processes
+                # TODO: handle status ack results
+                for _ in range(self.num_vibration_stream):
+                    self.vibration_task_queue.put(task) # tasks
+                self.stream_handler.handle(task)
+            finally:
+                if task.header is StreamEventType.STREAM_CLOSE:
+                    break
 
-        self.proc_sem.release()
-        print('audio playing exit...')
-        self._clean_stream()
-
-from .drivers import VibrationDriverBase
-class BoardProcess(multiprocessing.Process):
-    def __init__(self, driver:VibrationDriver, sem:multiprocessing.Semaphore):
-        super().__init__()
-        self.sem = sem
-        self.driver = driver
-
-    def run(self):
-        # driver starting before creating the board process
-        # self.driver.on_start()
-        if self.sem is None:
-            print('Running in stand-alone mode')
-            while self.driver.on_running(True):
+            # always procceed with next frame when activate
+            try:
+                if self.stream_handler.stream_state == AudioStreamState.STREAM_ACTIVE:
+                    for _ in range(self.num_vibration_stream):
+                        self.task_queue.put(StreamEvent(head=StreamEventType.STREAM_NEXT_FRAME))
+                self.stream_handler.on_next_frame()
+            except:
+                break # TODO: check audio playing error
+        
+        # before exit, check and try to close handler, no exception raised
+        if self.stream_handler.stream_state == AudioStreamState.STREAM_ACTIVE:
+            try:
+                self.stream_handler.on_close()
+            except:
                 pass
-        else:
-            update = False
-            while self.driver.on_running(update):
-                if self.sem.acquire(block=self.driver.blocking):
-                    update = True
-                else:
-                    update = False
-
-        self.driver.on_close()
-
-class VibrationProcess(multiprocessing.Process):
-    def __init__(self, driver:VibrationDriverBase, event_queue:multiprocessing.Queue) -> None:
-        super().__init__()
-        self.driver = driver
-    
-    def run(self) -> None:
-        pass
