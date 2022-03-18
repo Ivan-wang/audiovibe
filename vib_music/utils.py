@@ -1,12 +1,9 @@
-import multiprocessing
-from .FeatureExtractionManager import FeatureExtractionManager
+from typing import Optional
 
-def list_librosa_context():
-    ks = list(FeatureExtractionManager.stg_funcs.keys())
-    meta_ks = list(FeatureExtractionManager.stg_meta_funcs.keys())
-
-    print(f'Available Librosa Strategies : {ks}')
-    print(f'Available Librosa Meta Strategies : {meta_ks}')
+from .streams import WaveAudioStream
+from .drivers import AudioDriver
+from .streamhandler import StreamHandler, AudioStreamHandler
+from .processes import AudioProcess
 
 def get_feature(features, k=None, prefix=None):
     if k is not None and k in features:
@@ -25,28 +22,36 @@ if AUDIO_RUNTIME_READY:
     import pyaudio
     import wave
 
-def get_audio_process(audio, frame_len, sem, vib_sim=None):
+def get_audio_process(audio:str, len_frame:int) -> Optional[AudioProcess]:
     if not AUDIO_RUNTIME_READY:
         print('cannot import audio libs.')
         return None
 
     try:
         wf = wave.open(audio, 'rb')
+        audioHandler = AudioStreamHandler(WaveAudioStream(wf, len_frame), AudioDriver())
     except:
-        print('cannot open audio file.')
+        print('cannot create audio handler')
         return None
+    else:
+        return AudioProcess(audioHandler)
 
-    return AudioProcess(wf, frame_len, sem, vib_sim)
+from .core import AudioFeatureBundle
+from .streams import VibrationStream
+from .processes import VibrationProcess
+from .drivers import PCF8591Driver
 
-from .processes import BoardProcess
-from .drivers import DR2605Driver, PCF8591Driver, VibrationDriver
-def get_board_process(driver:VibrationDriver, sem):
-    if not driver.on_start():
-        print('cannot initialize board.')
+def get_vib_process(features:str, len_frame:int, mode:str):
+    try:
+        fb = AudioFeatureBundle.from_folder(features)
+        vibStream = VibrationStream.from_feature_bundle(fb, len_frame, mode)
+        vibHandler = StreamHandler(vibStream, PCF8591Driver())
+    except:
+        print('cannot create vibration handler')
         return None
-    return BoardProcess(driver, sem)
+    else:
+        return VibrationProcess(vibHandler)
 
-from .FeatureManager import FeatureManager
 from tqdm import tqdm
 
 def show_proc_bar(num_frame, sem):
@@ -59,51 +64,33 @@ def show_proc_bar(num_frame, sem):
             bar.update()
     bar.close()
 
-def launch_vibration(audio, feature_dir, mode, driver, vib_kwargs_dict):
-    fm = FeatureManager.from_folder(feature_dir, mode)
-
-    if driver == 'drv2605':
-        driver = DR2605Driver(fm.vibration_sequence(**vib_kwargs_dict))
-    elif driver == 'adc':
-        driver = PCF8591Driver(fm.vibration_sequence(**vib_kwargs_dict))
-    else:
-        print(f'unknown driver {driver}. exit...')
-        return
-
-    audio_sem = multiprocessing.Semaphore()
-    vib_sem = multiprocessing.Semaphore()
-
-    frame_len = fm.frame_len()
-    audio_proc = get_audio_process(audio, frame_len, audio_sem, vib_sem)
+def launch_vibration(audio:str, len_audio_frame:int, features:str, len_vib_frame:int, mode:str):
+    audio_proc = get_audio_process(audio, len_audio_frame)
     if audio_proc is None:
         print('initial audio process failed. exit...')
         return
 
-    board_proc = get_board_process(driver, audio_sem)
-    if board_proc is None:
+    vib_proc = get_vib_process(features, len_vib_frame, mode)
+    if vib_proc is None:
         print('initial board process failed. exit...')
         return
 
-    # show prograss bar here
-    sample_len = fm.sample_len()
-    num_frame = (sample_len + frame_len - 1) // frame_len
+    audio_proc.attach_vibration_proc(vib_proc)
 
-    board_proc.start()
+    # show prograss bar here
+    vib_proc.start()
     audio_proc.start()
 
     # show_proc_bar(num_frame, vib_sem)
 
-    board_proc.join()
+    vib_proc.join()
     audio_proc.join()
 
-from .plot import PlotManager
-def launch_plotting(audio, feature_dir, mode, plots):
-    fm = FeatureManager.from_folder(feature_dir, mode)
-    if fm is None:
-        print('cannot create feature manager')
-        return
-    ctx = PlotManager(audio, fm, plots)
-    ctx.save_plots()
-
-if __name__ == '__main__':
-    list_librosa_context()
+# from .plot import PlotManager
+# def launch_plotting(audio, feature_dir, mode, plots):
+#     fm = FeatureManager.from_folder(feature_dir, mode)
+#     if fm is None:
+#         print('cannot create feature manager')
+#         return
+#     ctx = PlotManager(audio, fm, plots)
+#     ctx.save_plots()
