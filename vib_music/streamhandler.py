@@ -7,6 +7,9 @@ from .core import StreamError
 from .drivers import AudioDriver
 from .streams import WaveAudioStream
 
+class StreamEndException(Exception):
+    pass
+
 @unique
 class AudioStreamEventType(IntEnum):
     # events handled by a stream driver
@@ -25,7 +28,7 @@ class AudioStreamEventType(IntEnum):
 
 class AudioStreamEvent(NamedTuple):
     head: AudioStreamEventType
-    what: Dict
+    what: Optional[Dict] 
 
 @unique
 class StreamState(IntEnum):
@@ -48,42 +51,37 @@ class StreamHandler(object):
             StreamEventType.STREAM_CLOSE: self.on_close
         }
     
-    def on_init(self) -> None:
-        self.stream_driver.on_init()
+    def on_init(self, what:Optional[Dict]=None) -> None:
         self.stream_data.rewind()
+        self.stream_driver.on_init(what)
         self.stream_state = StreamState.STREAM_ACTIVE
     
-    def on_seek(self, pos:int) -> None:
-        self.stream_data.setpos(pos)
+    def on_seek(self, what:Optional[Dict]=None) -> None:
+        self.stream_data.setpos(what['pos'])
 
-    def on_next_frame(self) -> None:
+    def on_next_frame(self, what:Optional[Dict]=None) -> None:
         if self.stream_state is not StreamState.STREAM_INACTIVE:
             return
-        frame = self.stream_data.readframe()
-        if len(frame) == 0:
-            raise StreamError()
+        if what is not None:
+            frame = what.get('frame', None)
+        else:
+            frame = self.stream_data.readframe()
+        if frame is None or len(frame) == 0:
+            raise StreamEndException('no more frames')
         self.stream_driver.on_next_frame(
             StreamEvent(StreamEventType.STREAM_NEXT_FRAME, {'frame': frame})
         )
     
-    def on_close(self) -> None:
+    def on_close(self, what:Optional[Dict]=None) -> None:
         self.stream_state = StreamState.STREAM_INACTIVE
-        self.stream_driver.on_close()
+        self.stream_driver.on_close(what)
         self.stream_data.close()
     
-    def on_status_acq(self) -> StreamEvent:
-        return self.stream_driver.on_status_acq()
+    def on_status_acq(self, what:Optional[Dict]=None) -> StreamEvent:
+        return self.stream_driver.on_status_acq(what)
     
     def handle(self, event:StreamEvent) -> Optional[StreamEvent]:
         return self.control_handle_funcs[event.head](event.what)
-
-@unique
-class AudioStreamState(IntEnum):
-    STREAM_ACTIVATE = StreamState.STREAM_ACTIVE
-    STREAM_INACTIVATE = StreamState.STREAM_INACTIVE
-
-    AUDIO_RUNNING = auto()
-    AUDIO_PULSE = auto()
 
 class AudioStreamHandler(StreamHandler):
     def __init__(self, stream_data: WaveAudioStream, stream_driver: AudioDriver) -> None:
@@ -95,18 +93,24 @@ class AudioStreamHandler(StreamHandler):
             AudioStreamEventType.AUDIO_START: self.on_start,
         })
     
-    def on_init(self) -> None:
-        super(AudioStreamHandler, self).on_init()
-        self.stream_state = AudioStreamState.STREAM_INACTIVE # audio waits for start signal
+    def on_init(self, what:Optional[Dict]=None) -> None:
+        what = {} if what is None else what
+        what.setdefault('format', self.stream_data.getchunks().getsampwidth())
+        what.setdefault('channels', self.stream_data.getchunks().getnchannels())
+        what.setdefault('rate', self.stream_data.getchunks().getframerate())
 
-    def on_start(self) -> None:
-        self.stream_state = AudioStreamState.STREAM_ACTIVE
+        super(AudioStreamHandler, self).on_init(what)
 
-    def on_pulse(self) -> None:
-        self.stream_state = AudioStreamState.STREAM_INACTIVE
-        self.stream_driver.on_pulse()
+        self.stream_state = StreamState.STREAM_INACTIVE # audio waits for start signal
+
+    def on_start(self, what:Optional[Dict]=None) -> None:
+        self.stream_state = StreamState.STREAM_ACTIVE
+
+    def on_pulse(self, what:Optional[Dict]=None) -> None:
+        self.stream_state = StreamState.STREAM_INACTIVE
+        self.stream_driver.on_pulse(what)
     
-    def on_resume(self) -> None:
-        self.stream_state = AudioStreamState.STREAM_ACTIVE
-        self.stream_driver.on_resume()
+    def on_resume(self, what:Optional[Dict]=None) -> None:
+        self.stream_state = StreamState.STREAM_ACTIVE
+        self.stream_driver.on_resume(what)
 

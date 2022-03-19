@@ -1,4 +1,3 @@
-from optparse import Option
 import os
 import librosa
 import numpy as np
@@ -11,7 +10,7 @@ class FeatureBuilder(object):
     this class mainly takes care of acoustic feature extraction
     """
     stg_funcs = {}
-    def __init__(self, audio:Union[str, np.ndarray], sr:Optional[int]=None, len_hop:Option[int]=512):
+    def __init__(self, audio:Union[str, np.ndarray], sr:Optional[int]=None, len_hop:Optional[int]=512):
         super(FeatureBuilder, self).__init__()
 
         if isinstance(audio, str):
@@ -43,7 +42,7 @@ class FeatureBuilder(object):
             raise NotImplementedError(f'{stg} is not implemented')
     
     
-    def build_features(self, recipe:Dict[str:Dict]) -> AudioFeatureBundle:
+    def build_features(self, recipe:Dict[str,Dict]) -> AudioFeatureBundle:
         fb = AudioFeatureBundle()
 
         fb.update({'meta':{

@@ -1,10 +1,14 @@
 import abc
 
+
 class StreamDataBase(abc.ABC):
     '''frame based stream data'''
     def __init__(self, chunks, len_frame:int) -> None:
         self.chunks = chunks
         self.len_frame = len_frame
+    
+    def getchunks(self):
+        return self.chunks
 
     @abc.abstractmethod
     def getnframes(self) ->int:

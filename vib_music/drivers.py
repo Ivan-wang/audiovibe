@@ -10,11 +10,11 @@ class AudioDriver(StreamDriverBase):
         self.audio = None # PyAudio object
         self.stream = None
     
-    def on_init(self, what: Optional[Dict] = None) -> None:
+    def on_init(self, what: Dict) -> None:
         from .dependency import PyAudio
         self.audio = PyAudio()
         self.stream = self.audio.open(
-            format=self.audio.get_format_from_width(what['samplewidth']),
+            format=self.audio.get_format_from_width(what['format']),
             channels=what['channels'],
             rate = what['rate'],
             output=True
@@ -26,11 +26,9 @@ class AudioDriver(StreamDriverBase):
         self.audio.terminate()
     
     def on_pulse(self, what:Optional[Dict]=None) -> None:
-        self.is_activate = False
         self.stream.stop_stream()
 
     def on_resume(self, what:Optional[Dict]=None) -> None:
-        self.is_activate = True
         self.stream.start_stream()
 
     def on_next_frame(self, what: Optional[Dict] = None) -> None:
@@ -44,7 +42,6 @@ class AudioDriver(StreamDriverBase):
     def on_status_acq(self, what: Optional[Dict] = None) -> Optional[StreamEvent]:
         return None
 
-# NOTE: each sample accept at most 8 operations
 class PCF8591Driver(StreamDriverBase):
     def __init__(self) -> None:
         super(PCF8591Driver, self).__init__()
@@ -66,3 +63,7 @@ class PCF8591Driver(StreamDriverBase):
     # TODO: return vibration hardware status
     def on_status_acq(self, what: Optional[Dict] = None) -> Optional[StreamEvent]:
         return StreamEvent(StreamEventType.STREAM_STATUS_ACK, {'status': 'PCF8591'})
+
+
+class PWMDriver(StreamDriverBase):
+    pass
