@@ -1,5 +1,6 @@
 from enum import IntEnum, unique, auto
 from typing import Optional, NamedTuple, Dict
+from tqdm import tqdm
 
 from .core import StreamDataBase, StreamDriverBase
 from .core import StreamEvent, StreamEventType
@@ -60,17 +61,16 @@ class StreamHandler(object):
         self.stream_data.setpos(what['pos'])
 
     def on_next_frame(self, what:Optional[Dict]=None) -> None:
-        if self.stream_state is not StreamState.STREAM_INACTIVE:
+        if not self.is_activate():
             return
+
         if what is not None:
             frame = what.get('frame', None)
         else:
             frame = self.stream_data.readframe()
         if frame is None or len(frame) == 0:
             raise StreamEndException('no more frames')
-        self.stream_driver.on_next_frame(
-            StreamEvent(StreamEventType.STREAM_NEXT_FRAME, {'frame': frame})
-        )
+        self.stream_driver.on_next_frame({'frame': frame})
     
     def on_close(self, what:Optional[Dict]=None) -> None:
         self.stream_state = StreamState.STREAM_INACTIVE
@@ -82,6 +82,9 @@ class StreamHandler(object):
     
     def handle(self, event:StreamEvent) -> Optional[StreamEvent]:
         return self.control_handle_funcs[event.head](event.what)
+    
+    def is_activate(self) -> bool:
+        return self.stream_state == StreamState.STREAM_ACTIVE
 
 class AudioStreamHandler(StreamHandler):
     def __init__(self, stream_data: WaveAudioStream, stream_driver: AudioDriver) -> None:
@@ -92,6 +95,9 @@ class AudioStreamHandler(StreamHandler):
             AudioStreamEventType.AUDIO_RESUME: self.on_resume,
             AudioStreamEventType.AUDIO_START: self.on_start,
         })
+
+        self.bar = None
+
     
     def on_init(self, what:Optional[Dict]=None) -> None:
         what = {} if what is None else what
@@ -100,6 +106,9 @@ class AudioStreamHandler(StreamHandler):
         what.setdefault('rate', self.stream_data.getchunks().getframerate())
 
         super(AudioStreamHandler, self).on_init(what)
+
+        num_frame = self.stream_data.getnframes()
+        self.bar = tqdm(desc='[audio]', unit=' frame', total=num_frame)
 
         self.stream_state = StreamState.STREAM_INACTIVE # audio waits for start signal
 
@@ -114,3 +123,14 @@ class AudioStreamHandler(StreamHandler):
         self.stream_state = StreamState.STREAM_ACTIVE
         self.stream_driver.on_resume(what)
 
+    def on_next_frame(self, what: Optional[Dict] = None) -> None:
+        try:
+            super(AudioStreamHandler, self).on_next_frame(what)
+        except StreamEndException as e:
+            raise e
+        else:
+            self.bar.update()
+    
+    def on_close(self, what: Optional[Dict] = None) -> None:
+        self.bar.close()
+        return super().on_close(what)

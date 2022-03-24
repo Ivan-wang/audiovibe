@@ -12,7 +12,7 @@ class WaveAudioStream(StreamDataBase):
         return (self.chunks.getnframes()+self.len_frame-1) // self.len_frame
 
     def readframe(self, n: int = 1):
-        return self.chunks.readframe(n*self.len_frame)
+        return self.chunks.readframes(n*self.len_frame)
 
     def tell(self) -> int:
         return self.chunks.tell()

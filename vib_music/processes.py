@@ -80,47 +80,44 @@ class AudioProcess(StreamProcess):
     def attach_result_queue(self, queue:multiprocessing.Queue) -> None:
         self.result_queue = queue
     
+    def broadcast_event(self, event:StreamEvent) -> None:
+        for _ in range(self.num_vibration_stream):
+            self.vibration_task_queue.put(event) # tasks
+    
     def run(self):
         # IMPORTANT: initialize the audio within one process
         # Don't share it across different processes
-        # self.stream_handler.on_start()
-        # if self.vibration_queue is not None:
-            # self.vibration_queue.put(Message(header=MessageT.MSG_STREAM_RESET))
-
         while True:
             try:
                 task = self.task_queue.get(
-                    block=self.stream_handler.stream_state == StreamState.STREAM_INACTIVE
+                    block=not self.stream_handler.is_activate()
                 ) # when stream is inactive, wait for next control signal
             except Empty:
                 pass # no task from main process
             else:
                 # pass control signal to vibration processes
                 # TODO: handle status ack results
-                print(task)
-                for _ in range(self.num_vibration_stream):
-                    self.vibration_task_queue.put(task) # tasks
+                self.broadcast_event(task)
                 self.stream_handler.handle(task)
                 if task.head == StreamEventType.STREAM_CLOSE:
                     break
 
             # always procceed with next frame when activate
-            if self.stream_handler.stream_state == StreamState.STREAM_ACTIVE:
-                for _ in range(self.num_vibration_stream):
-                    self.task_queue.put(StreamEvent(head=StreamEventType.STREAM_NEXT_FRAME))
+            if self.stream_handler.is_activate():
+                self.broadcast_event(StreamEvent(head=StreamEventType.STREAM_NEXT_FRAME, what={}))
 
-            try:
-                print('playing new frame')
-                self.stream_handler.on_next_frame()
-            except StreamEndException:
-                print('closing vibiration process...')
-                for _ in range(self.num_vibration_stream):
-                    self.task_queue.put(StreamEvent(head=StreamEventType.STREAM_CLOSE))
-            except:
-                break # TODO: check audio playing error
+                try:
+                    self.stream_handler.on_next_frame()
+                except StreamEndException:
+                    self.broadcast_event(StreamEvent(head=StreamEventType.STREAM_CLOSE, what={}))
+                    self.stream_handler.on_close()
+                    break
+                except Exception as e:
+                    print(f'playing error {e}')
+                    break # TODO: check audio playing error
         
         # before exit, check and try to close handler, no exception raised
-        if self.stream_handler.stream_state == StreamState.STREAM_ACTIVE:
+        if self.stream_handler.is_activate():
             try:
                 self.stream_handler.on_close()
             except:
