@@ -39,9 +39,9 @@ def main():
         print('Buidling Feature Database...', end='')
         librosa_config = init_vibration_extraction_config()
         librosa_config['audio'] = opt.audio
-        librosa_config['len_hop'] = opt.len_hop
+        librosa_config['len_hop'] = 512
         librosa_config['stgs']['rmse'] = {
-            'len_window': opt.len_window,
+            'len_window': 2048,
         }
 
     if opt.plot:
