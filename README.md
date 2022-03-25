@@ -1,20 +1,18 @@
 # Environment Setup
 
-1. Create virtual Python environment
+1. Install miniconda
+
+2. create conda enviroment with the command
 
    ```bash
-   python3 -m venv audio
+   conda env create -n audio -f conda_requirements.yml
    ```
 
-2. Activate Python virtual environment
-
+   then activate it by
+   
    ```bash
-   source ~/audio/bin/activate
+   conda activate audio
    ```
-
-   When the environment is activated, the environment name ("audio") appears in the terminal window like this
-
-   `pi@raspberrypi:~$` $\rightarrow$ `(audio)pi@raspberrypi:~$`
 
 3. Install `librosa`. (Requires `llvm-lite`)
 
