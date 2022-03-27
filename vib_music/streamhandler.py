@@ -85,6 +85,9 @@ class StreamHandler(object):
     
     def is_activate(self) -> bool:
         return self.stream_state == StreamState.STREAM_ACTIVE
+    
+    def tell(self) -> int:
+        return self.stream_data.tell()
 
 class AudioStreamHandler(StreamHandler):
     def __init__(self, stream_data: WaveAudioStream, stream_driver: AudioDriver) -> None:
@@ -122,6 +125,12 @@ class AudioStreamHandler(StreamHandler):
     def on_resume(self, what:Optional[Dict]=None) -> None:
         self.stream_state = StreamState.STREAM_ACTIVE
         self.stream_driver.on_resume(what)
+    
+    def on_seek(self, what: Optional[Dict] = None) -> None:
+        self.bar.n = what['pos']
+        self.bar.last_print_n = what['pos']
+        self.bar.refresh()
+        return super().on_seek(what)
 
     def on_next_frame(self, what: Optional[Dict] = None) -> None:
         try:
