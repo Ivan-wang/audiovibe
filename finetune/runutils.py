@@ -2,7 +2,8 @@ import os
 import sys
 import time
 from numpy import double
-sys.path.append('..')
+curr_path = os.getcwd()
+sys.path.append(os.path.join(curr_path,'..'))
 import re
 import argparse
 from pathlib import Path

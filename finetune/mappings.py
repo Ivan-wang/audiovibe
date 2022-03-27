@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import librosa
 import librosa.display
 
+bin_levels = 255
 
 @FeatureManager.vibration_mode(over_ride=False)
 def band_split(fm:FeatureManager, duty=0.5, recep_field=3, split_aud=None, vib_freq=[50,500], vib_scale=[1,1.5],
@@ -38,6 +39,9 @@ def band_split(fm:FeatureManager, duty=0.5, recep_field=3, split_aud=None, vib_f
     len_hop = fm.meta["len_hop"]
     mel_freq = fm.feature_data('melspec', prop='mel_freq')
     feat_dim, feat_time = feats.shape
+    bin_levels = 255
+    global_scale = kwargs["global_scale"]
+    assert global_scale>0 and global_scale<=1.0, "global scale must be in (0,1]"
     # ### debug ###
     # fig, ax = plt.subplots()
     # S_dB = librosa.power_to_db(feats, ref=np.max)
@@ -85,8 +89,8 @@ def band_split(fm:FeatureManager, duty=0.5, recep_field=3, split_aud=None, vib_f
         comb_power = (comb_power - min_power) / (max_power - min_power)    # noramlize
         comb_power = comb_power * vib_scale[sf_ind]    # band scale
         # digitize current band
-        bins = np.linspace(0., 1., 255, endpoint=True)
-        digit_power = np.expand_dims(np.digitize(comb_power, bins).astype(np.uint8), axis=1)
+        bins = np.linspace(0., 1., bin_levels, endpoint=True)
+        digit_power = np.expand_dims(np.digitize(comb_power, bins), axis=1)
         digit_power_matrix = np.tile(digit_power, (1, vib_frame_len))    # tile to form a matrix (frame_num, frame_len)
         # vibration signal
         vib_signal = periodic_rectangle_generator([1,0.], duty=duty, freq=vib_freq[sf_ind], frame_num=feat_time,
@@ -98,7 +102,15 @@ def band_split(fm:FeatureManager, duty=0.5, recep_field=3, split_aud=None, vib_f
             final_vibration += scaled_vib_signal    # accumulate vibration signals in bands
 
     assert not isinstance(final_vibration,int), "final_vibration is not assigned!"
-    return final_vibration
+    
+    # final normalization
+    final_max = np.max(final_vibration)
+    final_min = np.min(final_vibration)
+    final_vibration_norm = (final_vibration - final_min) / (final_max - final_min)
+    final_vibration_norm = np.round(bin_levels*final_vibration_norm*global_scale)
+    final_vibration_norm = final_vibration_norm.astype(np.uint8)
+
+    return final_vibration_norm
 
 
 @FeatureManager.vibration_mode(over_ride=False)
@@ -118,6 +130,8 @@ def hrps_split(fm:FeatureManager, len_harmonic_filt=0.1, len_percusive_filt=10, 
     sr = fm.meta["sr"]
     len_hop = fm.meta["len_hop"]
     stft_frame_len = fm.feature_data('stft',prop='len_window')
+    global_scale = kwargs["global_scale"]
+    assert global_scale>0 and global_scale<=1.0, "global scale must be in (0,1]"
 
     # HRPS
     power_spec = np.abs(specs)**2.0
@@ -172,6 +186,13 @@ def hrps_split(fm:FeatureManager, len_harmonic_filt=0.1, len_percusive_filt=10, 
     # part_scale = (global_power_p/global_power_h)    # scale factor for percussive part
     part_scale = 1
     final_vibration = scaled_vib_signal_h + scaled_vib_signal_p * part_scale
+    
+    # final normalization
+    final_max = np.max(final_vibration)
+    final_min = np.min(final_vibration)
+    final_vibration_norm = (final_vibration - final_min) / (final_max - final_min)
+    final_vibration_norm = np.round(bin_levels*final_vibration_norm*global_scale)
+    final_vibration_norm = final_vibration_norm.astype(np.uint8)
 
     # ### debug plot ###
     # print("plot...")
@@ -186,4 +207,4 @@ def hrps_split(fm:FeatureManager, len_harmonic_filt=0.1, len_percusive_filt=10, 
     # plt.show()
     # ######
 
-    return final_vibration
+    return final_vibration_norm
