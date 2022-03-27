@@ -15,4 +15,4 @@ class StreamEventType(IntEnum):
 
 class StreamEvent(NamedTuple):
     head: StreamEventType 
-    what: Dict
+    what: Dict = {}

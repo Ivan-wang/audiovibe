@@ -29,7 +29,7 @@ class AudioStreamEventType(IntEnum):
 
 class AudioStreamEvent(NamedTuple):
     head: AudioStreamEventType
-    what: Optional[Dict] 
+    what: Dict = {}
 
 @unique
 class StreamState(IntEnum):
@@ -127,9 +127,10 @@ class AudioStreamHandler(StreamHandler):
         self.stream_driver.on_resume(what)
     
     def on_seek(self, what: Optional[Dict] = None) -> None:
-        self.bar.n = what['pos']
-        self.bar.last_print_n = what['pos']
-        self.bar.refresh()
+        if self.bar is not None:
+            self.bar.n = what['pos']
+            self.bar.last_print_n = what['pos']
+            self.bar.refresh()
         return super().on_seek(what)
 
     def on_next_frame(self, what: Optional[Dict] = None) -> None:

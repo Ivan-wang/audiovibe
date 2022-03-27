@@ -1,28 +1,32 @@
-import multiprocessing
-from typing import Optional
+from copy import deepcopy
+from multiprocessing import Process, Queue
+from typing import Dict, List, Optional, Tuple
 from queue import Empty
 
 from .streamhandler import AudioStreamEventType, StreamEndException, StreamHandler, StreamState
 from .core import StreamEventType, StreamEvent
 from .core import StreamError
 
-class StreamProcess(multiprocessing.Process):
+class StreamProcess(Process):
     def __init__(self, stream_handler:StreamHandler) -> None:
         super(StreamProcess, self).__init__()
 
         self.stream_handler = stream_handler
-        self.result_queue:Optional[multiprocessing.Queue] = None
-        self.task_queue:Optional[multiprocessing.Queue] = None
+        self.send_conn:Optional[Queue] = None
+        self.recv_conn:Optional[Queue] = None
 
-    def set_event_queues(self, task:multiprocessing.Queue, result:multiprocessing.Queue) -> None:
-        self.task_queue = task
-        self.result_queue = result
+    def set_event_queues(self, recv:Queue, send:Queue) -> None:
+        self.recv_conn = recv
+        self.send_conn = send
 
         self.stream_handler.on_seek({'pos': 0})
     
     def unset_event_queues(self) -> None:
-        self.task_queue = None
-        self.result_queue = None
+        self.recv_conn = None
+        self.send_conn = None
+    
+    def event_queues(self) -> Tuple[Queue, Queue]:
+        return self.recv_conn, self.send_conn
     
 class VibrationProcess(StreamProcess):
     def __init__(self, stream_hander:StreamHandler) -> None:
@@ -30,7 +34,7 @@ class VibrationProcess(StreamProcess):
 
     def run(self) -> None:
         is_orphan = False # NOTE: vibration without music is an orphan
-        if self.task_queue is None or self.result_queue is None:
+        if self.recv_conn is None or self.send_conn is None:
             is_orphan = True
         
         if is_orphan:
@@ -46,7 +50,7 @@ class VibrationProcess(StreamProcess):
                     break
         else:
             while True:
-                task = self.task_queue.get(block=True)
+                task = self.recv_conn.get(block=True)
                 try:
                     result = self.stream_handler.handle(task)
                 except StreamEndException:
@@ -57,7 +61,7 @@ class VibrationProcess(StreamProcess):
                     break
                 else:
                     if result is not None:
-                        self.result_queue.put(result) 
+                        self.send_conn.put(result) 
                 finally:
                     # NOTE: break 2, music process closed
                     if task.head == StreamEventType.STREAM_CLOSE:
@@ -75,32 +79,53 @@ class AudioProcess(StreamProcess):
         super(AudioProcess, self).__init__(stream_handler)
 
         # audio process initialize task and result queues for all vibration process
-        self.vibration_task_queue = multiprocessing.Queue()
-        self.vibration_result_queue = multiprocessing.Queue()
+        self.attached_proc_send_conns = []
+        self.attached_proc_recv_conns = []
 
         self.num_vibration_stream = 0
+        # to collect from each stream
+        self.recvs = []
     
     def detach_vibration_proc(self, proc:VibrationProcess) -> None:
-        proc.unset_event_queues()
+        recv, send = proc.event_queues()
+        self.attached_proc_send_conns.remove(recv)
+        self.attached_proc_recv_conns.remove(send)
         self.num_vibration_stream -= 1
         self.num_vibration_stream = max(self.num_vibration_stream, 0)
+        proc.unset_event_queues()
 
     def attach_vibration_proc(self, proc:VibrationProcess) -> None:
-        proc.set_event_queues(self.task_queue, self.result_queue)
+        # IDEA: use P2P queues, no. attached procs -> 1 to 2
+        recv, send = Queue(), Queue()
+        proc.set_event_queues(recv, send)
+        self.attached_proc_recv_conns.append(send)
+        self.attached_proc_send_conns.append(recv)
+
         self.num_vibration_stream += 1
-    
-    def attach_task_queue(self, queue:multiprocessing.Queue) -> None:
-        self.task_queue = queue
-    
-    def attach_result_queue(self, queue:multiprocessing.Queue) -> None:
-        self.result_queue = queue
-    
+   
     def broadcast_event(self, event:StreamEvent) -> None:
         if event.head == AudioStreamEventType.AUDIO_RESUME:
             # TODO: force all stream aligned
             event.what.setdefault('pos', self.stream_handler.tell())
-        for _ in range(self.num_vibration_stream):
-            self.vibration_task_queue.put(event) # tasks
+        for send in self.attached_proc_send_conns:
+            send.put(event)
+        
+    def collect_recvs(self, timeout:float=0.01) -> None:
+        if self.num_vibration_stream == 0:
+            return
+
+        timeout /= self.num_vibration_stream
+        for i in range(len(self.recvs)):
+            try:
+                recv = self.attached_proc_recv_conns[i].get(block=True, timeout=timeout)
+            except Empty:
+                break
+            else:
+                self.recvs.append(recv)
+
+        if len(self.recvs) == self.num_vibration_stream:
+            self.send_conn.put(deepcopy(self.recvs))
+            self.recvs = []
     
     def run(self):
         # IMPORTANT: initialize the audio within one process
@@ -108,12 +133,11 @@ class AudioProcess(StreamProcess):
         while True:
             # IDEA: STEP 1, acquire control messages
             try:
-                task = self.task_queue.get(
+                task = self.recv_conn.get(
                     block=not self.stream_handler.is_activate()
                 ) # when stream is inactive, wait for next control signal
             except Empty:
-                task = None
-                pass # no task from main process
+                task = None # no task from main process
             else:
                 self.broadcast_event(task)
                 self.stream_handler.handle(task)
@@ -124,17 +148,17 @@ class AudioProcess(StreamProcess):
             # IDEA: STEP 2, handle ack messages
             if task is not None and task.head == StreamEventType.STREAM_STATUS_ACQ:
                 # TODO: collect stream response
-                pass
+                self.collect_recvs()
             
             # IDEA: STEP 3, always procceed with next frame when activate
             if self.stream_handler.is_activate():
-                self.broadcast_event(StreamEvent(head=StreamEventType.STREAM_NEXT_FRAME, what={}))
+                self.broadcast_event(StreamEvent(head=StreamEventType.STREAM_NEXT_FRAME))
 
                 try:
                     self.stream_handler.on_next_frame()
                 except StreamEndException:
                     # NOTE: break 2, music stream ends
-                    self.broadcast_event(StreamEvent(head=StreamEventType.STREAM_CLOSE, what={}))
+                    self.broadcast_event(StreamEvent(head=StreamEventType.STREAM_CLOSE))
                     self.stream_handler.on_close()
                     break
                 except Exception as e:
