@@ -48,13 +48,13 @@ class FeatureBuilder(object):
         fb.update({'meta':{
             "audio_name": self.audio_name,
             "sr": self.sr,
-            "len_sample": self._audio.shape[0], 
+            "len_sample": self.audio.shape[0], 
             "len_hop": self.len_hop,
             "recipe": list(recipe.keys())
             }})
         
-        for r, k in recipe.items():
-            fb.update({r: self._extract_func(r, k)(self._audio, self.sr)})
+        for stg, kwargs in recipe.items():
+            fb.update({stg: self._extract_func(stg, kwargs)(self.audio, self.sr)})
 
         return fb
 

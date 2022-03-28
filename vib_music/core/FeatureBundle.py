@@ -22,14 +22,14 @@ class AudioFeatureBundle(UserDict):
     def feature_dict(self, name:str) -> dict:
         return self.data[name]
 
-    def save(self, dst:str) -> None:
+    def save(self, dst:str, override:bool=True) -> None:
         os.makedirs(dst, exist_ok=True)
 
         for k in self.keys():
             filename = os.path.join(dst, k+'.pkl')
-            if not os.path.exists(filename):
+            if override or not os.path.exists(filename):
                 with open(filename, 'wb') as f:
-                    pickle.dump(self.feature_dict, f)
+                    pickle.dump(self.feature_dict(k), f)
 
     @classmethod
     def from_folder(cls, folder):
