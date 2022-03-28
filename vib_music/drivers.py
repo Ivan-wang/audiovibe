@@ -1,7 +1,44 @@
+import logging
 from typing import Optional, Dict
 
 from .core import StreamEvent, StreamEventType
 from .core import StreamDriverBase, StreamError
+
+class LogDriver(StreamDriverBase):
+    def __init__(self) -> None:
+        super(LogDriver, self).__init__()
+        self.stream = None
+        self.use_logger = True
+    
+    def on_init(self, what:Optional[Dict]=None) -> None:
+        self.stream = logging.getLogger('LogDriver')
+        self.stream.setLevel(logging.DEBUG)
+
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.DEBUG)
+
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        ch.setFormatter(formatter)
+
+        self.stream.addHandler(ch)
+
+        self.stream.info('LogDriver Handler Initialized!')
+
+    def on_next_frame(self, what: Optional[Dict] = None) -> None:
+        self.stream.info('LogDriver Move On Next Frame!')
+    
+    def on_status_acq(self, what: Optional[Dict] = None) -> Optional[StreamEvent]:
+        self.stream.info('LogDriver Receives Status Req!')
+        return StreamEvent(StreamEventType.STREAM_STATUS_ACK, {'status': 'LogDriver'})
+    
+    
+    def on_close(self, what: Optional[Dict] = None) -> None:
+        self.stream.info('LogDriver Is Closing...')
+        handlers = self.stream.handlers[:]
+        for h in handlers:
+            self.stream.removeHandler(h)
+            h.close()
+        logging.shutdown()
 
 class AudioDriver(StreamDriverBase):
     def __init__(self) -> None:
@@ -40,6 +77,7 @@ class AudioDriver(StreamDriverBase):
     
     # TODO: report audio hardware status?
     def on_status_acq(self, what: Optional[Dict] = None) -> Optional[StreamEvent]:
+        return StreamEvent(head=StreamEventType.STREAM_STATUS_ACK, what={'status': 'Music Stream'})
         return None
 
 class PCF8591Driver(StreamDriverBase):
