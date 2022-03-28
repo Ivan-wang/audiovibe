@@ -64,7 +64,7 @@ class StreamHandler(object):
         if not self.is_activate():
             return
 
-        if what is not None:
+        if what is not None and 'frame' in what:
             frame = what.get('frame', None)
         else:
             frame = self.stream_data.readframe()

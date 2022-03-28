@@ -104,11 +104,21 @@ class AudioProcess(StreamProcess):
         self.num_vibration_stream += 1
    
     def broadcast_event(self, event:StreamEvent) -> None:
-        if event.head == AudioStreamEventType.AUDIO_RESUME:
-            # TODO: force all stream aligned
-            event.what.setdefault('pos', self.stream_handler.tell())
-        for send in self.attached_proc_send_conns:
-            send.put(event)
+        # NOTE: do not boardcast AUDIO_START and AUDIO_PULSE
+        if event.head == AudioStreamEventType.AUDIO_START:
+            return
+        elif event.head == AudioStreamEventType.AUDIO_PULSE:
+            return
+        elif event.head == AudioStreamEventType.AUDIO_RESUME:
+            # NOTE: resume event aligns all vibration stream
+            pos = self.stream_handler.tell()
+            sevent = StreamEvent(StreamEventType.STREAM_SEEK, {'pos': pos})
+            for send in self.attached_proc_send_conns:
+                send.put(sevent)
+        else:
+            # NOTE: board other events
+            for send in self.attached_proc_send_conns:
+                send.put(event)
         
     def collect_recvs(self, timeout:float=0.01) -> None:
         if self.num_vibration_stream == 0:
