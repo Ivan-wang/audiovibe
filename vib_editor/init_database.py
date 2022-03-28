@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pickle
 
@@ -60,5 +61,8 @@ db['quadratic'].update({
 
 })
 
-with open('atomic-wave.pkl', 'wb') as f:
+import os
+
+os.makedirs('../data', exist_ok=True)
+with open('../data/atomic-wave.pkl', 'wb') as f:
     pickle.dump(db, f)
