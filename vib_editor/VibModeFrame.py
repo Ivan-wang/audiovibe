@@ -7,10 +7,10 @@ from tkinter import *
 from tkinter import ttk
 from tkinter import filedialog
 from matplotlib.figure import Figure
-from backend import load_audio
+from backend import init_audio_features
 from backend import draw_rmse
 from backend import TransformQueue, Transform
-from backend import launch_vib_mode
+from backend import launch_vib_with_transforms
 from backend import load_atomic_wave_database
 
 
@@ -501,7 +501,7 @@ class VibModeFrame(Frame):
         if len(audioPath) == 0:
             return
 
-        self.audio, self.fm = load_audio(audioPath)
+        self.audio, self.fm = init_audio_features(audioPath)
         self.__draw_audio_data()
         self.__unlock_load_vib_mode()
         self.__unlock_transform_queue()
@@ -510,7 +510,7 @@ class VibModeFrame(Frame):
         atomic_wave = self.playFrame.get_atomic_wave()
         print(atomic_wave)
         audioPath = self.audioPathFrame.get_audio_path()
-        launch_vib_mode(audioPath, self.fm, self.transformQueue, atomic_wave)
+        launch_vib_with_transforms(audioPath, self.fm, self.transformQueue, atomic_wave)
 
     def __load_vib_mode(self):
         vibModePath = self.audioPathFrame.get_vib_mode_path()

@@ -9,7 +9,7 @@ import threading
 import pickle
 import time
 
-from backend import launch_atomicwave_vibration
+from backend import launch_vib_with_atomicwave
 from backend import load_atomic_wave_database
 from backend import save_atomic_wave_database
 
@@ -295,7 +295,7 @@ class AtomicWaveFrame(Frame):
         t = threading.Thread(target=show_playing_dialog, args=(duration, scale))
         t.start()
 
-        launch_atomicwave_vibration(wave, duration, scale)
+        launch_vib_with_atomicwave(wave, duration, scale)
 
     def __save_atomic_wave(self):
         name = self.waveDBFrame.get_new_waveform_name()
