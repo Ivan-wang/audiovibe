@@ -1,22 +1,11 @@
-from typing import Optional
+import wave
+from typing import Optional, Tuple
 
 from .streams import WaveAudioStream
 from .drivers import AudioDriver
 from .streamhandler import StreamHandler, AudioStreamHandler
 from .processes import AudioProcess
 
-def get_feature(features, k=None, prefix=None):
-    if k is not None and k in features:
-        return features[k]
-
-    for name in features:
-        if name.startswith(prefix):
-            return features[name]
-
-    return None
-
-import wave
-from .processes import AudioProcess
 def get_audio_process(audio:str, len_frame:int) -> Optional[AudioProcess]:
     try:
         wf = wave.open(audio, 'rb')
@@ -43,39 +32,25 @@ def get_vib_process(features:str, len_frame:int, mode:str):
     else:
         return VibrationProcess(vibHandler)
 
-from tqdm import tqdm
+from multiprocessing import Queue
 
-def show_proc_bar(num_frame, sem):
-    bar = tqdm(desc='[audio]', unit=' frame', total=num_frame)
-
-    frame = 0
-    while frame < num_frame:
-        if sem.acquire(block=False):
-            frame += 1
-            bar.update()
-    bar.close()
-
-def launch_vibration(audio:str, len_audio_frame:int, features:str, len_vib_frame:int, mode:str):
+def launch_vibration(audio:str, len_audio_frame:int,
+    feature_dir:str, len_vib_frame:int, mode:str) -> Tuple[Queue, Queue]:
     audio_proc = get_audio_process(audio, len_audio_frame)
     if audio_proc is None:
         print('initial audio process failed. exit...')
         return
 
-    vib_proc = get_vib_process(features, len_vib_frame, mode)
+    vib_proc = get_vib_process(feature_dir, len_vib_frame, mode)
     if vib_proc is None:
         print('initial board process failed. exit...')
         return
 
+    results, commands = Queue(), Queue()
+    audio_proc.set_event_queues(commands, results)
     audio_proc.attach_vibration_proc(vib_proc)
 
-    # show prograss bar here
-    vib_proc.start()
-    audio_proc.start()
-
-    # show_proc_bar(num_frame, vib_sem)
-
-    vib_proc.join()
-    audio_proc.join()
+    return commands, results
 
 # from .plot import PlotManager
 # def launch_plotting(audio, feature_dir, mode, plots):
