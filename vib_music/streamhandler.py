@@ -88,6 +88,9 @@ class StreamHandler(object):
     
     def tell(self) -> int:
         return self.stream_data.tell()
+    
+    def num_frame(self) -> int:
+        return self.stream_data.getnframes()
 
 class AudioStreamHandler(StreamHandler):
     def __init__(self, stream_data: WaveAudioStream, stream_driver: AudioDriver) -> None:

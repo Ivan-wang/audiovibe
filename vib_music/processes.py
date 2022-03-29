@@ -3,7 +3,7 @@ from multiprocessing import Process, Queue
 from typing import Dict, List, Optional, Tuple
 from queue import Empty
 
-from .streamhandler import AudioStreamEventType, StreamEndException, StreamHandler, StreamState
+from .streamhandler import AudioStreamEvent, AudioStreamEventType, StreamEndException, StreamHandler, StreamState
 from .core import StreamEventType, StreamEvent
 from .core import StreamError
 
@@ -14,6 +14,8 @@ class StreamProcess(Process):
         self.stream_handler = stream_handler
         self.send_conn:Optional[Queue] = None
         self.recv_conn:Optional[Queue] = None
+
+        self.frame_ack = False
 
     def set_event_queues(self, recv:Queue, send:Queue) -> None:
         self.recv_conn = recv
@@ -27,6 +29,12 @@ class StreamProcess(Process):
     
     def event_queues(self) -> Tuple[Queue, Queue]:
         return self.recv_conn, self.send_conn
+    
+    def get_handler(self) -> StreamHandler:
+        return self.stream_handler
+    
+    def enable_frame_ack(self) -> None:
+        self.frame_ack = True
     
 class VibrationProcess(StreamProcess):
     def __init__(self, stream_hander:StreamHandler) -> None:
@@ -84,7 +92,12 @@ class AudioProcess(StreamProcess):
 
         self.num_vibration_stream = 0
         # to collect from each stream
-        self.recvs = []
+        self.received_msgs = []
+        #
+        self.auto_exit = True
+    
+    def enable_manual_exit(self) -> None:
+        self.auto_exit = False
     
     def detach_vibration_proc(self, proc:VibrationProcess) -> None:
         recv, send = proc.event_queues()
@@ -125,17 +138,17 @@ class AudioProcess(StreamProcess):
             return
 
         timeout /= self.num_vibration_stream
-        for i in range(len(self.recvs)):
+        for i in range(len(self.received_msgs)):
             try:
                 recv = self.attached_proc_recv_conns[i].get(block=True, timeout=timeout)
             except Empty:
                 break
             else:
-                self.recvs.append(recv)
+                self.received_msgs.append(recv)
 
-        if len(self.recvs) == self.num_vibration_stream:
-            self.send_conn.put(deepcopy(self.recvs))
-            self.recvs = []
+        if len(self.received_msgs) == self.num_vibration_stream:
+            self.send_conn.put(deepcopy(self.received_msgs))
+            self.received_msgs = []
     
     def run(self):
         # IMPORTANT: initialize the audio within one process
@@ -168,13 +181,23 @@ class AudioProcess(StreamProcess):
                     self.stream_handler.on_next_frame()
                 except StreamEndException:
                     # NOTE: break 2, music stream ends
-                    self.broadcast_event(StreamEvent(head=StreamEventType.STREAM_CLOSE))
-                    self.stream_handler.on_close()
-                    break
+                    if self.auto_exit:
+                        self.broadcast_event(StreamEvent(head=StreamEventType.STREAM_CLOSE))
+                        self.stream_handler.on_close()
+                        break
+                    else:
+                        self.stream_handler.on_pulse()
                 except Exception as e:
                     # NOTE: break 3, music playing errors
                     print(f'playing error {e}')
                     break
+
+                if self.frame_ack:
+                    try:
+                        self.send_conn.put(AudioStreamEvent(
+                            head=AudioStreamEventType.STREAM_STATUS_ACK, what={'pos': self.stream_handler.tell()}))
+                    except:
+                        pass
         
         # IDEA: STEP 4, before exit, check and try to close handler, no exception raised
         if self.stream_handler.is_activate():

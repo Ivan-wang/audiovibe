@@ -1,5 +1,6 @@
 import wave
-from typing import Optional, Tuple
+from typing import Optional, List
+from multiprocessing import Process
 
 from .streams import WaveAudioStream
 from .drivers import AudioDriver
@@ -35,7 +36,7 @@ def get_vib_process(features:str, len_frame:int, mode:str):
 from multiprocessing import Queue
 
 def launch_vibration(audio:str, len_audio_frame:int,
-    feature_dir:str, len_vib_frame:int, mode:str) -> Tuple[Queue, Queue]:
+    feature_dir:str, len_vib_frame:int, mode:str) -> List[Process]:
     audio_proc = get_audio_process(audio, len_audio_frame)
     if audio_proc is None:
         print('initial audio process failed. exit...')
@@ -50,7 +51,7 @@ def launch_vibration(audio:str, len_audio_frame:int,
     audio_proc.set_event_queues(commands, results)
     audio_proc.attach_vibration_proc(vib_proc)
 
-    return commands, results
+    return [audio_proc, vib_proc]
 
 # from .plot import PlotManager
 # def launch_plotting(audio, feature_dir, mode, plots):

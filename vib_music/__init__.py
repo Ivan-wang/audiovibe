@@ -1,6 +1,6 @@
 from .core import *
 
-from .processes import AudioProcess, VibrationProcess
+from .processes import StreamProcess, AudioProcess, VibrationProcess
 from .drivers import PCF8591Driver, AudioDriver, LogDriver
 from .streamhandler import StreamHandler, AudioStreamHandler
 from .streamhandler import AudioStreamEvent, AudioStreamEventType
