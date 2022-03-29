@@ -1,11 +1,12 @@
 import sys
 import os
-import time
 import pickle
 import librosa
 import numpy as np
-from multiprocessing import Queue
-from typing import Tuple
+from tkinter import IntVar
+from multiprocessing import Queue, Process
+from threading import Thread, Event
+from typing import List, Tuple
 
 sys.path.append('..')
 from vib_music import PCF8591Driver
@@ -15,10 +16,95 @@ from vib_music import AudioFeatureBundle
 from vib_music import StreamHandler
 from vib_music import VibrationStream
 from vib_music import get_audio_process
+from vib_music import AudioProcess, StreamProcess
+from vib_music import StreamEvent, StreamEventType
+from vib_music import AudioStreamEvent, AudioStreamEventType
 
 FRAME_TIME = 0.0116
 VIB_TUNE_MODE = 'vibration_tune_mode'
 
+class SliderHelperThread(Thread):
+    def __init__(self, variable:IntVar, msg_queue:Queue, end_event:Event):
+        self.variable = variable
+        self.msg_queue = msg_queue
+        self.end_event = end_event
+    
+    def run(self) -> None:
+        while not self.end_event.is_set():
+            msg = self.msg_queue.get(block=True)
+            self.variable.set(msg.what['pos'])
+
+class BackendHalper(object):
+    def __init__(self, slider_var:IntVar, processes:List[StreamProcess]=[]):
+        super(self, BackendHalper).__init__()
+        self.audio_proc = processes[0] if len(processes) > 0 else None
+        self.vib_processes = processes[1:]
+        self.sendQ, self.recvQ = self.audio_proc.event_queues()
+
+        # prepare for GUI
+        if self.audio_proc is not None:
+            self.exit_event = Event()
+            self.slider_thread = SliderHelperThread(slider_var, self.recvQ, self.exit_event)
+            self.audio_proc.enable_frame_ack()
+            self.audio_proc.enable_manual_exit()
+        
+    def has_audio_proc(self) -> bool:
+        return self.audio_proc is not None
+
+    def start_stream(self) -> None:
+        if not self.has_audio_proc(): return
+        for p in self.vib_processes:
+            p.start()
+        self.audio_proc.start()
+        self.slider_thread.start()
+        self.sendQ.put(StreamEvent(head=StreamEventType.STREAM_INIT))
+        self.sendQ.put(AudioStreamEvent(head=AudioStreamEventType.AUDIO_START))
+
+    def close_stream(self) -> None:
+        if not self.has_audio_proc(): return
+
+        self.exit_event.set()
+        self.sendQ.put(StreamEvent(head=StreamEventType.STREAM_CLOSE))
+
+        self.slider_thread.join()
+        self.audio_proc.join()
+        for p in self.vib_processes:
+            p.join()
+
+    def pulse_stream(self) -> None:
+        if not self.has_audio_proc(): return
+
+        self.sendQ.put(AudioStreamEvent(head=AudioStreamEventType.AUDIO_PULSE))
+
+    def resume_stream(self) -> None:
+        if not self.has_audio_proc(): return
+
+        self.sendQ.put(AudioStreamEvent(head=AudioStreamEventType.AUDIO_RESUME))
+
+    def forward_stream(self) -> None:
+        if not self.has_audio_proc(): return
+
+        pos = self.audio_proc.stream_handler.tell()
+        pos = min(self.audio_proc.stream_handler.num_frame(), pos+100)
+        self.sendQ.put(AudioStreamEvent(head=AudioStreamEventType.STREAM_SEEK, what={'pos': pos}))
+
+    def backward_stream(self) -> None:
+        if not self.has_audio_proc(): return
+
+        pos = self.audio_proc.stream_handler.tell()
+        pos = min(0, pos-100)
+        self.sendQ.put(AudioStreamEvent(head=AudioStreamEventType.STREAM_SEEK, what={'pos': pos}))
+    
+    def vib_up(self) -> None:
+        pass
+
+    def vib_down(self) -> None:
+        pass
+
+    def seek_stream(self, where:int) -> None:
+        if not self.has_audio_proc(): return
+
+        self.sendQ.put(AudioStreamEvent(head=AudioStreamEventType.STREAM_SEEK, what={'pos': where}))
 
 def load_atomic_wave_database(path):
     with open(path, 'rb') as f:
@@ -57,7 +143,7 @@ def launch_vib_with_array(sequence:np.ndarray, len_frame:int):
 from .VibTransformQueue import TransformQueue
 
 def launch_vib_with_transforms(audio:str, fb:AudioFeatureBundle, 
-    tQ:TransformQueue, atomic_wave:np.ndarray) -> Tuple[Queue, Queue]:
+    tQ:TransformQueue, atomic_wave:np.ndarray) -> List[Process, Process]:
     # update vibration mode
     @VibrationStream.vibration_mode(over_ride=True)
     def vib_editor_mode(fb:AudioFeatureBundle):
@@ -85,7 +171,7 @@ def launch_vib_with_transforms(audio:str, fb:AudioFeatureBundle,
     audio_proc.set_event_queues(commands, results)
     audio_proc.attach_vibration_proc(vib_proc)
 
-    return commands, results
+    return [audio_proc, vib_proc]
 
 def init_audio_features(audio:str, len_hop:int=512, use_cache:bool=False) -> AudioFeatureBundle:
     # build feature dirs if necessary
