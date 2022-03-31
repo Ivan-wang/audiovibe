@@ -8,8 +8,5 @@ from .streams import WaveAudioStream, VibrationStream
 
 from .utils import launch_vibration
 from .utils import get_audio_process, get_vib_process
-# from .utils import launch_plotting
 
 from .features import *
-
-from .misc import VIB_FRAME_LEN, BASE_HOP_LEN

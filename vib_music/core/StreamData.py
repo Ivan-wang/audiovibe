@@ -11,9 +11,14 @@ class StreamDataBase(abc.ABC):
         return self.chunks
 
     @abc.abstractmethod
-    def getnframes(self) ->int:
+    def init_stream(self) -> None:
+        self.rewind()
+
+    @abc.abstractmethod
+    def getnframes(self) -> int:
         pass
 
+    # return type depends on the chunks
     @abc.abstractmethod
     def readframe(self, n:int=1):
         pass

@@ -21,7 +21,7 @@ class StreamProcess(Process):
         self.recv_conn = recv
         self.send_conn = send
 
-        self.stream_handler.on_seek({'pos': 0})
+        # self.stream_handler.on_seek({'pos': 0})
     
     def unset_event_queues(self) -> None:
         self.recv_conn = None
@@ -115,7 +115,7 @@ class AudioProcess(StreamProcess):
         self.attached_proc_send_conns.append(recv)
 
         self.num_vibration_stream += 1
-   
+
     def broadcast_event(self, event:StreamEvent) -> None:
         # NOTE: do not boardcast AUDIO_START and AUDIO_PULSE
         if event.head == AudioStreamEventType.AUDIO_START:

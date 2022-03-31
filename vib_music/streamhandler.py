@@ -53,7 +53,7 @@ class StreamHandler(object):
         }
     
     def on_init(self, what:Optional[Dict]=None) -> None:
-        self.stream_data.rewind()
+        self.stream_data.init_stream()
         self.stream_driver.on_init(what)
         self.stream_state = StreamState.STREAM_ACTIVE
     
@@ -106,13 +106,14 @@ class AudioStreamHandler(StreamHandler):
 
     
     def on_init(self, what:Optional[Dict]=None) -> None:
+        # override
+        self.stream_data.init_stream()
         what = {} if what is None else what
         what.setdefault('format', self.stream_data.getchunks().getsampwidth())
         what.setdefault('channels', self.stream_data.getchunks().getnchannels())
         what.setdefault('rate', self.stream_data.getchunks().getframerate())
 
-        super(AudioStreamHandler, self).on_init(what)
-
+        self.stream_driver.on_init(what)
         num_frame = self.stream_data.getnframes()
         self.bar = tqdm(desc='[audio]', unit=' frame', total=num_frame)
 

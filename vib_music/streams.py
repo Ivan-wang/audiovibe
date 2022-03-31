@@ -5,9 +5,18 @@ from .core import StreamDataBase
 from .core import AudioFeatureBundle
 
 class WaveAudioStream(StreamDataBase):
-    def __init__(self, wavefile:wave.Wave_read, len_frame:int) -> None:
-        super(WaveAudioStream, self).__init__(wavefile, len_frame)
+    def __init__(self, wavefile:str, len_frame:int) -> None:
+        # NOTE: avoid opening the wave here, opening files may have problems when sharing by difference process
+        super(WaveAudioStream, self).__init__(None, len_frame)
+        self.wavefile = wavefile
     
+    def init_stream(self) -> None:
+        try:
+            self.chunks = wave.open(self.wavefile, 'rb')
+        except:
+            # NOTE: error cannot open wave file
+            self.chunks = None
+        return super().init_stream()
     def getnframes(self) -> int:
         return (self.chunks.getnframes()+self.len_frame-1) // self.len_frame
 
@@ -18,7 +27,8 @@ class WaveAudioStream(StreamDataBase):
         return self.chunks.tell()
     
     def setpos(self, pos:int) -> None:
-        self.chunks.setpos(pos*self.len_frame)
+        if self.chunks is not None:
+            self.chunks.setpos(pos*self.len_frame)
     
     def rewind(self) -> None:
         self.chunks.rewind()

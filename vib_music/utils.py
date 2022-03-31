@@ -9,8 +9,9 @@ from .processes import AudioProcess
 
 def get_audio_process(audio:str, len_frame:int) -> Optional[AudioProcess]:
     try:
-        wf = wave.open(audio, 'rb')
-        audioHandler = AudioStreamHandler(WaveAudioStream(wf, len_frame), AudioDriver())
+        # NOTE: wave file opening now handled by stram data init method
+        # wf = wave.open(audio, 'rb')
+        audioHandler = AudioStreamHandler(WaveAudioStream(audio, len_frame), AudioDriver())
     except:
         print('cannot create audio handler')
         return None
