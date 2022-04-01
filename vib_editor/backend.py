@@ -45,16 +45,19 @@ class BackendHalper(object):
     def __init__(self, slider_var:IntVar, processes:List[StreamProcess]=[]):
         super(BackendHalper, self).__init__()
         self.audio_proc = processes[0] if len(processes) > 0 else None
+
+        if self.audio_proc is None:
+            return
         self.vib_processes = processes[1:]
-        
+
+        self.slider_var = slider_var 
         self.sendQ, self.recvQ = Queue(), Queue()
         self.audio_proc.set_event_queues(self.sendQ, self.recvQ)
 
         # prepare for GUI
-        if self.audio_proc is not None:
-            self.exit_event = Event()
-            self.slider_thread = SliderHelperThread(slider_var, self.recvQ, self.exit_event)
-            self.audio_proc.enable_GUI_mode()
+        self.exit_event = Event()
+        self.slider_thread = SliderHelperThread(slider_var, self.recvQ, self.exit_event)
+        self.audio_proc.enable_GUI_mode()
         
         self._init_stream()
         try:
@@ -105,15 +108,17 @@ class BackendHalper(object):
     def forward_stream(self) -> None:
         if not self.has_audio_proc(): return
 
-        pos = self.audio_proc.stream_handler.tell()
-        pos = min(self.audio_proc.stream_handler.num_frame(), pos+100)
+        pos = self.slider_var.get()
+        pos = min(self.total_frame, pos+100)
+        self.slider_var.set(pos)
         self.sendQ.put(AudioStreamEvent(head=AudioStreamEventType.STREAM_SEEK, what={'pos': pos}))
 
     def backward_stream(self) -> None:
         if not self.has_audio_proc(): return
 
-        pos = self.audio_proc.stream_handler.tell()
-        pos = min(0, pos-100)
+        pos = self.slider_var.get()
+        pos = max(0, pos-100)
+        self.slider_var.set(pos)
         self.sendQ.put(AudioStreamEvent(head=AudioStreamEventType.STREAM_SEEK, what={'pos': pos}))
     
     def vib_up(self) -> None:

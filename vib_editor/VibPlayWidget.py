@@ -9,7 +9,7 @@ class VibPlayWidget(LabelFrame):
 
         self.nextFrame = IntVar(value=0)
         self.backend = BackendHalper(self.nextFrame, processes)
-        self.btns = []
+        self.btns = {}
 
         # status text
         statusFrame = LabelFrame(self, text='Status')
@@ -29,20 +29,20 @@ class VibPlayWidget(LabelFrame):
         # control panel
         btnFrame = Frame(self)
         for t in ['Start', 'Pulse', 'Resume', 'Stop']:
-            self.btns.append(Button(btnFrame, text=t))
+            self.btns.update({t:Button(btnFrame, text=t)})
         
-        for t in ['Backward', 'Forward', 'VibUP', 'VibDown']:
-            self.btns.append(Button(btnFrame, text=t))
+        for t in ['Backward', 'Forward', 'VibUP', 'VibDOWN']:
+            self.btns.update({t:Button(btnFrame, text=t)})
         
         # bind signals
-        self.btns[0].bind('<Button-1>', lambda e: self.backend.start_stream())
-        self.btns[1].bind('<Button-1>', lambda e: self.backend.pulse_stream())
-        self.btns[2].bind('<Button-1>', lambda e: self.backend.resume_stream())
-        self.btns[3].bind('<Button-1>', lambda e: self.backend.close_stream())
-        self.btns[4].bind('<Button-1>', lambda e: self.backend.forward_stream())
-        self.btns[5].bind('<Button-1>', lambda e: self.backend.backward_stream())
-        self.btns[6].bind('<Button-1>', lambda e: self.backend.vib_up())
-        self.btns[7].bind('<Button-1>', lambda e: self.backend.vib_down())
+        self.btns['Start'].bind('<Button-1>', lambda e: self.on_start())
+        self.btns['Pulse'].bind('<Button-1>', lambda e: self.on_pulse())
+        self.btns['Resume'].bind('<Button-1>', lambda e: self.on_resume())
+        self.btns['Stop'].bind('<Button-1>', lambda e: self.backend.close_stream())
+        self.btns['Forward'].bind('<Button-1>', lambda e: self.backend.forward_stream())
+        self.btns['Backward'].bind('<Button-1>', lambda e: self.backend.backward_stream())
+        self.btns['VibUP'].bind('<Button-1>', lambda e: self.backend.vib_up())
+        self.btns['VibDOWN'].bind('<Button-1>', lambda e: self.backend.vib_down())
         self.slider.bind('<Button-1>', lambda e: self.backend.pulse_stream())
         self.slider.bind('<ButtonRelease-1>', lambda e: self.backend.seek_stream(self.nextFrame.get()))
 
@@ -56,26 +56,54 @@ class VibPlayWidget(LabelFrame):
         sliderFrame.pack(side=TOP, padx=5, fill=BOTH, expand=YES)
 
         for i, btn in enumerate(self.btns):
-            btn.grid(row=i//4, column=i%4, padx=5, pady=0, sticky=E+W)
+            self.btns[btn].grid(row=i//4, column=i%4, padx=5, pady=0, sticky=E+W)
         for i in range(0, 4):
             btnFrame.grid_columnconfigure(i, weight=1)
         for i in range(0, 2):
             btnFrame.grid_rowconfigure(i, weight=1)
         btnFrame.pack(side=TOP, fill=X, expand=YES)
 
+        self._disable_all()
         if self.backend.has_audio_proc():
             self.statusLabel.configure(text='Audio Process Good But Not Start!!!')
+            self.btns['Start'].configure(state='normal')
         else:
             self.statusLabel.configure(text='No Audio Process Attached!!!')
-            self._disable_all()
 
     def _disable_all(self):
         for btn in self.btns:
-            btn.configure(state='disable')
+            self.btns[btn].configure(state='disable')
         self.slider.configure(state='disable')
     
     def _enable_all(self):
-        pass
+        for btn in self.btns:
+            self.btns[btn].configure(state='normal')
+        self.slider.configure(state='normal')
+
+    def on_start(self):
+        self._enable_all()
+        self.btns['Start'].configure(state='disable')
+        self.btns['Resume'].configure(state='disable')
+        self.statusLabel.configure(text='Audio Playing...')
+        self.backend.start_stream()
+    
+    def on_pulse(self):
+        self.btns['Resume'].configure(state='normal')
+        self.btns['Pulse'].configure(state='disable')
+        self.statusLabel.configure(text='Audio Pulsed...')
+        self.backend.pulse_stream()
+    
+    def on_resume(self):
+        self.btns['Pulse'].configure(state='normal')
+        self.btns['Resume'].configure(state='disable')
+        self.statusLabel.configure(text='Audio Playing...')
+        self.backend.resume_stream()
+    
+    def on_stop(self):
+        self._disable_all()
+        self.statusLabel.configure(text='Audio Stopped...')
+        self.backend.close_stream()
+
 
 
 def launch_vibration_GUI(process=[]) -> None:
