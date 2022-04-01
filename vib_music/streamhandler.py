@@ -102,10 +102,13 @@ class AudioStreamHandler(StreamHandler):
             AudioStreamEventType.AUDIO_START: self.on_start,
         })
 
+        self.enable_bar = True
         self.bar = None
 
+    def disable_bar(self) -> None:
+        self.enable_bar = False
     
-    def on_init(self, what:Optional[Dict]=None) -> None:
+    def on_init(self, what:Optional[Dict]=None) -> StreamEvent:
         # override
         self.stream_data.init_stream()
         what = {} if what is None else what
@@ -115,9 +118,12 @@ class AudioStreamHandler(StreamHandler):
 
         self.stream_driver.on_init(what)
         num_frame = self.stream_data.getnframes()
-        self.bar = tqdm(desc='[audio]', unit=' frame', total=num_frame)
+        if self.enable_bar:
+            self.bar = tqdm(desc='[audio]', unit=' frame', total=num_frame)
 
         self.stream_state = StreamState.STREAM_INACTIVE # audio waits for start signal
+
+        return StreamEvent(StreamEventType.STREAM_STATUS_ACK, what={'num_frame': num_frame})
 
     def on_start(self, what:Optional[Dict]=None) -> None:
         self.stream_state = StreamState.STREAM_ACTIVE
@@ -143,8 +149,8 @@ class AudioStreamHandler(StreamHandler):
         except StreamEndException as e:
             raise e
         else:
-            self.bar.update()
-    
+            if self.bar is not None: self.bar.update()
+   
     def on_close(self, what: Optional[Dict] = None) -> None:
-        self.bar.close()
+        if self.bar is not None: self.bar.close()
         return super().on_close(what)

@@ -3,7 +3,7 @@ from multiprocessing import Process, Queue
 from typing import Dict, List, Optional, Tuple
 from queue import Empty
 
-from .streamhandler import AudioStreamEvent, AudioStreamEventType, StreamEndException, StreamHandler, StreamState
+from .streamhandler import AudioStreamEvent, AudioStreamEventType, AudioStreamHandler, StreamEndException, StreamHandler, StreamState
 from .core import StreamEventType, StreamEvent
 from .core import StreamError
 
@@ -83,7 +83,7 @@ class VibrationProcess(StreamProcess):
                 pass
 
 class AudioProcess(StreamProcess):
-    def __init__(self, stream_handler:StreamHandler) -> None:
+    def __init__(self, stream_handler:AudioStreamHandler) -> None:
         super(AudioProcess, self).__init__(stream_handler)
 
         # audio process initialize task and result queues for all vibration process
@@ -94,8 +94,18 @@ class AudioProcess(StreamProcess):
         # to collect from each stream
         self.received_msgs = []
         #
+        self.auto_init = False
         self.auto_exit = True
     
+    def enable_GUI_mode(self) -> None:
+        # self.stream_handler.disable_bar()
+        self.enable_auto_init()
+        self.enable_manual_exit()
+        self.enable_frame_ack()
+    
+    def enable_auto_init(self) -> None:
+        self.auto_init = True
+
     def enable_manual_exit(self) -> None:
         self.auto_exit = False
     
@@ -151,8 +161,11 @@ class AudioProcess(StreamProcess):
             self.received_msgs = []
     
     def run(self):
-        # IMPORTANT: initialize the audio within one process
-        # Don't share it across different processes
+        if self.auto_init:
+            self.broadcast_event(StreamEvent(head=StreamEventType.STREAM_INIT))
+            msg = self.stream_handler.on_init()
+            self.send_conn.put(msg)
+
         while True:
             # IDEA: STEP 1, acquire control messages
             try:

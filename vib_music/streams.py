@@ -24,7 +24,7 @@ class WaveAudioStream(StreamDataBase):
         return self.chunks.readframes(n*self.len_frame)
 
     def tell(self) -> int:
-        return self.chunks.tell()
+        return self.chunks.tell() // self.len_frame
     
     def setpos(self, pos:int) -> None:
         if self.chunks is not None:
