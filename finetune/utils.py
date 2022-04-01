@@ -55,19 +55,30 @@ def tune_pitch_parser(base_parser=None):
 
     return p
 
-from vib_music import FeatureExtractionManager
-from vib_music import launch_vibration
-from vib_music import launch_plotting
+# from vib_music import FeatureExtractionManager
+# from vib_music import launch_vibration
+# from vib_music import launch_plotting
 
-def _main(opt, mode, driver, librosa_cfg, plot_cfg):
-    if opt.task == 'run' or opt.task == 'build':
-        ctx = FeatureExtractionManager.from_config(librosa_cfg)
-        ctx.save_features(root=opt.data_dir)
+# def _main(opt, mode, driver, librosa_cfg, plot_cfg):
+#     if opt.task == 'run' or opt.task == 'build':
+#         ctx = FeatureExtractionManager.from_config(librosa_cfg)
+#         ctx.save_features(root=opt.data_dir)
 
-    feature_folder = os.path.basename(opt.audio).split('.')[0]
-    feature_folder = os.path.join(opt.data_dir, feature_folder)
-    if opt.plot and plot_cfg is not None:
-        launch_plotting(opt.audio, feature_folder, mode, plot_cfg['plots'])
+#     feature_folder = os.path.basename(opt.audio).split('.')[0]
+#     feature_folder = os.path.join(opt.data_dir, feature_folder)
+#     if opt.plot and plot_cfg is not None:
+#         launch_plotting(opt.audio, feature_folder, mode, plot_cfg['plots'])
 
-    if opt.task == 'run' or opt.task == 'play':
-        launch_vibration(opt.audio, feature_folder, mode, driver)
+#     if opt.task == 'run' or opt.task == 'play':
+#         launch_vibration(opt.audio, feature_folder, mode, driver)
+
+# TODO: use launch vibration processes here
+from vib_music import get_audio_process
+from vib_editor import launch_vibration_GUI
+
+def launch_music_and_vibration():
+    audio_proc = get_audio_process('../audio/test_beat_short_1.wav', 512)
+    launch_vibration_GUI([audio_proc])
+
+if __name__ == '__main__':
+    launch_music_and_vibration()

@@ -6,8 +6,9 @@ from .backend import BackendHalper
 class VibPlayWidget(LabelFrame):
     def __init__(self, master=None, processes=[], **args):
         LabelFrame.__init__(self, master, text='Vib Play Frame', **args)
-        
+
         self.nextFrame = IntVar(value=0)
+        self.backend = BackendHalper(self.nextFrame, processes)
         self.btns = []
 
         # status text
@@ -15,12 +16,15 @@ class VibPlayWidget(LabelFrame):
         self.statusLabel = Label(statusFrame, text='Loading...', width=60, height=5)
 
         # progress slider
-        total_frame = 1 if self.audio_proc is None else self.audio_proc.get_handler().num_frame()
+        total_frame = 1
+        if self.backend.has_audio_proc():
+            total_frame = self.backend.total_frame
         sliderFrame = LabelFrame(self, text='Progress (Frame)')
         self.slider = Scale(sliderFrame, from_=0, to=total_frame, resolution=1, orient=HORIZONTAL,
             showvalue=NO, sliderlength=60, variable=self.nextFrame)
         nextFrameLabel = Label(sliderFrame, textvariable=self.nextFrame)
         totalFrameLabel = Label(sliderFrame, text='/ {}'.format(total_frame))
+        self.nextFrame.set(0)
         
         # control panel
         btnFrame = Frame(self)
@@ -59,7 +63,6 @@ class VibPlayWidget(LabelFrame):
             btnFrame.grid_rowconfigure(i, weight=1)
         btnFrame.pack(side=TOP, fill=X, expand=YES)
 
-        self.backend = BackendHalper(self.nextFrame, processes)
         if self.backend.has_audio_proc():
             self.statusLabel.configure(text='Audio Process Good But Not Start!!!')
         else:
@@ -77,7 +80,7 @@ class VibPlayWidget(LabelFrame):
 
 def launch_vibration_GUI(process=[]) -> None:
     root = Tk()
-    frame = VibPlayWidget()
+    frame = VibPlayWidget(root, process)
     frame.pack()
 
     def on_closing():

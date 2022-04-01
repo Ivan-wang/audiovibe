@@ -1,3 +1,4 @@
+from queue import Empty
 import sys
 import os
 import pickle
@@ -25,39 +26,59 @@ VIB_TUNE_MODE = 'vibration_tune_mode'
 
 class SliderHelperThread(Thread):
     def __init__(self, variable:IntVar, msg_queue:Queue, end_event:Event):
+        super(SliderHelperThread, self).__init__()
         self.variable = variable
         self.msg_queue = msg_queue
         self.end_event = end_event
     
     def run(self) -> None:
         while not self.end_event.is_set():
-            msg = self.msg_queue.get(block=True)
-            self.variable.set(msg.what['pos'])
+            try:
+                msg = self.msg_queue.get(block=True, timeout=0.1)
+            except Empty:
+                pass
+            else:
+                if 'pos' in msg.what:
+                    self.variable.set(msg.what['pos'])
 
 class BackendHalper(object):
     def __init__(self, slider_var:IntVar, processes:List[StreamProcess]=[]):
-        super(self, BackendHalper).__init__()
+        super(BackendHalper, self).__init__()
         self.audio_proc = processes[0] if len(processes) > 0 else None
         self.vib_processes = processes[1:]
-        self.sendQ, self.recvQ = self.audio_proc.event_queues()
+        
+        self.sendQ, self.recvQ = Queue(), Queue()
+        self.audio_proc.set_event_queues(self.sendQ, self.recvQ)
 
         # prepare for GUI
         if self.audio_proc is not None:
             self.exit_event = Event()
             self.slider_thread = SliderHelperThread(slider_var, self.recvQ, self.exit_event)
-            self.audio_proc.enable_frame_ack()
-            self.audio_proc.enable_manual_exit()
+            self.audio_proc.enable_GUI_mode()
+        
+        self._init_stream()
+        try:
+            msg = self.recvQ.get(block=True)
+        except:
+            self.total_frame = 1
+        else:
+            self.total_frame = msg.what['num_frame']
+        
+        # NOTE: must start the slider after we get the num frame
+        self.slider_thread.start()
         
     def has_audio_proc(self) -> bool:
         return self.audio_proc is not None
-
-    def start_stream(self) -> None:
+    
+    def _init_stream(self) -> None:
         if not self.has_audio_proc(): return
         for p in self.vib_processes:
             p.start()
         self.audio_proc.start()
-        self.slider_thread.start()
-        self.sendQ.put(StreamEvent(head=StreamEventType.STREAM_INIT))
+        # NOTE: audio process uses auto init here
+        # self.sendQ.put(StreamEvent(head=StreamEventType.STREAM_INIT))
+    
+    def start_stream(self) -> None:
         self.sendQ.put(AudioStreamEvent(head=AudioStreamEventType.AUDIO_START))
 
     def close_stream(self) -> None:
@@ -143,7 +164,7 @@ def launch_vib_with_array(sequence:np.ndarray, len_frame:int):
 from .VibTransformQueue import TransformQueue
 
 def launch_vib_with_transforms(audio:str, fb:AudioFeatureBundle, 
-    tQ:TransformQueue, atomic_wave:np.ndarray) -> List[Process, Process]:
+    tQ:TransformQueue, atomic_wave:np.ndarray) -> List[Process]:
     # update vibration mode
     @VibrationStream.vibration_mode(over_ride=True)
     def vib_editor_mode(fb:AudioFeatureBundle):
