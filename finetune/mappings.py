@@ -39,7 +39,6 @@ def band_split(fm:FeatureManager, duty=0.5, recep_field=3, split_aud=None, vib_f
     len_hop = fm.meta["len_hop"]
     mel_freq = fm.feature_data('melspec', prop='mel_freq')
     feat_dim, feat_time = feats.shape
-    bin_levels = 255
     global_scale = kwargs["global_scale"]
     assert global_scale>0 and global_scale<=1.0, "global scale must be in (0,1]"
     # ### debug ###
@@ -74,18 +73,12 @@ def band_split(fm:FeatureManager, duty=0.5, recep_field=3, split_aud=None, vib_f
         curr_feats = split_feats[sf_ind]
         # compute current band power
         curr_band_power = np.sum(curr_feats,axis=0)
-        # construct receptive field (zero padding beginning and end)
-        context_power = np.zeros((recep_field, len(curr_band_power)+recep_field-1))    # put redundant field
-        for ci in range(recep_field):
-            start_ind = int(recep_field//2-ci+1)
-            context_power[ci, start_ind:start_ind+len(curr_band_power)] = curr_band_power
-        context_power = context_power[:, recep_field//2:-(recep_field//2)]    # trim redundant field
-        # max_power = max(context_power)
-        # min_power = min(context_power)
-        # combine receptive field
-        max_power = np.max(curr_band_power)
-        min_power = np.min(curr_band_power)
-        comb_power = np.mean(context_power, axis=0)
+        # moving average
+        average_weight = np.ones((recep_field))/recep_field
+        comb_power = np.convolve(curr_band_power, average_weight, mode="same")
+        # normalize current band
+        max_power = np.max(comb_power)
+        min_power = np.min(comb_power)
         comb_power = (comb_power - min_power) / (max_power - min_power)    # noramlize
         comb_power = comb_power * vib_scale[sf_ind]    # band scale
         # digitize current band
@@ -109,7 +102,7 @@ def band_split(fm:FeatureManager, duty=0.5, recep_field=3, split_aud=None, vib_f
     final_vibration_norm = (final_vibration - final_min) / (final_max - final_min)
     final_vibration_norm = np.round(bin_levels*final_vibration_norm*global_scale)
     final_vibration_norm = final_vibration_norm.astype(np.uint8)
-
+    
     return final_vibration_norm
 
 

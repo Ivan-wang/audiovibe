@@ -54,8 +54,8 @@ def main():
 
 
 # debug part
-sys.argv = ["rmse.py", "--audio", "../audio/m1_22k.wav", "--task", "run"]
-print("DEBUGDEBUGDEBUGDEBUG...")
+# sys.argv = ["rmse.py", "--audio", "../audio/kick.wav", "--task", "run"]
+# print("DEBUGDEBUGDEBUGDEBUG...")
 ###
 
 main()
