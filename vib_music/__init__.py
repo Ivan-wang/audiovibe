@@ -10,3 +10,4 @@ from .utils import launch_vibration
 from .utils import get_audio_process, get_vib_process
 
 from .features import *
+from .vibrations import *
