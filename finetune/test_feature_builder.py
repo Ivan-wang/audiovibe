@@ -11,7 +11,7 @@ len_hop = 512
 fbuilder = FeatureBuilder(audio, sr, len_hop)
 
 recipe = {
-    'rmse': {'len_window': 2048}
+    'rmse': {'len_window': 1024}
 }
 
 fb = fbuilder.build_features(recipe)
