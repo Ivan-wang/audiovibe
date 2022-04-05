@@ -49,6 +49,9 @@ class VibrationStream(StreamDataBase):
         super(VibrationStream, self).__init__(chunks, len_frame)
         self.pos = 0
 
+    def init_stream(self) -> None:
+        self.rewind()
+
     def getnframes(self) -> int:
         return (self.chunks.shape[0]+self.len_frame-1) // self.len_frame
 

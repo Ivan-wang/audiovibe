@@ -71,7 +71,14 @@ def rmse(audio, sr, len_hop, len_window=2048, **kwargs):
 
     mse = librosa.feature.rms(y=audio, frame_length=len_window,
         hop_length=len_hop, center=True)
-    mse = mse.reshape((-1, ))
+    # NOTE: discard last one element:
+    # NOTE: when audio has been aligned with the hop length and use 'center=True'
+    # NOTE: in librosa, last window is "half audio + half padding"
+    # NOTE: extracted feature is one more frame than audio
+    # NOTE: see librosa rmse function document for more
+    # NOTE: assume `len_window = 2 * len_hop`
+    # TODO: fix this issue for other feature extraction functions
+    mse = mse.reshape((-1, ))[:-1]
     ret = {'len_frame': len_window, 'data': mse}
 
     return ret

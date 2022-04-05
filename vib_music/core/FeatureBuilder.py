@@ -24,7 +24,7 @@ class FeatureBuilder(object):
         self.len_hop = len_hop
 
         frame_num = (audio.shape[-1]+len_hop-1) // len_hop
-        audio_shape = (frame_num*len_hop) if len(audio.shape) == 1 else (2, frame_num*len_hop)
+        audio_shape = (frame_num*len_hop,) if len(audio.shape) == 1 else (2, frame_num*len_hop)
 
         self.audio = np.zeros(audio_shape, dtype=audio.dtype)
         self.audio[..., :audio.shape[-1]] = audio
