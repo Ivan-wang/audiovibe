@@ -1,7 +1,11 @@
 import os
 import sys
 
-from numpy import double
+# for typing
+from typing import List
+from argparse import Namespace
+from multiprocessing import Process
+
 sys.path.append('..')
 
 import argparse
@@ -50,7 +54,7 @@ def tune_pitch_parser(base_parser=None):
     p.add_argument('--fmin', type=str, default='C2')
     p.add_argument('--fmax', type=str, default='C7')
     p.add_argument('--n-chroma', type=int, default=12)
-    p.add_argument('--tuning', type=double, default=0.0)
+    p.add_argument('--tuning', type=float, default=0.0)
     p.add_argument('--yin-thres', type=float, default=0.8)
 
     return p
@@ -58,6 +62,41 @@ def tune_pitch_parser(base_parser=None):
 # from vib_music import FeatureExtractionManager
 # from vib_music import launch_vibration
 # from vib_music import launch_plotting
+from vib_music import FeatureBuilder
+from vib_music import AudioFeatureBundle
+
+def _init_features(audio:str, len_hop:int, recipes:dict) -> AudioFeatureBundle:
+    fbuilder = FeatureBuilder(audio, None, len_hop)
+    fb = fbuilder.build_features(recipes)
+
+    audio_name = os.path.basename(audio).split('.')[0]
+    # save features to data dir
+    os.makedirs('../data', exist_ok=True)
+    os.makedirs(f'../data/{audio_name}', exist_ok=True)
+    fb.save(f'../data/{audio_name}')
+
+    return fb
+
+from vib_music import get_audio_process
+from vib_music import VibrationStream, PCF8591Driver, StreamHandler
+from vib_music import VibrationProcess
+
+def _init_processes(audio:str, len_hop:int,
+    fb:AudioFeatureBundle, mode:str='rmse_mode') -> List[Process]:
+    sdata = VibrationStream.from_feature_bundle(fb, 24, mode)
+    sdriver = PCF8591Driver()
+    shandler = StreamHandler(sdata, sdriver)
+    vib_proc = VibrationProcess(shandler)
+    
+    music_proc = get_audio_process(audio, len_hop)
+
+    return [music_proc, vib_proc]
+
+from vib_editor import launch_vibration_GUI
+def _main(opt:Namespace) -> None:
+    fb = _init_features(opt.audio, opt.len_hop, opt.feat_recipes)
+    procs = _init_processes(opt.audio, opt.len_hop, fb, opt.vib_mode)
+    launch_vibration_GUI(procs)
 
 # def _main(opt, mode, driver, librosa_cfg, plot_cfg):
 #     if opt.task == 'run' or opt.task == 'build':
