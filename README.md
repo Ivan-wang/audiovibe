@@ -1,5 +1,5 @@
 # Setup
-####	1. setup envrionment
+###	1. setup envrionment
 #####	1.1 desktop user (ubuntu)
 	
 Install miniconda
