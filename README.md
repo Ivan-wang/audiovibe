@@ -11,7 +11,7 @@ then ***activate*** it by
   conda activate audio
   ```
 #####	1.2 raspberry pi user
-***You must make sure your `python3` version is 3.9` by this command `python3 --version`. The output should be the format of "3.9.x"***. If not, install python 3.9 and all the following `python` command should be python3.9. <br>
+***You must make sure your `python3` version is 3.9 by this command `python3 --version`. The output should be the format of "3.9.x"***. If not, install python 3.9 and all the following `python` command should be python3.9. <br>
 
 Create virtual Python environment
   ```bash
