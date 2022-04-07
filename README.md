@@ -1,4 +1,4 @@
-# Setup
+## 	A. Setup
 ###	1. setup envrionment
 #####	1.1 desktop user (ubuntu)
 	
@@ -24,7 +24,7 @@ then activate it by
 When the environment is activated, the environment name ("audio") appears in the terminal window like this
 `pi@raspberrypi:~$` $\rightarrow$ `(audio)pi@raspberrypi:~$`
 
-####	2. install dependencies
+###	2. install dependencies
 #####	2.1 install llvm and related libraries
 
 Install llvm
@@ -71,3 +71,8 @@ If you can see the above line, the installation is success.
 
 ####	3. develop and use
 ***Every time when you develop (or use), you should activate the envrionment following the commands in section 1.***
+
+##	B. Must-know notes
+* developer can use audio/kick_22k.wav (22k hz) or audio/kick.wav (44k hz) as basic audio tracks for development; audio/m1_22k.wav (22k hz) or audio/m1.wav (44k hz) can be used as advanced audio tracks for development
+
+* final vibration signal output to raspberry, should have at least 60 (when 255 is max) amplitude to feel the vibration. when it is low, such as [0, 0, 0, 20, 20, ..., 20, 0, 0, 0], vibration cannot be felt.
