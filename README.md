@@ -15,7 +15,6 @@
 ###	1.2 For raspberry pi user
 	
 	1.2.1 Create virtual Python environment
-	   ``` 
 
 
 
