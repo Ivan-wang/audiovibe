@@ -38,7 +38,7 @@ Check `llvm-config`
   ```
 Set the environment variable `LLVM_CONFIG` and Install `librosa` (as well as other dependency)
   ```bash
-  LLVM_CONFIG=/usr/bin/llvm-config-8 pip install llvmlite==0.31.0 numba==0.48.0 colorama==0.3.9 librosa==0.8.0
+  export LLVM_CONFIG=/usr/bin/llvm-config-8 
   ```
 
 #####	2.2 configure environment
