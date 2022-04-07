@@ -44,7 +44,7 @@ Set the environment variable `LLVM_CONFIG` and Install `librosa` (as well as oth
   ```
 
 #####	2.2 configure environment
-Git clone the repo, and switch to corresponding branch
+Git clone the repo, and switch to corresponding branch <br>
 Install all needed packages by pip
   ```bash
   pip3 install -r pip_requirements.txt
