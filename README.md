@@ -1,20 +1,19 @@
 # Setup
-##	1. setup envrionment
-###	1.1 For desktop user 
+###	1. setup envrionment
+####	1.1 For desktop user 
 	
-1.1.1 Install miniconda
+Install miniconda
+create conda enviroment with the command
+  ```bash
+  conda env create -n audio -f conda_requirements.yml
+  ```
+then activate it by
+  ```bash
+  conda activate audio
+  ```
+####	1.2 For raspberry pi user
 
-	1.1.2 create conda enviroment with the command
-	   ```bash
-	   conda env create -n audio -f conda_requirements.yml
-	   ```
-	   then activate it by
-	   ```bash
-	   conda activate audio
-	   ```
-###	1.2 For raspberry pi user
-	
-	1.2.1 Create virtual Python environment
+Create virtual Python environment
 
 
 
