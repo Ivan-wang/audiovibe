@@ -1,17 +1,17 @@
 ## 	A. Setup
 ###	1. setup envrionment
 #####	1.1 desktop user (ubuntu)
-	
-Install miniconda
-create conda enviroment with the command
+
+Install miniconda first. Create conda enviroment with the command
   ```bash
-  conda env create -n audio -f conda_requirements.yml
+  conda env create -n audio -f conda_requirements.yml python=3.9
   ```
 then ***activate*** it by
   ```bash
   conda activate audio
   ```
 #####	1.2 raspberry pi user
+***You must make sure your `python3` version is 3.9` by this command `python3 --version`. The output should be the format of "3.9.x"***. If not, install python 3.9 and all the following `python` command should be python3.9. <br>
 
 Create virtual Python environment
   ```bash
