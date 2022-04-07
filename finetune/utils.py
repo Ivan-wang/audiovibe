@@ -53,12 +53,14 @@ def _init_features(audio:str, len_hop:int, recipes:Optional[dict]=None) -> Audio
 
 from vib_music import get_audio_process
 from vib_music import VibrationStream, PCF8591Driver, StreamHandler
+from vib_music import LogDriver
 from vib_music import VibrationProcess
 
 def _init_processes(audio:str, len_hop:int,
     fb:AudioFeatureBundle, mode:str='rmse_mode') -> List[Process]:
     sdata = VibrationStream.from_feature_bundle(fb, 24, mode)
-    sdriver = PCF8591Driver()
+    # sdriver = PCF8591Driver()
+    sdriver = LogDriver()
     shandler = StreamHandler(sdata, sdriver)
     vib_proc = VibrationProcess(shandler)
     

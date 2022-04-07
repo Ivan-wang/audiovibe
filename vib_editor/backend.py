@@ -53,6 +53,8 @@ class BackendHalper(object):
         self.slider_var = slider_var 
         self.sendQ, self.recvQ = Queue(), Queue()
         self.audio_proc.set_event_queues(self.sendQ, self.recvQ)
+        for p in self.vib_processes:
+            self.audio_proc.attach_vibration_proc(p)
 
         # prepare for GUI
         self.exit_event = Event()
