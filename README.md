@@ -7,7 +7,7 @@ create conda enviroment with the command
   ```bash
   conda env create -n audio -f conda_requirements.yml
   ```
-then activate it by
+then ***activate*** it by
   ```bash
   conda activate audio
   ```
@@ -15,9 +15,9 @@ then activate it by
 
 Create virtual Python environment
   ```bash
-  python3 -m audio
+  python3 -m venv audio
   ```
-then activate it by
+then ***activate*** it by
   ```bash
   source ~/audio/bin/activate
   ```
@@ -70,7 +70,7 @@ You may see many warnings for "unknown PCM cards". ***Pay attention to this line
 If you can see the above line, the installation is success.
 
 ####	3. develop and use
-***Every time when you develop (or use), you should activate the envrionment following the commands in section 1.***
+Every time when you develop (or use), ***you should firstly activate the envrionment following the commands in section 1. (find the corresponding command for your system)***
 
 ##	B. Must-know notes
 * developer can use audio/kick_22k.wav (22k hz) or audio/kick.wav (44k hz) as basic audio tracks for development; audio/m1_22k.wav (22k hz) or audio/m1.wav (44k hz) can be used as advanced audio tracks for development
