@@ -2,7 +2,7 @@
 ##	1. setup envrionment
 ###	1.1 For desktop user 
 	
-	1.1.1 Install miniconda
+1.1.1 Install miniconda
 
 	1.1.2 create conda enviroment with the command
 	   ```bash
