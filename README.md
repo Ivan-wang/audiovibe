@@ -18,8 +18,7 @@ Create virtual Python environment
   cd ~
   python3 -m venv audio
   ```
-You will see one folder named `audio` created under you home directory
-then ***activate*** it by
+You will see one folder named `audio` created under you home directory. Then ***activate*** it by
   ```bash
   source ~/audio/bin/activate
   ```
