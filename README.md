@@ -15,8 +15,10 @@ then ***activate*** it by
 
 Create virtual Python environment
   ```bash
+  cd ~
   python3 -m venv audio
   ```
+You will see one folder named `audio` created under you home directory
 then ***activate*** it by
   ```bash
   source ~/audio/bin/activate
@@ -42,7 +44,7 @@ Set the environment variable `LLVM_CONFIG` and Install `librosa` (as well as oth
   ```
 
 #####	2.2 configure environment
-
+Git clone the repo, and switch to corresponding branch
 Install all needed packages by pip
   ```bash
   pip3 install -r pip_requirements.txt
