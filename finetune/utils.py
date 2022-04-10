@@ -14,6 +14,8 @@ def _base_arg_parser():
     p.add_argument('--audio', type=str)
     p.add_argument('--task', type=str, default='run', choices=['run', 'build', 'play'])
     p.add_argument('--len-hop', type=int, default=512)
+    p.add_argument('--len-hop-vib', type=int, default=24)
+    p.add_argument('--vib-mode', type=str, default='rmse_mode')
 
     return p
 
@@ -28,8 +30,6 @@ def tune_melspec_parser(base_parser=None):
 def tune_rmse_parser(base_parser=None):
     p = _base_arg_parser() if base_parser is None else base_parser
     p.add_argument('--len-window', type=int, default=1024)
-
-    p.add_argument('--vib-mode', type=str, default='rmse_mode')
 
     return p
 
@@ -57,8 +57,8 @@ from vib_music import LogDriver
 from vib_music import VibrationProcess
 
 def _init_processes(audio:str, len_hop:int,
-    fb:AudioFeatureBundle, mode:str='rmse_mode') -> List[Process]:
-    sdata = VibrationStream.from_feature_bundle(fb, 24, mode)
+    fb:AudioFeatureBundle, len_vib_frame:int, mode:str='rmse_mode') -> List[Process]:
+    sdata = VibrationStream.from_feature_bundle(fb, len_vib_frame, mode)
     # sdriver = PCF8591Driver()
     sdriver = LogDriver()
     shandler = StreamHandler(sdata, sdriver)
@@ -73,7 +73,8 @@ def _main(opt:Namespace, feat_recipes:Optional[dict]=None) -> None:
     fb = _init_features(opt.audio, opt.len_hop, feat_recipes)
 
     if opt.task == 'run' or opt.task == 'play':
-        procs = _init_processes(opt.audio, opt.len_hop, fb, opt.vib_mode)
+        procs = _init_processes(opt.audio, opt.len_hop, fb, 
+            opt.len_hop_vib, opt.vib_mode)
         launch_vibration_GUI(procs)
 
 from vib_music import get_audio_process
