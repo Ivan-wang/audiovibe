@@ -5,7 +5,6 @@ from matplotlib.figure import Figure
 
 import numpy as np
 import multiprocessing
-import time
 
 from backends import AtomicWaveBackend
 from utils import launch_atomic_wave_frame

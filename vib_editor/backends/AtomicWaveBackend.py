@@ -110,19 +110,3 @@ class AtomicWaveBackend(object):
 
     def save_database(self, to:str) -> None:
         self.database.save(to)
-
-    def launch_vibration(self):
-        pass
-    
-def launch_vib_with_array(sequence:np.ndarray, len_frame:int):
-    sdata = VibrationStream(sequence, len_frame)
-    sdriver = PCF8591Driver()
-    shandler = StreamHandler(sdata, sdriver)
-
-    vib_proc = VibrationProcess(shandler)
-    results, commands = Queue(), Queue()
-    vib_proc.set_event_queues(commands, results)
-
-    # FIXME: where to start the process
-    return commands, results
-
