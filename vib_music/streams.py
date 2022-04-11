@@ -1,10 +1,10 @@
 import wave
 import numpy as np
 
-from .core import StreamDataBase
+from .core import StreamDataBase, AudioStream
 from .core import AudioFeatureBundle
 
-class WaveAudioStream(StreamDataBase):
+class WaveAudioStream(AudioStream):
     def __init__(self, wavefile:str, len_frame:int) -> None:
         # NOTE: avoid opening the wave here, opening files may have problems when sharing by difference process
         super(WaveAudioStream, self).__init__(None, len_frame)
@@ -35,6 +35,15 @@ class WaveAudioStream(StreamDataBase):
     
     def close(self) -> None:
         self.chunks.close()
+    
+    def getsampwidth(self) -> int:
+        return self.chunks.getsampwidth()
+    
+    def getnchannels(self) -> int:
+        return self.chunks.getnchannels()
+    
+    def getframerate(self) -> int:
+        return self.chunks.getframerate()
 
 class VibrationFormatError(Exception):
     pass

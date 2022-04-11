@@ -17,11 +17,10 @@ from vib_music import AudioFeatureBundle
 from vib_music import StreamHandler
 from vib_music import VibrationStream
 from vib_music import get_audio_process
-from vib_music import AudioProcess, StreamProcess
+from vib_music import StreamProcess
 from vib_music import StreamEvent, StreamEventType
 from vib_music import AudioStreamEvent, AudioStreamEventType
 
-FRAME_TIME = 0.0116
 VIB_TUNE_MODE = 'vibration_tune_mode'
 
 class SliderHelperThread(Thread):
@@ -41,9 +40,9 @@ class SliderHelperThread(Thread):
                 if 'pos' in msg.what:
                     self.variable.set(msg.what['pos'])
 
-class BackendHalper(object):
+class VibPlayBackend(object):
     def __init__(self, slider_var:IntVar, processes:List[StreamProcess]=[]):
-        super(BackendHalper, self).__init__()
+        super(VibPlayBackend, self).__init__()
         self.audio_proc = processes[0] if len(processes) > 0 else None
 
         if self.audio_proc is None:
@@ -133,40 +132,6 @@ class BackendHalper(object):
         if not self.has_audio_proc(): return
 
         self.sendQ.put(AudioStreamEvent(head=AudioStreamEventType.STREAM_SEEK, what={'pos': where}))
-
-def load_atomic_wave_database(path):
-    with open(path, 'rb') as f:
-        data = pickle.load(f)
-
-    return data
-
-
-def save_atomic_wave_database(data, path):
-    with open(path, 'wb') as f:
-        pickle.dump(data, f)
-
-
-def launch_vib_with_atomicwave(atomicwave:np.ndarray,
-    duration:float, scale:int=1) -> Tuple[Queue, Queue]:
-    atomicwave *= scale
-    MAGIC_NUM = 1.4
-    num_frame = int(duration / FRAME_TIME * MAGIC_NUM)
-    # print(f'estimated duration {FRAME_TIME * num_frame:.3f}')
-    sequence = np.stack([atomicwave] * num_frame, axis=0).astype(np.uint8)
-    return launch_vib_with_array(sequence)
-
-
-def launch_vib_with_array(sequence:np.ndarray, len_frame:int):
-    sdata = VibrationStream(sequence, len_frame)
-    sdriver = PCF8591Driver()
-    shandler = StreamHandler(sdata, sdriver)
-
-    vib_proc = VibrationProcess(shandler)
-    results, commands = Queue(), Queue()
-    vib_proc.set_event_queues(commands, results)
-
-    # FIXME: where to start the process
-    return commands, results
 
 from .VibTransformQueue import TransformQueue
 

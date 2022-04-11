@@ -2,7 +2,9 @@ from enum import IntEnum, unique, auto
 from typing import Optional, NamedTuple, Dict
 from tqdm import tqdm
 
-from .core import StreamDataBase, StreamDriverBase
+from vib_music.core.StreamData import StreamDataBase
+
+from .core import AudioStream, StreamDriverBase
 from .core import StreamEvent, StreamEventType
 from .core import StreamError
 from .drivers import AudioDriver
@@ -93,7 +95,7 @@ class StreamHandler(object):
         return self.stream_data.getnframes()
 
 class AudioStreamHandler(StreamHandler):
-    def __init__(self, stream_data: WaveAudioStream, stream_driver: AudioDriver) -> None:
+    def __init__(self, stream_data: AudioStream, stream_driver: AudioDriver) -> None:
         super(AudioStreamHandler, self).__init__(stream_data, stream_driver)
 
         self.control_handle_funcs.update({
@@ -112,9 +114,9 @@ class AudioStreamHandler(StreamHandler):
         # override
         self.stream_data.init_stream()
         what = {} if what is None else what
-        what.setdefault('format', self.stream_data.getchunks().getsampwidth())
-        what.setdefault('channels', self.stream_data.getchunks().getnchannels())
-        what.setdefault('rate', self.stream_data.getchunks().getframerate())
+        what.setdefault('format', self.stream_data.getsampwidth())
+        what.setdefault('channels', self.stream_data.getnchannels())
+        what.setdefault('rate', self.stream_data.getframerate())
 
         self.stream_driver.on_init(what)
         num_frame = self.stream_data.getnframes()

@@ -1,1 +1,2 @@
-from .VibPlayWidget import VibPlayWidget, launch_vibration_GUI
+from .VibPlayFrame import VibPlayFrame
+

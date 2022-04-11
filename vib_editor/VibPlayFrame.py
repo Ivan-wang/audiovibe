@@ -1,14 +1,14 @@
 from tkinter import *
 import tkinter.ttk as ttk
 
-from .backend import BackendHalper
+from .VibPlayBackend import VibPlayBackend
 
-class VibPlayWidget(LabelFrame):
+class VibPlayFrame(LabelFrame):
     def __init__(self, master=None, processes=[], **args):
         LabelFrame.__init__(self, master, text='Vib Play Frame', **args)
 
         self.nextFrame = IntVar(value=0)
-        self.backend = BackendHalper(self.nextFrame, processes)
+        self.backend = VibPlayBackend(self.nextFrame, processes)
         self.btns = {}
 
         # status text
@@ -106,17 +106,5 @@ class VibPlayWidget(LabelFrame):
 
 
 
-def launch_vibration_GUI(process=[]) -> None:
-    root = Tk()
-    frame = VibPlayWidget(root, process)
-    frame.pack()
-
-    def on_closing():
-        frame.backend.close_stream()
-        root.destroy()
-
-    root.protocol("WM_DELETE_WINDOW", on_closing)
-    root.mainloop()
-
-if __name__ == '__main__':
-    launch_vibration_GUI()
+# if __name__ == '__main__':
+#     launch_vibration_GUI()
