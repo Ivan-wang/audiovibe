@@ -1,7 +1,7 @@
 from tkinter import *
 import tkinter.ttk as ttk
 
-from .VibPlayBackend import VibPlayBackend
+from backends import VibPlayBackend
 
 class VibPlayFrame(LabelFrame):
     def __init__(self, master=None, processes=[], **args):
@@ -38,7 +38,7 @@ class VibPlayFrame(LabelFrame):
         self.btns['Start'].bind('<Button-1>', lambda e: self.on_start())
         self.btns['Pulse'].bind('<Button-1>', lambda e: self.on_pulse())
         self.btns['Resume'].bind('<Button-1>', lambda e: self.on_resume())
-        self.btns['Stop'].bind('<Button-1>', lambda e: self.backend.close_stream())
+        self.btns['Stop'].bind('<Button-1>', lambda e: self.on_stop())
         self.btns['Forward'].bind('<Button-1>', lambda e: self.backend.forward_stream())
         self.btns['Backward'].bind('<Button-1>', lambda e: self.backend.backward_stream())
         self.btns['VibUP'].bind('<Button-1>', lambda e: self.backend.vib_up())
@@ -84,11 +84,13 @@ class VibPlayFrame(LabelFrame):
         self._enable_all()
         self.btns['Start'].configure(state='disable')
         self.btns['Resume'].configure(state='disable')
+        self.btns['Stop'].configure(state='disable')
         self.statusLabel.configure(text='Audio Playing...')
         self.backend.start_stream()
     
     def on_pulse(self):
         self.btns['Resume'].configure(state='normal')
+        self.btns['Stop'].configure(state='normal')
         self.btns['Pulse'].configure(state='disable')
         self.statusLabel.configure(text='Audio Pulsed...')
         self.backend.pulse_stream()
@@ -96,6 +98,7 @@ class VibPlayFrame(LabelFrame):
     def on_resume(self):
         self.btns['Pulse'].configure(state='normal')
         self.btns['Resume'].configure(state='disable')
+        self.btns['Stop'].configure(state='disable')
         self.statusLabel.configure(text='Audio Playing...')
         self.backend.resume_stream()
     
@@ -104,7 +107,5 @@ class VibPlayFrame(LabelFrame):
         self.statusLabel.configure(text='Audio Stopped...')
         self.backend.close_stream()
 
-
-
-# if __name__ == '__main__':
-#     launch_vibration_GUI()
+if __name__ == '__main__':
+    pass

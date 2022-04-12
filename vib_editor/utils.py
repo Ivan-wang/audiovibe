@@ -2,26 +2,24 @@ import sys
 import numpy as np
 from tkinter import Tk
 
-from AtomicWaveFrame import AtomicWaveFrame
+sys.path.append('..')
 
-from vib_music import AudioStream, VibrationStream
-from vib_music import AudioDriver, LogDriver
-from vib_music import AudioProcess, VibrationProcess
-from vib_music import AudioStreamHandler, StreamHandler
+# from AtomicWaveFrame import AtomicWaveFrame
 
-def launch_atomic_wave_frame() -> None:
-    root = Tk()
-    f = AtomicWaveFrame(root)
-    f.pack()
-    root.mainloop()
 
-from VibModeFrame import VibModeFrame
+# def launch_atomic_wave_frame() -> None:
+#     root = Tk()
+#     f = AtomicWaveFrame(root)
+#     f.pack()
+#     root.mainloop()
 
-def launch_vibration_mode_frame() -> None:
-    root = Tk()
-    f = VibModeFrame(root)
-    f.pack()
-    root.mainloop()
+# from VibModeFrame import VibModeFrame
+
+# def launch_vibration_mode_frame() -> None:
+#     root = Tk()
+#     f = VibModeFrame(root)
+#     f.pack()
+#     root.mainloop()
 
 from VibPlayFrame import VibPlayFrame
 
@@ -37,46 +35,12 @@ def launch_vibration(process=[]) -> None:
     root.protocol("WM_DELETE_WINDOW", on_closing)
     root.mainloop()
 
-class MonoFrameAudioStream(AudioStream):
-    def __init__(self, num_frame:int, len_frame: int) -> None:
-        super().__init__(np.zeros((len_frame,), dtype=np.uint16), len_frame)
-        self.next_frame = 0
-        self.num_frame = num_frame
-    
-    def init_stream(self) -> None:
-        super().init_stream()
-    
-    def getnframes(self) -> int:
-        return self.num_frame
-    
-    def readframe(self, n: int = 1):
-        if self.next_frame == self.num_frame:
-            return ''
-        else:
-            self.next_frame += 1
-            return self.chunks.tostring()
-    
-    def tell(self) -> int:
-        return self.next_frame
-    
-    def setpos(self, pos: int) -> None:
-        self.next_frame = pos
-    
-    def rewind(self) -> None:
-        self.next_frame = 0
+from backends import MonoFrameAudioStream
 
-    def close(self) -> None:
-        pass
-        
-    def getframerate() -> int:
-        return 44100
-    
-    def getnchannels() -> int:
-        return 1
-    
-    def getsampwidth() -> int:
-        return 2
-
+from vib_music import VibrationStream
+from vib_music import AudioDriver, LogDriver
+from vib_music import AudioProcess, VibrationProcess
+from vib_music import AudioStreamHandler, StreamHandler
 def launch_vib_with_atomicwave(atomicwave:np.ndarray,
     duration:float, scale:int=1) -> None:
     FRAME_TIME = 0.0116
@@ -95,3 +59,29 @@ def launch_vib_with_atomicwave(atomicwave:np.ndarray,
     vibproc = VibrationProcess(vibhandler)
 
     launch_vibration([audioproc, vibproc]) 
+
+if __name__ == '__main__':
+    from multiprocessing import Queue
+    
+    from vib_music import AudioFeatureBundle
+    from vib_music import VibrationStream
+    from vib_music import LogDriver
+    from vib_music import StreamHandler
+    from vib_music import VibrationProcess
+    from vib_music import get_audio_process
+
+    fb = AudioFeatureBundle.from_folder('../data/test_beat_short_1')
+    sdata = VibrationStream.from_feature_bundle(fb, 24, 'rmse_mode')
+    sdriver = LogDriver()
+    shandler = StreamHandler(sdata, sdriver)
+    vib_proc = VibrationProcess(shandler)
+
+    audio = '../audio/test_beat_short_1.wav'
+    len_hop = 512
+    music_proc = get_audio_process(audio, len_hop)
+
+    results, commands = Queue(), Queue()
+    music_proc.set_event_queues(commands, results)
+    music_proc.attach_vibration_proc(vib_proc)
+
+    launch_vibration([music_proc, vib_proc])

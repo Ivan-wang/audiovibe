@@ -41,13 +41,13 @@ class StreamDataBase(abc.ABC):
 
 class AudioStream(StreamDataBase):
     @abc.abstractmethod
-    def getsampwidth() -> int:
+    def getsampwidth(self) -> int:
         pass
 
     @abc.abstractmethod
-    def getnchannels() -> int:
+    def getnchannels(self) -> int:
         pass
 
     @abc.abstractmethod
-    def getframerate() -> int:
+    def getframerate(self) -> int:
         pass
