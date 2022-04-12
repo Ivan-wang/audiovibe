@@ -10,6 +10,7 @@ from utils.wave_generator import periodic_rectangle_generator
 import matplotlib.pyplot as plt
 import librosa
 import librosa.display
+import sys, copy
 
 bin_levels = 255
 
@@ -91,18 +92,36 @@ def band_split(fm:FeatureManager, duty=0.5, recep_field=3, split_aud=None, vib_f
         scaled_vib_signal = vib_signal * digit_power_matrix    # pointwise scale vibration given power
         if sf_ind == 0:
             final_vibration = scaled_vib_signal
+            accumulate_scale = vib_scale[sf_ind]
         else:
             final_vibration += scaled_vib_signal    # accumulate vibration signals in bands
+            accumulate_scale += vib_scale[sf_ind]
 
     assert not isinstance(final_vibration,int), "final_vibration is not assigned!"
     
     # final normalization
+    final_vibration = final_vibration / accumulate_scale
+    final_vibration = final_vibration ** 0.5
     final_max = np.max(final_vibration)
     final_min = np.min(final_vibration)
     final_vibration_norm = (final_vibration - final_min) / (final_max - final_min)
-    final_vibration_norm = np.round(bin_levels*final_vibration_norm*global_scale)
+    final_vibration_norm = np.floor(bin_levels*final_vibration_norm*global_scale)
     final_vibration_norm = final_vibration_norm.astype(np.uint8)
-    
+
+    # ### debug ###
+    # debug_vibration = copy.deepcopy(final_vibration_norm)
+    # debug_vibration.resize(final_vibration_norm.shape[0]*final_vibration_norm.shape[1])
+    # # debug_vibration = debug_vibration.astype(int)
+    # plt.figure()
+    # plt.plot(debug_vibration)
+    # plt.savefig("vib_signal.png")
+    # plt.close()
+    # debug_vibration_nozeros = debug_vibration[debug_vibration!=0]
+    # plt.hist(debug_vibration_nozeros, bins="auto")
+    # plt.savefig("histogram.png")
+    # sys.exit()
+    # ######
+        
     return final_vibration_norm
 
 
