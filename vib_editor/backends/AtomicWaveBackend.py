@@ -1,8 +1,11 @@
-import os
+import sys
 import pickle
-from typing import List, Optional
 import numpy as np
+from typing import List, Optional
 from collections import UserDict
+
+sys.path.append('..')
+from vib_music import AudioStream
 
 class AtomicWaveDatabase(UserDict):
     def save(self, to:str) -> None:
@@ -14,8 +17,7 @@ class AtomicWaveDatabase(UserDict):
             db = pickle.load(f)
         self.data.update(db)
 
-    @classmethod
-    def init_db(cls, db:str):
+    def init_db(self) -> None:
         db = {'uniform': {}, 'linear': {}, 'quadratic': {}}
 
         base0 = np.zeros((24, ))
@@ -75,9 +77,7 @@ class AtomicWaveDatabase(UserDict):
         
         })
 
-        aw = cls()
-        aw.update(db)
-        return aw
+        self.data.update(db)
 
 class AtomicWaveBackend(object):
     def __init__(self, database:Optional[str]=None):
@@ -110,3 +110,44 @@ class AtomicWaveBackend(object):
 
     def save_database(self, to:str) -> None:
         self.database.save(to)
+
+class MonoFrameAudioStream(AudioStream):
+    def __init__(self, num_frame:int, len_frame: int) -> None:
+        super().__init__(np.zeros((len_frame,), dtype=np.uint16), len_frame)
+        self.next_frame = 0
+        self.num_frame = num_frame
+    
+    def init_stream(self) -> None:
+        super().init_stream()
+    
+    def getnframes(self) -> int:
+        return self.num_frame
+    
+    def readframe(self, n: int = 1):
+        if self.next_frame == self.num_frame:
+            return ''
+        else:
+            self.next_frame += 1
+            return self.chunks.tostring()
+    
+    def tell(self) -> int:
+        return self.next_frame
+    
+    def setpos(self, pos: int) -> None:
+        self.next_frame = pos
+    
+    def rewind(self) -> None:
+        self.next_frame = 0
+
+    def close(self) -> None:
+        pass
+        
+    def getframerate(self) -> int:
+        return 44100
+    
+    def getnchannels(self) -> int:
+        return 1
+    
+    def getsampwidth(self) -> int:
+        return 2
+

@@ -1,6 +1,6 @@
 import sys
 import numpy as np
-from tkinter import Tk
+from tkinter import Tk, Toplevel
 
 sys.path.append('..')
 
@@ -23,17 +23,21 @@ sys.path.append('..')
 
 from VibPlayFrame import VibPlayFrame
 
-def launch_vibration(process=[]) -> None:
-    root = Tk()
+def launch_vibration(master=None, process=[]) -> None:
+    if master is None:
+        root = Tk()
+    else:
+        print('init Vib Play in TopLevel')
+        root = Toplevel(master)
     frame = VibPlayFrame(root, process)
     frame.pack()
 
-    def on_closing():
-        frame.backend.close_stream()
-        root.destroy()
+    # def on_closing():
+        # frame.backend.close_stream()
+        # root.destroy()
 
-    root.protocol("WM_DELETE_WINDOW", on_closing)
-    root.mainloop()
+    # root.protocol("WM_DELETE_WINDOW", on_closing)
+    # root.mainloop()
 
 from backends import MonoFrameAudioStream
 
@@ -41,7 +45,7 @@ from vib_music import VibrationStream
 from vib_music import AudioDriver, LogDriver
 from vib_music import AudioProcess, VibrationProcess
 from vib_music import AudioStreamHandler, StreamHandler
-def launch_vib_with_atomicwave(atomicwave:np.ndarray,
+def launch_vib_with_atomicwave(master, atomicwave:np.ndarray,
     duration:float, scale:int=1) -> None:
     FRAME_TIME = 0.0116
     atomicwave *= scale
@@ -58,7 +62,7 @@ def launch_vib_with_atomicwave(atomicwave:np.ndarray,
     vibhandler = StreamHandler(vibdata, vibdriver)
     vibproc = VibrationProcess(vibhandler)
 
-    launch_vibration([audioproc, vibproc]) 
+    launch_vibration(master=master, process=[audioproc, vibproc]) 
 
 if __name__ == '__main__':
     from multiprocessing import Queue
@@ -84,4 +88,4 @@ if __name__ == '__main__':
     music_proc.set_event_queues(commands, results)
     music_proc.attach_vibration_proc(vib_proc)
 
-    launch_vibration([music_proc, vib_proc])
+    launch_vibration(process=[music_proc, vib_proc])

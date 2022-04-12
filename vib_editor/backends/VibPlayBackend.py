@@ -1,13 +1,8 @@
 from queue import Empty
-import sys
-import os
-import pickle
-import librosa
-import numpy as np
 from tkinter import IntVar
-from multiprocessing import Queue, Process
+from multiprocessing import Queue
 from threading import Thread, Event
-from typing import List, Tuple
+from typing import List
 
 from vib_music import StreamProcess
 from vib_music import StreamEvent, StreamEventType

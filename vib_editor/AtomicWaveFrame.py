@@ -4,10 +4,9 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib.figure import Figure
 
 import numpy as np
-import multiprocessing
 
 from backends import AtomicWaveBackend
-from utils import launch_atomic_wave_frame
+from utils import launch_vib_with_atomicwave
 
 def _render_wave_data(data):
     xdata = np.linspace(0, 24, num=1000, endpoint=False)
@@ -62,7 +61,7 @@ class WaveDBFrame(LabelFrame):
         self.waveNameList = Listbox(self.waveNameFram, selectmode=SINGLE, exportselection=False)
 
         self.btnFrame = Frame(self)
-        self.newDB = Button(self.btnFrame, text='New Database', command=self.__add_wave_database)
+        self.newDB = Button(self.btnFrame, text='New Database', command=self.__add_wave_family)
         self.newDBNameEntry = Entry(self.btnFrame, textvariable=self.newDBNameEntry)
         self.newWave = Button(self.btnFrame, text='New Wave')
         self.newWaveName = Entry(self.btnFrame, textvariable=self.newWaveName)
@@ -230,7 +229,8 @@ class AtomicWaveFrame(Frame):
         self.plotFrame = WavePlotFrame(self)
         self.sliderFrame = SliderFrame(self, height=400)
         self.controlFrame = Frame(self)
-        self.waveDBFrame = WaveDBFrame(self.controlFrame, database=self.data, height=200)
+        self.waveDBFrame = WaveDBFrame(self.controlFrame, height=200)
+        self.waveDBFrame.set_atomic_wave_backend(self.backend)
         self.playFrame = WavePlayFrame(self.controlFrame)
 
         self.waveDBFrame.set_wave_family_list(
@@ -278,11 +278,13 @@ class AtomicWaveFrame(Frame):
         duration = self.playFrame.get_duration()
         scale = self.playFrame.get_scale()
         wave = self.sliderFrame.get_values()
-        proc = multiprocessing.Process(
-            target=launch_atomic_wave_frame,
-            args=(wave, duration, scale))
-        proc.start()
-        proc.join()
+        # launch vibration playing frame as TopLevel
+        launch_vib_with_atomicwave(self.master, wave, duration, scale)
+        # proc = multiprocessing.Process(
+        #     target=launch_vib_with_atomicwave,
+        #     args=(self.master, wave, duration, scale))
+        # proc.start()
+        # proc.join()
 
     def __save_atomic_wave(self):
         name = self.waveDBFrame.get_new_wave_name()
