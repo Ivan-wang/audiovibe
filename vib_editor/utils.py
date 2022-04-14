@@ -32,19 +32,22 @@ def launch_vibration(master=None, process=[]) -> None:
     frame = VibPlayFrame(root, process)
     frame.pack()
 
-    # def on_closing():
-        # frame.backend.close_stream()
-        # root.destroy()
+    def on_closing():
+        frame.backend.close_stream()
+        root.destroy()
 
-    # root.protocol("WM_DELETE_WINDOW", on_closing)
-    # root.mainloop()
+    root.protocol("WM_DELETE_WINDOW", on_closing)
+    if master is None:
+        root.mainloop()
 
 from backends import MonoFrameAudioStream
 
+from vib_music import AudioFeatureBundle
 from vib_music import VibrationStream
 from vib_music import AudioDriver, LogDriver
 from vib_music import AudioProcess, VibrationProcess
 from vib_music import AudioStreamHandler, StreamHandler
+
 def launch_vib_with_atomicwave(master, atomicwave:np.ndarray,
     duration:float, scale:int=1) -> None:
     FRAME_TIME = 0.0116
@@ -63,6 +66,39 @@ def launch_vib_with_atomicwave(master, atomicwave:np.ndarray,
     vibproc = VibrationProcess(vibhandler)
 
     launch_vibration(master=master, process=[audioproc, vibproc]) 
+
+from backends import TransformQueue
+def launch_vib_with_rmse_transforms(master, audio:str, fb:AudioFeatureBundle,
+    transforms:TransformQueue, atomicwave:np.ndarray) -> None:
+    # update vibration mode
+    @VibrationStream.vibration_mode(over_ride=True)
+    def rmse_transform_mode(fb:AudioFeatureBundle):
+        rmse = fb.feature_data('rmse').copy()
+        rmse = transforms.apply_all(rmse, curve=False)
+        rmse = np.clip((rmse*255).round(), a_min=0, a_max=255)
+
+        vib_seq = rmse.reshape((-1, 1))
+        wave = atomicwave.reshape((1, -1))
+
+        vib_seq = (vib_seq * wave).round().astype(np.uint8)
+        return vib_seq
+
+    sdata = VibrationStream.from_feature_bundle(fb, 24, 'rmse_transform_mode')
+    # sdriver = PCF8591Driver()
+    sdriver = LogDriver()
+    shandler = StreamHandler(sdata, sdriver)
+    vib_proc = VibrationProcess(shandler)
+
+    audio_proc = get_audio_process(audio, 512)
+    if audio_proc is None:
+        print('initial audio process failed. exit...')
+        return
+
+    results, commands = Queue(), Queue()
+    audio_proc.set_event_queues(commands, results)
+    audio_proc.attach_vibration_proc(vib_proc)
+
+    launch_vibration(master, [audio_proc, vib_proc])
 
 if __name__ == '__main__':
     from multiprocessing import Queue

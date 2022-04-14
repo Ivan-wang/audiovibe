@@ -1,3 +1,5 @@
+import sys
+from typing import Optional
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
 
@@ -7,11 +9,14 @@ from tkinter import *
 from tkinter import ttk
 from tkinter import filedialog
 from matplotlib.figure import Figure
-from backend import init_audio_features
-from backend import draw_rmse
-from backend import TransformQueue, Transform
-from backend import launch_vib_with_transforms
-from backend import load_atomic_wave_database
+
+from backends import VibModeBackend
+from backends import Transform
+from utils import launch_vib_with_rmse_transforms
+
+sys.path.append('..')
+
+from vib_music import FeaturePlotter, AudioFeatureBundle
 
 
 class LibLoadFrame(LabelFrame):
@@ -61,22 +66,18 @@ class AudioPlayFrame(LabelFrame):
     def __init__(self, master=None, **args):
         LabelFrame.__init__(self, master, text='Audio Play', **args)
 
+        self.backend = None
+
         self.atomicDbPath = StringVar()
         self.atomicDbname = StringVar()
         self.atomicWaveName = StringVar()
-
-        self.atomicDB = None
-        self.atomicDbNames = ['none']
-        self.atomicWaveNames = ['none']
 
         self.atomicDbEntry = Entry(self, textvariable=self.atomicDbPath)
         self.browseBtn = Button(self, text='Browse...', command=self.__ask_atomic_db_path)
         self.loadBtn = Button(self, text='Load', command=self.__on_load_atomic_db)
         self.playBtn = Button(self, text='Play')
-        self.atomicDataBaseOptMenu = OptionMenu(self, self.atomicDbname, *self.atomicDbNames)
-        self.atomicWaveOptMenu = OptionMenu(self, self.atomicWaveName, *self.atomicWaveNames)
-        self.atomicDbname.set(self.atomicWaveNames[0])
-        self.atomicWaveName.set(self.atomicWaveNames[0])
+        self.atomicDataBaseOptMenu = OptionMenu(self, self.atomicDbname, *[''])
+        self.atomicWaveOptMenu = OptionMenu(self, self.atomicWaveName, *[''])
 
         Label(self, text='Atomic Wave DB Path: ').pack(side=LEFT, padx=5, pady=5)
         self.atomicDbEntry.pack(side=LEFT, fill=X, expand=True, padx=5, pady=5)
@@ -90,6 +91,9 @@ class AudioPlayFrame(LabelFrame):
 
         self.__lock_atomic_wave_options()
         self.playBtn.configure(state='disable')
+
+    def set_backend(self, backend:VibModeBackend):
+        self.backend = backend
 
     def __ask_atomic_db_path(self):
         self.atomicDbPath.set(filedialog.askopenfilename(
@@ -105,35 +109,35 @@ class AudioPlayFrame(LabelFrame):
         self.atomicWaveOptMenu.configure(state='normal')
 
     def __on_load_atomic_db(self):
-        self.atomicDB = load_atomic_wave_database(
-            self.atomicDbPath.get()
-        )
+        self.backend.load_atomic_wave_db(self.atomicDbPath.get())
 
-        self.atomicDbNames = sorted(list(self.atomicDB.keys()))
+        atomicDbnames = self.backend.atomic_waves().list_atomic_family_name()
         self.__unlock_atomic_wave_options()
-        self.__on_atomic_db_load()
+
+        self.atomicDbname.set('')
+        self.atomicDataBaseOptMenu['menu'].delete(0, END)
+        for c in atomicDbnames:
+            self.atomicDataBaseOptMenu['menu'].add_command(label=c, command=lambda x=c: self.__on_atomic_db_change(x))
+        self.__on_atomic_db_change(atomicDbnames[0])
 
     def __on_atomic_db_change(self, db):
         self.atomicDbname.set(db)
 
         self.atomicWaveOptMenu['menu'].delete(0, END)
         self.atomicWaveName.set('')
-        if db == 'none':
-            self.atomicWaveNames = ['none']
-            self.playBtn.configure(state='disable')
-        else:
-            self.atomicWaveNames = sorted(list(self.atomicDB[db].keys()))
-        for c in self.atomicWaveNames:
-            self.atomicWaveOptMenu['menu'].add_command(label=c, command=tk._setit(self.atomicWaveName, c))
-            self.playBtn.configure(state='normal')
-        self.atomicWaveName.set(self.atomicWaveNames[0])
+        self.playBtn.configure(state='disable')
 
-    def __on_atomic_db_load(self):
-        self.atomicDbname.set('')
-        self.atomicDataBaseOptMenu['menu'].delete(0, END)
-        for c in self.atomicDbNames:
-            self.atomicDataBaseOptMenu['menu'].add_command(label=c, command=lambda x=c: self.__on_atomic_db_change(x))
-        self.__on_atomic_db_change(self.atomicDbNames[0])
+        if db == '':
+            atomicWaveNames = []
+        else:
+            atomicWaveNames = self.backend.atomic_waves().list_atomic_wave_names(db)
+
+        for c in atomicWaveNames:
+            self.atomicWaveOptMenu['menu'].add_command(label=c, command=tk._setit(self.atomicWaveName, c))
+
+        if len(atomicWaveNames) > 0:
+            self.atomicWaveName.set(atomicWaveNames[0])
+            self.playBtn.configure(state='normal')
 
     def get_atomic_wave(self):
         db = self.atomicDbname.get()
@@ -142,7 +146,7 @@ class AudioPlayFrame(LabelFrame):
         if db == 'none' or wave == 'none':
             return None
         else:
-            return self.atomicDB[db][wave]
+            return self.backend.atomic_waves().get_atomic_wave(db, wave)
 
 
 class AudioRMSEFrame(LabelFrame):
@@ -157,20 +161,17 @@ class AudioRMSEFrame(LabelFrame):
 
         self.canvas.get_tk_widget().pack(side=TOP, fill=BOTH, expand=YES)
 
-    def draw_rmse(self, audio, fm, rmse=None):
-        sr = fm.sample_rate()
-        hop_len = fm.frame_len()
-        if rmse is None:
-            rmse = fm.feature_data('rmse')
-        draw_rmse(audio, sr, hop_len, rmse, self.ax)
+    def draw_rmse(self, plotter:FeaturePlotter, data:AudioFeatureBundle) -> None:
+        print(f'AudioRMSE drawing...')
+        plotter.set_plots(['waveform', 'wavermse'])
+        plotter.plot_feature(self.ax, data)
 
         self.ax.grid(which='both')
         self.ax.grid(which='minor', alpha=0.2)
         self.ax.grid(which='major', alpha=0.5)
 
         self.canvas.draw()
-
-
+    
 class _CurveFrame(LabelFrame):
     def __init__(self, master=None, text='', **args):
         LabelFrame.__init__(self, master, text=text, **args)
@@ -382,17 +383,19 @@ class VibTuneFrame(LabelFrame):
 
 
 class VibModeFrame(Frame):
-    def __init__(self, root):
+    def __init__(self, root, backend:Optional[VibModeBackend]=None):
         Frame.__init__(self, root)
 
-        self.audio, self.fm = None, None
-        self.transformQueue = TransformQueue()
+        self.backend = VibModeBackend() if backend is None else backend
+
+        # self.audio, self.fm = None, None
         self.inPlaceEdit = None
 
         self.audioPathFrame = LibLoadFrame(self)
         self.rmseFrame = AudioRMSEFrame(self)
         self.tuneFrame = VibTuneFrame(self)
         self.playFrame = AudioPlayFrame(self)
+        self.playFrame.set_backend(self.backend)
 
         self.audioPathFrame.loadBtn.bind('<ButtonRelease-1>', lambda e: self.__load_music())
         self.audioPathFrame.loadBtn2.bind('<ButtonRelease-1>', lambda e: self.__load_vib_mode())
@@ -415,29 +418,29 @@ class VibModeFrame(Frame):
 
     def __on_add_transform(self):
         trans = self.tuneFrame.get_active_transform()
-        self.transformQueue.append(trans=trans)
-        self.tuneFrame.list_transforms(self.transformQueue.transform_list())
+        self.backend.transforms().append(trans=trans)
+        self.tuneFrame.list_transforms(self.backend.transforms().transform_list())
         self.__on_transform_param_change()
 
     def __on_delete_transform(self):
-        if len(self.transformQueue) == 0:
+        if len(self.backend.transforms()) == 0:
             return
 
         idx = self.tuneFrame.get_selected_transform_idx()  # tuple
-        self.transformQueue.delete(pos=idx[0])
-        self.tuneFrame.list_transforms(self.transformQueue.transform_list())
+        self.backend.transforms().delete(pos=idx[0])
+        self.tuneFrame.list_transforms(self.backend.transforms().transform_list())
         self.__on_transform_param_change()
 
     def __on_move_up_transform(self):
         idx = self.tuneFrame.get_selected_transform_idx()  # tuple
-        self.transformQueue.move_up(idx[0])
-        self.tuneFrame.list_transforms(self.transformQueue.transform_list())
+        self.backend.transforms().move_up(idx[0])
+        self.tuneFrame.list_transforms(self.backend.transforms().transform_list())
         self.__on_transform_param_change()
 
     def __on_move_down_transform(self):
         idx = self.tuneFrame.get_selected_transform_idx()  # tuple
-        self.transformQueue.move_down(idx[0])
-        self.tuneFrame.list_transforms(self.transformQueue.transform_list())
+        self.backend.transforms().move_down(idx[0])
+        self.tuneFrame.list_transforms(self.backend.transforms().transform_list())
         self.__on_transform_param_change()
 
     def __lock_load_vib_mode(self):
@@ -464,7 +467,7 @@ class VibModeFrame(Frame):
 
     def __on_transform_selected(self):
         idx = self.tuneFrame.get_selected_transform_idx()  # tuple
-        trans = self.transformQueue.get_transform(idx[0])
+        trans = self.backend.transforms().get_transform(idx[0])
         if trans is not None:
             self.tuneFrame.set_active_transform(trans)
         self.inPlaceEdit = idx[0]
@@ -473,50 +476,53 @@ class VibModeFrame(Frame):
     def __on_transform_param_change(self, include_active=False):
         trans = self.tuneFrame.get_active_transform()
         if self.inPlaceEdit is not None:
-            self.transformQueue.update(trans.params, self.inPlaceEdit)
-        self.tuneFrame.list_transforms(self.transformQueue.transform_list())
+            self.backend.transforms().update(trans.params, self.inPlaceEdit)
+        self.tuneFrame.list_transforms(
+            self.backend.transforms().transform_list())
 
         # curve mapping data
         x = np.linspace(0, 1, 1000)
-        curve = self.transformQueue.apply_all(x, curve=True)
+        curve = self.backend.transforms().apply_all(x, curve=True)
         if self.inPlaceEdit is None and include_active:
-            curve = self.transformQueue.apply_transform(curve, trans, curve=True)
+            curve = self.backend.transforms().apply_transform(curve, trans, curve=True)
         self.tuneFrame.draw_curve(curve)
 
         # rmse data
-        if self.fm is not None:
-            rmse = self.fm.feature_data('rmse').copy()
-            vib = self.transformQueue.apply_all(rmse, curve=False)
+        if self.backend.feature_bundle() is not None:
             if self.inPlaceEdit is None and include_active:
-                vib = self.transformQueue.apply_transform(vib, trans, curve=False)
-            # self.fm.set_vibration_sequence(vib)
-            self.__draw_audio_data(vib)
+                fb = self.backend.feature_bundle(use_cached=False, sketch_transform=trans)
+            else:
+                fb = self.backend.feature_bundle(use_cached=False)
+            self.__draw_audio_data(fb)
 
         self.inPlaceEdit = None
         self.__unlock_transform_queue()
 
     def __load_music(self):
-        self.audio, self.fm = None, None
         audioPath = self.audioPathFrame.get_audio_path()
         if len(audioPath) == 0:
             return
 
-        self.audio, self.fm = init_audio_features(audioPath)
+        self.backend.load_audio(audioPath)
+        self.backend.init_features(audioPath, 512)
+
         self.__draw_audio_data()
         self.__unlock_load_vib_mode()
         self.__unlock_transform_queue()
 
     def __play_music(self):
         atomic_wave = self.playFrame.get_atomic_wave()
-        print(atomic_wave)
+        # print(atomic_wave)
         audioPath = self.audioPathFrame.get_audio_path()
-        launch_vib_with_transforms(audioPath, self.fm, self.transformQueue, atomic_wave)
+        launch_vib_with_rmse_transforms(self.master,
+            audioPath, self.backend.feature_bundle(),
+            self.backend.transforms(), atomic_wave)
 
     def __load_vib_mode(self):
         vibModePath = self.audioPathFrame.get_vib_mode_path()
         if len(vibModePath) == 0:
             return
-        self.transformQueue.load_transforms(vibModePath)
+        self.backend.transforms().load_transforms(vibModePath)
         self.__on_transform_param_change()
 
     def __save_vib_mode(self):
@@ -524,12 +530,14 @@ class VibModeFrame(Frame):
         if len(vibModePath) == 0:
             return
 
-        self.transformQueue.save_transforms(vibModePath)
+        self.backend.transforms().save_transforms(vibModePath)
 
-    def __draw_audio_data(self, rmse=None):
-        self.rmseFrame.draw_rmse(self.audio, self.fm, rmse)
+    def __draw_audio_data(self, features=None):
+        if features is None:
+            pass
+        self.rmseFrame.draw_rmse(self.backend.plotter())
         if rmse is None:
-            rmse = self.fm.feature_data('rmse')
+            rmse = self.backend.feature_bundle().feature_data('rmse')
         self.tuneFrame.draw_histogram(rmse)
 
 

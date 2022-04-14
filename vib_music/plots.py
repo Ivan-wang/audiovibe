@@ -28,7 +28,7 @@ def wavermse(ax:plt.Axes, audio:np.ndarray, fb:AudioFeatureBundle):
     ax.set_title('RMSE Waveform')
 
 @FeaturePlotter.plot
-def wavermse(ax:plt.Axes, audio:np.ndarray, fb:AudioFeatureBundle):
+def melspec(ax:plt.Axes, audio:np.ndarray, fb:AudioFeatureBundle):
     # recover feature extraction environment
     sr = fb.sample_rate()
     hop_len = fb.frame_len()
@@ -113,7 +113,7 @@ def picth(ax:plt.Axes, audio:np.ndarray, fb:AudioFeatureBundle):
     ax.legend(loc='upper right')
 
 @FeaturePlotter.plot
-def picth(ax:plt.Axes, audio:np.ndarray, fb:AudioFeatureBundle):
+def chromaspec(ax:plt.Axes, audio:np.ndarray, fb:AudioFeatureBundle):
     sr = fb.sample_rate()
     hop_len = fb.frame_len()
 

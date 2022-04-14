@@ -1,6 +1,16 @@
+import os, sys
+import copy
 import pickle
 import numpy as np
+from typing import Optional
 from collections import namedtuple
+
+from .AtomicWaveBackend import AtomicWaveBackend
+
+sys.path.append('..')
+
+from vib_music import FeatureBuilder, AudioFeatureBundle
+from vib_music import FeaturePlotter
 
 Transform = namedtuple('Transform', ('name', 'params'))
 
@@ -94,3 +104,75 @@ class TransformQueue(object):
         out = out * (max_val-min_val) + min_val
 
         return out
+
+class VibModeBackend(object):
+    def __init__(self) -> None:
+        self.audio = None
+        self.loaded_feature_bundle = None
+        self.running_feature_bundle = None
+        self.transforms_queue = TransformQueue()
+        self.atomic_wave_db = AtomicWaveBackend()
+        self.feature_plotter = FeaturePlotter()
+
+        self.feature_plotter.set_plots(['waveform', 'wavermse'])
+    
+    def load_audio(self, audio:str) -> None:
+        self.audio = audio
+        self.feature_plotter.set_audio(audio)
+
+    def feature_bundle(self, use_cached:bool=True,
+        sketch_transform:Optional[Transform]=None) -> Optional[AudioFeatureBundle]:
+        if use_cached:
+            return self.loaded_feature_bundle
+        else:
+            rmse = self.loaded_feature_bundle.feature_data('rmse').copy()
+            vib = self.transforms_queue.apply_all(rmse, curve=False)
+            if sketch_transform is not None:
+                vib = self.transforms_queue.apply_transform(vib, sketch_transform, curve=False)
+            self.running_feature_bundle['rmse']['data'] = vib
+            return self.running_feature_bundle
+    
+    def atomic_waves(self) -> AtomicWaveBackend:
+        return self.atomic_wave_db
+    
+    def transforms(self) -> TransformQueue:
+        return self.transforms_queue
+    
+    def plotter(self) -> FeaturePlotter:
+        return self.feature_plotter
+
+    def load_atomic_wave_db(self, db:str) -> None:
+        self.atomic_wave_db = AtomicWaveBackend(db)
+
+    def init_features(self, audio:str, len_hop:int, use_cache:bool=False) -> None:
+        # build feature dirs if necessary
+        DATA_DIR = '../data/'
+        os.makedirs(DATA_DIR, exist_ok=True)
+        DATA_DIR = os.path.join(DATA_DIR, 'vib_editor')
+        os.makedirs(DATA_DIR, exist_ok=True)
+
+        feature_dir = os.path.basename(audio).split('.')[0]
+        feature_dir = os.path.join(DATA_DIR, feature_dir)
+        if not use_cache or not os.path.isdir(feature_dir):
+            # extract and save features
+            recipe = {
+                'rmse': {
+                    'len_window': 1024
+                },
+                'melspec': {
+                    'len_window': 1024,
+                    'n_mels': 128,
+                    'fmax': None
+                }
+            }
+
+            fbuilder = FeatureBuilder(audio, None, len_hop)
+            fb = fbuilder.build_features(recipe)
+            fb.save(feature_dir)
+        else:
+            fb = AudioFeatureBundle.from_folder(feature_dir)
+        
+        # don't set feature bundle to plotter
+        # self.feature_plotter.set_audio_feature_bundle(fb)
+        self.loaded_feature_bundle = fb
+        self.running_feature_bundle = copy.deepcopy(fb)
