@@ -37,6 +37,7 @@ def launch_vibration(master=None, process=[]) -> None:
         root.destroy()
 
     root.protocol("WM_DELETE_WINDOW", on_closing)
+
     if master is None:
         root.mainloop()
 
@@ -68,6 +69,8 @@ def launch_vib_with_atomicwave(master, atomicwave:np.ndarray,
     launch_vibration(master=master, process=[audioproc, vibproc]) 
 
 from backends import TransformQueue
+from vib_music import get_audio_process
+from multiprocessing import Queue
 def launch_vib_with_rmse_transforms(master, audio:str, fb:AudioFeatureBundle,
     transforms:TransformQueue, atomicwave:np.ndarray) -> None:
     # update vibration mode
@@ -98,7 +101,7 @@ def launch_vib_with_rmse_transforms(master, audio:str, fb:AudioFeatureBundle,
     audio_proc.set_event_queues(commands, results)
     audio_proc.attach_vibration_proc(vib_proc)
 
-    launch_vibration(master, [audio_proc, vib_proc])
+    launch_vibration(master=master, process=[audio_proc, vib_proc])
 
 if __name__ == '__main__':
     from multiprocessing import Queue

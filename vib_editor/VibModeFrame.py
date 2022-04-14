@@ -163,8 +163,7 @@ class AudioRMSEFrame(LabelFrame):
 
     def draw_rmse(self, plotter:FeaturePlotter, data:AudioFeatureBundle) -> None:
         print(f'AudioRMSE drawing...')
-        plotter.set_plots(['waveform', 'wavermse'])
-        plotter.plot_feature(self.ax, data)
+        plotter.plot_feature(self.ax, ['waveform', 'wavermse'], data)
 
         self.ax.grid(which='both')
         self.ax.grid(which='minor', alpha=0.2)
@@ -506,7 +505,7 @@ class VibModeFrame(Frame):
         self.backend.load_audio(audioPath)
         self.backend.init_features(audioPath, 512)
 
-        self.__draw_audio_data()
+        self.__draw_audio_data(self.backend.feature_bundle())
         self.__unlock_load_vib_mode()
         self.__unlock_transform_queue()
 
@@ -534,11 +533,9 @@ class VibModeFrame(Frame):
 
     def __draw_audio_data(self, features=None):
         if features is None:
-            pass
-        self.rmseFrame.draw_rmse(self.backend.plotter())
-        if rmse is None:
-            rmse = self.backend.feature_bundle().feature_data('rmse')
-        self.tuneFrame.draw_histogram(rmse)
+            features = self.backend.feature_bundle()
+        self.rmseFrame.draw_rmse(self.backend.plotter(), features)
+        self.tuneFrame.draw_histogram(features.feature_data('rmse'))
 
 
 if __name__ == '__main__':
