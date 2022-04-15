@@ -17,13 +17,6 @@ from vib_music import VibrationStream
 def audio_power(fb:AudioFeatureBundle) -> np.ndarray:
     # AudioFeatureBundle has a similar interface with previous FeatureManager
     rmse = fb.feature_data('rmse')
-
-    rmse = (rmse-rmse.min()) / (rmse.max()-rmse.min())
-    rmse  = rmse ** 2
-
-    bins = np.linspace(0., 1., 150, endpoint=True)
-    level = np.digitize(rmse, bins).astype(np.uint8)
-
     varr = 0
     for i in np.arange(0.1,0.9,0.01):
         if varr < np.var(np.power(rmse,i)):
@@ -48,7 +41,7 @@ def audio_power(fb:AudioFeatureBundle) -> np.ndarray:
                 level_seq[i,8:16] = level_seq[i,8:16]*0.7
                 level_seq[i,16:24] = level_seq[i,16:24]*0.5
     # CHANGE: all vibration return an 1-D array, please flatten the vibration sequence
-    return level_seq.ravel()
+    return level_seq.ravel().astype(np.uint8)
 
 def main():
     p = tune_rmse_parser()
