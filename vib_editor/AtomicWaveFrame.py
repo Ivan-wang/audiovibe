@@ -5,8 +5,8 @@ from matplotlib.figure import Figure
 
 import numpy as np
 
-from backends import AtomicWaveBackend
-from utils import launch_vib_with_atomicwave
+from .backends import AtomicWaveBackend
+from .utils import launch_vib_with_atomicwave
 
 def _render_wave_data(data):
     xdata = np.linspace(0, 24, num=1000, endpoint=False)

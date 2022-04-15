@@ -1,3 +1,5 @@
 from .VibPlayFrame import VibPlayFrame
+from .AtomicWaveFrame import AtomicWaveFrame
+from .VibModeFrame import VibModeFrame
 
-from .utils import launch_atomic_wave_frame
+from .utils import launch_vibration

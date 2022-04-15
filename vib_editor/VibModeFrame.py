@@ -10,9 +10,8 @@ from tkinter import ttk
 from tkinter import filedialog
 from matplotlib.figure import Figure
 
-from backends import VibModeBackend
-from backends import Transform
-from utils import launch_vib_with_rmse_transforms
+from .backends import VibModeBackend, Transform
+from .utils import launch_vib_with_rmse_transforms
 
 sys.path.append('..')
 

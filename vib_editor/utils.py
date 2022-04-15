@@ -21,7 +21,7 @@ sys.path.append('..')
 #     f.pack()
 #     root.mainloop()
 
-from VibPlayFrame import VibPlayFrame
+from .VibPlayFrame import VibPlayFrame
 
 def launch_vibration(master=None, process=[]) -> None:
     if master is None:
@@ -41,7 +41,7 @@ def launch_vibration(master=None, process=[]) -> None:
     if master is None:
         root.mainloop()
 
-from backends import MonoFrameAudioStream
+from .backends import MonoFrameAudioStream
 
 from vib_music import AudioFeatureBundle
 from vib_music import VibrationStream
@@ -68,7 +68,7 @@ def launch_vib_with_atomicwave(master, atomicwave:np.ndarray,
 
     launch_vibration(master=master, process=[audioproc, vibproc]) 
 
-from backends import TransformQueue
+from .backends import TransformQueue
 from vib_music import get_audio_process
 from multiprocessing import Queue
 def launch_vib_with_rmse_transforms(master, audio:str, fb:AudioFeatureBundle,
