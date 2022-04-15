@@ -1,6 +1,6 @@
 ## 	A. Setup
 ###	1. setup envrionment
-#####	1.1 desktop user (ubuntu)
+####	1.1 desktop user (ubuntu)
 
 Install miniconda first. Create conda enviroment with the command
   ```bash
@@ -10,7 +10,7 @@ then ***activate*** it by
   ```bash
   conda activate audio
   ```
-#####	1.2 raspberry pi user
+####	1.2 raspberry pi user
 Check your python3 version by this command 
   ```base
   python3 --version
@@ -30,7 +30,7 @@ When the environment is activated, the environment name ("audio") appears in the
 `pi@raspberrypi:~$` $\rightarrow$ `(audio)pi@raspberrypi:~$`
 
 ###	2. install dependencies
-#####	2.1 install llvm and related libraries
+####	2.1 install llvm and related libraries
 
 Install llvm
   ```bash
@@ -46,7 +46,7 @@ Set the environment variable `LLVM_CONFIG` and Install `librosa` (as well as oth
   export LLVM_CONFIG=/usr/bin/llvm-config-8 
   ```
 
-#####	2.2 configure environment
+####	2.2 configure environment
 Git clone the repo, and switch to corresponding branch. Install all needed packages by pip
   ```bash
   pip3 install -r pip_requirements.txt
@@ -56,7 +56,7 @@ Check `librosa`
   python -c "import librosa; print(librosa.__version__)" # 0.8.0
   ```
 
-#####	2.3 install pyaudio (for users who have hardware, e.g. raspberry pi)
+####	2.3 install pyaudio (for users who have hardware, e.g. raspberry pi)
 
 Install pyaudio and dependencies
   ```bash
@@ -80,3 +80,8 @@ Every time when you develop (or use), ***you should firstly activate the envrion
 * developer can use audio/kick_22k.wav (22k hz) or audio/kick.wav (44k hz) as basic audio tracks for development; audio/m1_22k.wav (22k hz) or audio/m1.wav (44k hz) can be used as advanced audio tracks for development
 
 * final vibration signal output to raspberry, should have at least 60 (when 255 is max) amplitude to feel the vibration. when it is low, such as [0, 0, 0, 20, 20, ..., 20, 0, 0, 0], vibration cannot be felt.
+
+## C. Open questions
+* square root can spread the energy into more bins, will it help improve feeling?
+* how does vibration waveform shape affect feeling?
+* how does the slope of the triangle vibration wave affect feeling? how does step difference in step vibration wave affect feeling?
