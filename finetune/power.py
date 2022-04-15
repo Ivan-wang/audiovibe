@@ -1,20 +1,20 @@
 import numpy as np
-from utils import tune_rmse_parser
-from utils import tune_melspec_parser
-from utils import _main
-
+from runutils import tune_rmse_parser
+from runutils import tune_melspec_parser
+from runutils import _main
+import sys
 from vib_music import FeatureManager
 from vib_music.misc import init_vibration_extraction_config
 
-@FeatureManager.vibration_mode
-def audio_power(fm:FeatureManager) -> np.ndarray:
+@FeatureManager.vibration_mode(over_ride=False)
+def audio_power(fm:FeatureManager, scale=150) -> np.ndarray:
     rmse = fm.feature_data('rmse')
     spec = fm.feature_data('melspec')
 
     rmse = (rmse-rmse.min()) / (rmse.max()-rmse.min())
     rmse  = rmse ** 2
 
-    bins = np.linspace(0., 1., 150, endpoint=True)
+    bins = np.linspace(0., 1., scale, endpoint=True)
     level = np.digitize(rmse, bins).astype(np.uint8)
 
     # mimic a square wave for each frame [x, x, x, x, 0, 0, 0, 0]
@@ -65,7 +65,7 @@ def main():
         print('Buidling Feature Database...', end='')
         librosa_config = init_vibration_extraction_config()
         librosa_config['audio'] = opt.audio
-        librosa_config['len_hop'] = opt.len_hop
+        librosa_config['len_hop'] = 512
         librosa_config['stgs']['rmse'] = {
             'len_window': opt.len_window,
         }
@@ -79,7 +79,11 @@ def main():
         plot_config = {
             'plots': ['waveform', 'wavermse']
         }
+    vib_kwargs_dict = {"scale":50}
+    _main(opt, 'audio_power', 'adc', librosa_config, plot_config, vib_kwargs_dict)
 
-    _main(opt, 'audio_power', 'adc', librosa_config, plot_config)
-
+# debug part
+sys.argv = ["power.py", "--audio", "../audio/kick.wav", "--task", "run"]
+print("DEBUGDEBUGDEBUGDEBUG...")
+###
 main()

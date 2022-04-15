@@ -41,6 +41,7 @@ def band_split(fm:FeatureManager, duty=0.5, recep_field=3, split_aud=None, vib_f
     mel_freq = fm.feature_data('melspec', prop='mel_freq')
     feat_dim, feat_time = feats.shape
     global_scale = kwargs["global_scale"]
+    vib_bias = 50
     assert global_scale>0 and global_scale<=1.0, "global scale must be in (0,1]"
     # ### debug ###
     # fig, ax = plt.subplots()
@@ -80,11 +81,10 @@ def band_split(fm:FeatureManager, duty=0.5, recep_field=3, split_aud=None, vib_f
         # normalize current band
         max_power = np.max(comb_power)
         min_power = np.min(comb_power)
+        # comb_power = comb_power ** 0.5    # subband square root
         comb_power = (comb_power - min_power) / (max_power - min_power)    # noramlize
         comb_power = comb_power * vib_scale[sf_ind]    # band scale
-        # digitize current band
-        bins = np.linspace(0., 1., bin_levels, endpoint=True)
-        digit_power = np.expand_dims(np.digitize(comb_power, bins), axis=1)
+        digit_power = np.expand_dims(comb_power, axis=1)
         digit_power_matrix = np.tile(digit_power, (1, vib_frame_len))    # tile to form a matrix (frame_num, frame_len)
         # vibration signal
         vib_signal = periodic_rectangle_generator([1,0.], duty=duty, freq=vib_freq[sf_ind], frame_num=feat_time,
@@ -101,28 +101,32 @@ def band_split(fm:FeatureManager, duty=0.5, recep_field=3, split_aud=None, vib_f
     
     # final normalization
     final_vibration = final_vibration / accumulate_scale
-    final_vibration = final_vibration ** 0.5
+    # final_vibration = final_vibration ** 0.5    # final signal square root
     final_max = np.max(final_vibration)
     final_min = np.min(final_vibration)
     final_vibration_norm = (final_vibration - final_min) / (final_max - final_min)
-    final_vibration_norm = np.floor(bin_levels*final_vibration_norm*global_scale)
-    final_vibration_norm = final_vibration_norm.astype(np.uint8)
+    bins = np.linspace(0., 1., 150, endpoint=True)    # TODO we should use a smarter way to set bin number
+    final_vibration_bins = np.digitize(final_vibration_norm, bins)
+    final_vibration_bins = final_vibration_bins.astype(np.uint8)
+    # add offset
+    final_vibration_bins += vib_bias
+    final_vibration_bins[final_vibration_bins<=vib_bias+1] = 0
 
     # ### debug ###
-    # debug_vibration = copy.deepcopy(final_vibration_norm)
-    # debug_vibration.resize(final_vibration_norm.shape[0]*final_vibration_norm.shape[1])
+    # debug_vibration = copy.deepcopy(final_vibration_bins)
+    # debug_vibration.resize(final_vibration_bins.shape[0]*final_vibration_norm.shape[1])
     # # debug_vibration = debug_vibration.astype(int)
     # plt.figure()
     # plt.plot(debug_vibration)
     # plt.savefig("vib_signal.png")
-    # plt.close()
-    # debug_vibration_nozeros = debug_vibration[debug_vibration!=0]
-    # plt.hist(debug_vibration_nozeros, bins="auto")
-    # plt.savefig("histogram.png")
+    # # plt.show()
+    # # debug_vibration_nozeros = debug_vibration[debug_vibration!=0]
+    # # plt.hist(debug_vibration_nozeros, bins="auto")
+    # # plt.savefig("histogram.png")
     # sys.exit()
     # ######
         
-    return final_vibration_norm
+    return final_vibration_bins
 
 
 @FeatureManager.vibration_mode(over_ride=False)
