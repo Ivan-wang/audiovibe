@@ -65,8 +65,8 @@ class VibrationStream(StreamDataBase):
         return (self.chunks.shape[0]+self.len_frame-1) // self.len_frame
 
     def readframe(self, n:int=1) -> np.ndarray:
-        frames = self.chunks[self.pos:self.pos+n*self.len_frame]
-        self.pos = min(self.getnframes(), self.pos+n*self.len_frame)
+        frames = self.chunks[self.pos*self.len_frame:(self.pos+n)*self.len_frame]
+        self.pos = min(self.getnframes(), self.pos+n)
 
         return frames
 

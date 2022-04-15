@@ -20,7 +20,7 @@ class SliderHelperThread(Thread):
     def run(self) -> None:
         while not self.end_event.is_set():
             try:
-                msg = self.msg_queue.get(block=False)
+                msg = self.msg_queue.get(block=True, timeout=0.1)
             except Empty:
                 pass
             else:

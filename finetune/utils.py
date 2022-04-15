@@ -59,8 +59,8 @@ from vib_music import VibrationProcess
 def _init_processes(audio:str, len_hop:int,
     fb:AudioFeatureBundle, len_vib_frame:int, mode:str='rmse_mode') -> List[Process]:
     sdata = VibrationStream.from_feature_bundle(fb, len_vib_frame, mode)
-    # sdriver = PCF8591Driver()
-    sdriver = LogDriver()
+    sdriver = PCF8591Driver()
+    # sdriver = LogDriver()
     shandler = StreamHandler(sdata, sdriver)
     vib_proc = VibrationProcess(shandler)
     
@@ -68,21 +68,12 @@ def _init_processes(audio:str, len_hop:int,
 
     return [music_proc, vib_proc]
 
-from vib_editor import launch_vibration_GUI
+from vib_editor import launch_vibration
 def _main(opt:Namespace, feat_recipes:Optional[dict]=None) -> None:
     fb = _init_features(opt.audio, opt.len_hop, feat_recipes)
 
     if opt.task == 'run' or opt.task == 'play':
         procs = _init_processes(opt.audio, opt.len_hop, fb, 
             opt.len_hop_vib, opt.vib_mode)
-        launch_vibration_GUI(procs)
-
-from vib_music import get_audio_process
-from vib_editor import launch_vibration_GUI
-
-def launch_music_and_vibration():
-    audio_proc = get_audio_process('../audio/test_beat_short_1.wav', 512)
-    launch_vibration_GUI([audio_proc])
-
-if __name__ == '__main__':
-    launch_music_and_vibration()
+        # master = None -> run vibration in an independent window
+        launch_vibration(master=None, process=procs)
