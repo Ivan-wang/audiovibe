@@ -1,13 +1,14 @@
-from .features import FeatureExtractionManager
-from .FeatureManager import FeatureManager
-from .processes import AudioProcess
-from .processes import BoardProcess
+from .core import *
 
-from .plot import PlotManager
-
-from .drivers import VibrationDriver
-from .drivers import DR2605Driver
-from .drivers import AdcDriver
+from .processes import StreamProcess, AudioProcess, VibrationProcess
+from .drivers import PCF8591Driver, AudioDriver, LogDriver
+from .streamhandler import StreamHandler, AudioStreamHandler
+from .streamhandler import AudioStreamEvent, AudioStreamEventType
+from .streams import WaveAudioStream, VibrationStream
 
 from .utils import launch_vibration
-from .utils import launch_plotting
+from .utils import get_audio_process, get_vib_process
+
+from .features import *
+from .vibrations import *
+from .plots import *

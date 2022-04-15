@@ -1,30 +1,22 @@
+# CHANGE: all vib_music functions now have type hints.
+# CHANGE: a python IDE can show the expected type when you call a function from vib_music
 import numpy as np
 from utils import tune_rmse_parser
-from utils import tune_melspec_parser
 from utils import _main
 
-from vib_music import FeatureManager
-from vib_music.misc import init_vibration_extraction_config
+# CHANGE: FeatureManager is separated to AudioFeatureBundle and FeatureBuilder
+# CHNAGE: AudioFeatureBundle is data class, use it to generate vib signals
+# CHANGE: FeatureBuilder manages librosa extraction functions
+from vib_music import AudioFeatureBundle
+# CHANGE: VibrationStream manages the vibration data and drivers.
+from vib_music import VibrationStream
 
-@FeatureManager.vibration_mode
-def audio_power(fm:FeatureManager) -> np.ndarray:
-    rmse = fm.feature_data('rmse')
-    spec = fm.feature_data('melspec')
-
-    rmse = (rmse-rmse.min()) / (rmse.max()-rmse.min())
-    rmse  = rmse ** 2
-
-    bins = np.linspace(0., 1., 150, endpoint=True)
-    level = np.digitize(rmse, bins).astype(np.uint8)
-
-    # mimic a square wave for each frame [x, x, x, x, 0, 0, 0, 0]
-    # [x,x,x,x,0,0,0,0,x,x,x,x,0,0,0,0,x,x,x,x,0,0,0,0] - 300Hz
-
-    # when using 2D sequence, do not use plot function
-    # level_zeros = np.zeros_like(level)
-    # level_seq = np.stack([level]*4+[level_zeros]*4, axis=-1)
-    # level_seq = np.concatenate([level_seq]*3, axis=-1)
-
+# CHNAGE: register vibration function with VibrationStream.vibration_mode
+# CHANGE: vibration function now need an AudioFeatureBundle instance
+@VibrationStream.vibration_mode(over_ride=False)
+def audio_power(fb:AudioFeatureBundle) -> np.ndarray:
+    # AudioFeatureBundle has a similar interface with previous FeatureManager
+    rmse = fb.feature_data('rmse')
     varr = 0
     for i in np.arange(0.1,0.9,0.01):
         if varr < np.var(np.power(rmse,i)):
@@ -37,9 +29,6 @@ def audio_power(fm:FeatureManager) -> np.ndarray:
     level = np.digitize(rmse, bins).astype(np.uint8)
     level = level + 30
 
-    # [x,x,x,x,0,0,0,0,x,x,x,x,0,0,0,0,x,x,x,x,0,0,0,0] - 300Hz
-
-    # when using 2D sequence, do not use plot function
     level_zeros = np.zeros_like(level)
     level_seq = np.stack([level]*4+[level_zeros]*4, axis=-1)
     level_seq = np.concatenate([level_seq]*3, axis=-1)
@@ -51,35 +40,33 @@ def audio_power(fm:FeatureManager) -> np.ndarray:
             if (level[i] - 30 > level[i+1]):
                 level_seq[i,8:16] = level_seq[i,8:16]*0.7
                 level_seq[i,16:24] = level_seq[i,16:24]*0.5
-
-    return level_seq
+    # CHANGE: all vibration return an 1-D array, please flatten the vibration sequence
+    return level_seq.ravel().astype(np.uint8)
 
 def main():
-    p = tune_rmse_parser(base_parser=tune_melspec_parser())
+    p = tune_rmse_parser()
     opt = p.parse_args()
+
+    # CHANGE: vibration mode is a command line argument, see utils.py
+    # CHANGE: here we fixed the vibration mode as "audio_power" (default "rmse")
+    opt = p.parse_args(args=['--vib-mode', 'audio_power'], namespace=opt)
     print(opt)
 
-    librosa_config = None
-    plot_config = None
+    # CHANGE: librosa_config is replaced by a "feature recipes" dict
+    # CHANGE: we need to build the "recipes" from the command line args here
+    feat_recipes = None
     if opt.task == 'run' or 'build':
-        print('Buidling Feature Database...', end='')
-        librosa_config = init_vibration_extraction_config()
-        librosa_config['audio'] = opt.audio
-        librosa_config['len_hop'] = opt.len_hop
-        librosa_config['stgs']['rmse'] = {
-            'len_window': opt.len_window,
-        }
-        librosa_config['stgs']['melspec'] = {
-            'len_window': opt.len_window,
-            'n_mels': opt.n_mels,
-            'fmax': opt.fmax if opt.fmax > 0 else None
-        }
+        feat_recipes = {}
+        # put "len_window" into "rmse" recipes
+        feat_recipes['rmse'] = {'len_window': opt.len_window}
+        # for other recipes, use:
+        # feat_recipes['other_feature_extraction_func'] = {
+        #     'func_arg_0': opt.func_arg_0,
+        #     'func_arg_1': opt.func_arg_1,
+        #     ...
+        # }
 
-    if opt.plot:
-        plot_config = {
-            'plots': ['waveform', 'wavermse']
-        }
-
-    _main(opt, 'audio_power', 'adc', librosa_config, plot_config)
+    # CHANGE: now main function only requires opt and feature recipes
+    _main(opt, feat_recipes)
 
 main()

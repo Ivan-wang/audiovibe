@@ -1,121 +1,107 @@
-import abc
+import logging
+from typing import Optional, Dict
 
-class VibrationDriver(abc.ABC):
-    def __init__(self, vibration_data=None) -> None:
-        super(VibrationDriver, self).__init__()
-        if vibration_data is None:
-            self.vibration_iter = None
-            self.vibration_len = 0
-        else:
-            self.vibration_len = len(vibration_data)
-            self.vibration_iter = iter(vibration_data)
+from .core import StreamEvent, StreamEventType
+from .core import StreamDriverBase, StreamError
 
-        self.device = None
-        self.blocking = False
+class LogDriver(StreamDriverBase):
+    def __init__(self) -> None:
+        super(LogDriver, self).__init__()
+        self.stream = None
+        self.use_logger = True
+    
+    def on_init(self, what:Optional[Dict]=None) -> None:
+        self.stream = logging.getLogger('LogDriver')
+        self.stream.setLevel(logging.DEBUG)
 
-    def __len__(self):
-        return self.vibration_len
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.DEBUG)
 
-    @abc.abstractmethod
-    def on_start(self):
-        return
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        ch.setFormatter(formatter)
 
-    @abc.abstractmethod
-    def on_running(self, update=False):
-        return
+        self.stream.addHandler(ch)
 
-    @abc.abstractmethod
-    def on_close(self):
-        return
+        self.stream.info('LogDriver Handler Initialized!')
 
-from .env import DRV2605_ENV_READY
-if DRV2605_ENV_READY:
-    import board
-    import busio
-    import adafruit_drv2605
+    def on_next_frame(self, what: Optional[Dict] = None) -> None:
+        self.stream.info('LogDriver Move On Next Frame!')
+    
+    def on_status_acq(self, what: Optional[Dict] = None) -> Optional[StreamEvent]:
+        self.stream.info('LogDriver Receives Status Req!')
+        return StreamEvent(StreamEventType.STREAM_STATUS_ACK, {'status': 'LogDriver'})
+    
+    
+    def on_close(self, what: Optional[Dict] = None) -> None:
+        self.stream.info('LogDriver Is Closing...')
+        handlers = self.stream.handlers[:]
+        for h in handlers:
+            self.stream.removeHandler(h)
+            h.close()
+        logging.shutdown()
 
-class DR2605Driver(VibrationDriver):
-    def __init__(self, vibrations) -> None:
-        if (vibrations.shape[1] != 2):
-            vibrations = None
-        super().__init__(vibration_data=vibrations)
+class AudioDriver(StreamDriverBase):
+    def __init__(self) -> None:
+        super(AudioDriver, self).__init__()
 
-        self.amp = 0
-        self.freq = 0
+        self.audio = None # PyAudio object
+        self.stream = None
+    
+    def on_init(self, what: Dict) -> None:
+        from .dependency import PyAudio
+        self.audio = PyAudio()
+        self.stream = self.audio.open(
+            format=self.audio.get_format_from_width(what['format']),
+            channels=what['channels'],
+            rate = what['rate'],
+            output=True
+        )
+    
+    def on_close(self, what: Optional[Dict] = None) -> None:
+        self.stream.stop_stream()
+        self.stream.close()
+        self.audio.terminate()
+    
+    def on_pulse(self, what:Optional[Dict]=None) -> None:
+        self.stream.stop_stream()
 
-    def on_start(self):
-        if DRV2605_ENV_READY:
-            i2c = busio.I2C(board.SCL, board.SDA)
-            self.device = adafruit_drv2605.DRV2605(i2c)
-            self.device._write_u8(0x1D, 0xA1) # enable LRA Open Loop Mode
-            return True
-        else:
-            return False
+    def on_resume(self, what:Optional[Dict]=None) -> None:
+        self.stream.start_stream()
 
-    def on_running(self, update=False):
-        if update:
+    def on_next_frame(self, what: Optional[Dict] = None) -> None:
+        if what is not None:
             try:
-                self.amp, self.freq = next(self.vibration_iter)
-            except StopIteration:
-                return False
-        self.device._write_u8(0x02, self.amp) # Set real-time play value (amplitude)
-        self.device._write_u8(0x20, self.freq) # Set real-time play value (frequency)
-        self._write_u8(0x01, 5) # Set real-time play mode
-        self.device.play()
-        return True
+                self.stream.write(what['frame'])
+            except:
+                raise
+    
+    # TODO: report audio hardware status?
+    def on_status_acq(self, what: Optional[Dict] = None) -> Optional[StreamEvent]:
+        return StreamEvent(head=StreamEventType.STREAM_STATUS_ACK, what={'status': 'Music Stream'})
+        return None
 
-    def on_close(self):
-        self.device._write_u8(0x01, 0)
+class PCF8591Driver(StreamDriverBase):
+    def __init__(self) -> None:
+        super(PCF8591Driver, self).__init__()
+        self.stream = None
 
-from .env import ADC_ENV_READY
-if ADC_ENV_READY:
-    import smbus
+    def on_init(self, what: Optional[Dict] = None) -> None:
+        from .dependency import smbus
+        self.stream = smbus.SMBus(1)
+        # raise StreamError('Init PCF8591 failed. SMBus not installed.')
 
-# NOTE: each sample accept at most 8 operations
-import numpy as np
-class AdcDriver(VibrationDriver):
-    def __init__(self, vibration_data=None) -> None:
-        if isinstance(vibration_data, np.ndarray):
-            if len(vibration_data.shape) > 2:
-                print(f'vibration data should be at most 2D but get {vibration_data.shape}')
-                vibration_data = None
-        else:
-            print(f'need a np.ndarray for vibration data but get {type(vibration_data)}')
-            vibration_data = None
-        super().__init__(vibration_data=vibration_data)
+    def on_next_frame(self, what: Optional[Dict] = None) -> None:
+        for a in what['frame']:
+            self.stream.write_byte_data(0x48, 0x40, a)
 
-        # self.amp = 0
-
-        # when use a sequence for each frame, set blocking mode as true
-        if len(vibration_data.shape) > 2:
-            self.blocking = False
-
-    def on_start(self):
-        if self.vibration_iter is None:
-            return False
-
-        if ADC_ENV_READY:
-            self.device = smbus.SMBus(1)
-            return True
-        else:
-            return False
-
-    def on_running(self, update=False):
-        if update:
-            try:
-                amp = next(self.vibration_iter)
-            except StopIteration:
-                return False
-            else:
-                if isinstance(amp, np.ndarray):
-                    for a in amp:
-                        self.device.write_byte_data(0x48, 0x40, a)
-                else:
-                    for _ in range(4):
-                        self.device.write_byte_data(0x48, 0x40, amp)
-                    self.device.write_byte_data(0x48, 0x40, 0)
-        return True
-
-    def on_close(self):
+    def on_close(self, what: Optional[Dict] = None) -> None:
         # close the device?
         return
+
+    # TODO: return vibration hardware status
+    def on_status_acq(self, what: Optional[Dict] = None) -> Optional[StreamEvent]:
+        return StreamEvent(StreamEventType.STREAM_STATUS_ACK, {'status': 'PCF8591'})
+
+
+class PWMDriver(StreamDriverBase):
+    pass
