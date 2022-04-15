@@ -1,5 +1,13 @@
 # Vib Editor Branch ReadMe
 
+## UPDATE - 04/14/2022
+1. Add `backends` submodules to support each GUI widget
+    * Separate `VibPlayBackend` to support `VibPlayFrame` (renamed from `VibPlayWidget`)
+    * Add `AtomicWaveBackend` to support `AtomicWaveFrame`. Add `MonoFrameAudioStream` to sync atomic waveforms (`MAGIC_NUMBER` to control delay is gone)
+    * Add `VibModeBackend` to support `VibModeFrame`
+    * other renamed or relocated classes
+2. Add top level interface to invoke `VibPlayFrame` GUI
+
 ## UPDATE - 04/01/2022
 1.  Add `VibPlayWidget` class to support music and vibration control function
     * Basic: Start, Pulse, Resume, and Stop
