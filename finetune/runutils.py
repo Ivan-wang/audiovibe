@@ -58,7 +58,7 @@ def base_arg_parser():
     p = argparse.ArgumentParser(conflict_handler='resolve')
     p.add_argument('--audio', type=str)
     p.add_argument('--task', type=str, default='run', choices=['run', 'build', 'play'])
-    p.add_argument('--data-dir', type=str, default='.')
+    p.add_argument('--data-dir', type=str, default='./data')
     p.add_argument('--config', type=str, default="./configs/band_split_demo.py")
     p.add_argument('--plot', action='store_true')
     p.add_argument('--vibmode', type=str, default="band_split")

@@ -60,3 +60,4 @@ configs/*
 **/*.jpg
 **/*.png
 **/*.bin
+**/plots/
