@@ -79,8 +79,8 @@ class FeatureManager(object):
         # audio = os.path.basename(folder).split(".")[0]
         vibrations = glob.glob(f"{folder}/*.pkl")
         vibrations = {os.path.basename(v).split(".")[0] : v for v in vibrations}
-        print(f"find {len(vibrations)} from {folder}:")
-        print(vibrations)
+        # print(f"find {len(vibrations)} from {folder}:")
+        # print(vibrations)
 
         try:
             with open(vibrations["meta"], "rb") as f:
@@ -93,7 +93,7 @@ class FeatureManager(object):
         # print("find %d in %s..." % (len(meta["audfeats"]), folder))
         for aud in meta["audfeats"]:
             with open(vibrations[aud], "rb") as f:
-                print(f"loading {aud}...")
+                # print(f"loading {aud}...")
                 features[aud] = pickle.load(f)
 
         return cls(meta, features, mode)

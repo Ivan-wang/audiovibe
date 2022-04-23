@@ -32,7 +32,7 @@ class FeatureExtractionManager(object):
             self.audio = np.pad(self.audio, ((0.0), (expect_len-current_len,0)), 'constant', constant_values=0)
         else:    # single channel case
             self.audio = np.pad(self.audio, (expect_len-current_len,0), 'constant', constant_values=0)
-        print(f"we should have {len(self.audio)//len_hop} frames")
+        # print(f"we should have {len(self.audio)//len_hop} frames")
 
         self.len_hop = len_hop
         self.stg_names = list(stg.keys())

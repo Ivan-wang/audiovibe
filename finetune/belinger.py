@@ -16,7 +16,7 @@ def main():
     opt = p.parse_args()
     print(opt)
     params = import_module_from_file("params",opt.config)
-    print_params_module(params)
+    # print_params_module(params)
     librosa_config = None
     plot_config = None
 
@@ -25,7 +25,7 @@ def main():
 
     # save configs for audio
     if opt.task == 'run' or 'build':
-        print('Buidling Feature Database...', end='')
+        # print('Buidling Feature Database...', end='')
         librosa_config = init_vibration_extraction_config()
         librosa_config['audio'] = opt.audio
         librosa_config['len_hop'] = params.len_hop
@@ -51,7 +51,6 @@ print("DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!D
 ######
 
 print("==================================")
-print("        莺歌项目   版本：清歌        ")
+print("        莺歌项目   系统：清歌        ")
 print("==================================")
-
 main()
