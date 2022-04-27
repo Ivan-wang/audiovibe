@@ -1,4 +1,6 @@
- 
+#include <esp_bt_main.h>
+#include <esp_bt_device.h>
+
 #include <BLEDevice.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
@@ -17,7 +19,17 @@ uint8_t txValue = 0;
 #define CHARACTERISTIC_UUID_RX "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
 #define CHARACTERISTIC_UUID_TX "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
  
- 
+
+void show_ble_addr(void) {
+  const uint8_t* point = esp_bt_dev_get_address();
+  for (int i = 0; i < 6; ++i) {
+    char str[3];
+    sprintf(str, "%02X", (int)point[i]);
+    Serial.print(str);
+    if (i < 5) { Serial.print(":"); }
+  }
+}
+
 class MyServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* pServer) {
       deviceConnected = true;
@@ -33,10 +45,14 @@ class MyCallbacks: public BLECharacteristicCallbacks {
       std::string rxValue = pCharacteristic->getValue();
  
       if (rxValue.length() > 0) {
+        char str[10];
         Serial.println("*********");
-        Serial.print("Received Value: ");
-        for (int i = 0; i < rxValue.length(); i++)
-          Serial.print(rxValue[i]);
+        Serial.print("Received Value (the first 8 byte): ");
+        for (int i = 0; i < 8; i++) {
+          sprintf(str, "%d", (int)rxValue[i]); 
+          Serial.print(str);
+          Serial.print(" ");
+        }
  
         Serial.println();
         Serial.println("*********");
@@ -79,16 +95,17 @@ void setup() {
   // Start advertising
   pServer->getAdvertising()->start();
   Serial.println("Waiting a client connection to notify...");
+  show_ble_addr();
 }
  
 void loop() {
  
-    if (deviceConnected) {
-        pTxCharacteristic->setValue(&txValue, 1);
-        pTxCharacteristic->notify();
-        txValue++;
-        delay(10); // bluetooth stack will go into congestion, if too many packets are sent
-    }
+//    if (deviceConnected) {
+//        pTxCharacteristic->setValue(&txValue, 1);
+//        pTxCharacteristic->notify();
+//        txValue++;
+//        delay(10); // bluetooth stack will go into congestion, if too many packets are sent
+//    }
  
     // disconnecting
     if (!deviceConnected && oldDeviceConnected) {
@@ -103,5 +120,3 @@ void loop() {
         oldDeviceConnected = deviceConnected;
     }
 }
-
-  
