@@ -17,6 +17,8 @@ from vib_music import get_audio_process
 from btle_driver import BtleDriver
 BTLE_ADDR = "44:17:93:59:3F:92"
 SERVICE_UUID = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
+TX_CHAR_UUID = "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
+RX_CHAR_UUID = "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
 
 fb = AudioFeatureBundle.from_folder('../data/test_fb')
 sdata = VibrationStream.from_feature_bundle(fb, 24, 'rmse_mode')
@@ -39,8 +41,8 @@ music_proc.start()
 init_info = {
     'btle_addr': BTLE_ADDR,
     'service_uuid': SERVICE_UUID,
-    'tx_char_uuid': SERVICE_UUID,
-    'rx_char_uuid': SERVICE_UUID
+    'tx_char_uuid': TX_CHAR_UUID,
+    'rx_char_uuid': RX_CHAR_UUID 
 }
 commands.put(StreamEvent(head=StreamEventType.STREAM_INIT, what=init_info))
 commands.put(AudioStreamEvent(head=AudioStreamEventType.AUDIO_START))

@@ -25,8 +25,8 @@ class BtleDriver(StreamDriverBase):
             self.btle_device = None
         else:
             svc = self.btle_device.getServiceByUUID(what['service_uuid'])
-            self.tx_channel = svc.getCharacteristics(what['tx_char_uuid'])
-            self.rx_channel = svc.getCharacteristics(what['rx_char_uuid'])
+            self.tx_channel = svc.getCharacteristics(what['tx_char_uuid'])[0]
+            self.rx_channel = svc.getCharacteristics(what['rx_char_uuid'])[0]
 
     def on_close(self, what: Optional[Dict] = None) -> None:
         self.tx_channel = None
