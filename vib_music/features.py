@@ -22,9 +22,10 @@ def melspec(audio, sr, len_hop, len_window=2048, n_mels=128, fmax=None, **kwargs
 
 @FeatureExtractionManager.register_vib_meta_stg
 def stft(audio, sr, len_hop, len_window=512, **kwargs):
-    X = librosa.stft(audio, n_fft=len_window, hop_length=len_hop, win_length=len_hop, window='hann',
+    X = librosa.stft(audio, n_fft=len_window, hop_length=len_hop, win_length=len_window, window='hann',
                      center=True, pad_mode='constant')
-    ret = {'len_window': len_window, 'data': X}
+    stft_freq = librosa.fft_frequencies(sr=sr, n_fft=len_window)
+    ret = {'len_window': len_window, 'data': X, "stft_freq":stft_freq}
     return ret
 
 @FeatureExtractionManager.register_vib_meta_stg

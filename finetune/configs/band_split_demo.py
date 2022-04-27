@@ -15,5 +15,5 @@ vib__vib_scale = [1,1,1]    # output vibration signal's scale
 vib__vib_frame_len = 24    # vibration signal sample number for each output frame
 vib__global_scale = 1.0    # the global scale for vibration tense
 # dsp
-len_window = 512    # acoustic feature window length
+len_window = 1024    # acoustic feature window length
 len_hop = 256    # acoustic feature hop length

@@ -5,12 +5,15 @@
 
 from vib_music import FeatureManager
 import numpy as np
-from sigprocs.signal_separation import band_separate, hrps
+from utils.signal_separation import band_separate, hrps
 from utils.wave_generator import periodic_rectangle_generator
+from utils.signal_analysis import remove_harmonics, extract_peaks
+from utils.ml_basic import extract_clustern
+from utils.global_paras import PEAK_LIMIT
 import matplotlib.pyplot as plt
 import librosa
 import librosa.display
-import sys, copy
+import sys, copy, time
 from scipy.ndimage import convolve1d
 from scipy.signal import argrelextrema
 from math import log
@@ -71,11 +74,11 @@ def band_split(fm:FeatureManager, duty=0.5, recep_field=3, split_aud=None, vib_f
     # plt.colorbar()
     # plt.savefig("spec_kick_fakedb.png")
     # sys.exit()
-    # # fig, ax = plt.subplots()
-    # # S_dB = librosa.power_to_db(feats, ref=np.max)
-    # # img = librosa.display.specshow(S_dB, x_axis='time',y_axis='mel', sr=sr, fmax=sr//2, ax=ax)
-    # # fig.colorbar(img, ax=ax, format='%+2.0f dB')
-    # # ax.set(title='Mel-frequency spectrogram')
+    # fig, ax = plt.subplots()
+    # S_dB = librosa.power_to_db(feats, ref=np.max)
+    # img = librosa.display.specshow(S_dB, x_axis='time',y_axis='mel', sr=sr, fmax=sr//2, ax=ax)
+    # fig.colorbar(img, ax=ax, format='%+2.0f dB')
+    # ax.set(title='Mel-frequency spectrogram')
     # ######
 
     # split features
@@ -277,23 +280,35 @@ def hrps_split(fm:FeatureManager, len_harmonic_filt=0.1, len_percusive_filt=10, 
 
 
 @FeatureManager.vibration_mode(over_ride=False)
-def band_select(fm:FeatureManager, duty=0.5, peak_globalth = 50, peak_relativeth = 4, peak_movlen = 5, vib_extremefreq = [50,500],
-               vib_bias=80, vib_maxbin=255, peak_limit=5, vib_frame_len=24, **kwargs) -> np.ndarray:
+def band_select(fm:FeatureManager, duty=0.5, vib_extremefreq = [50,500], vib_bias=80, vib_maxbin=255, 
+                peak_limit=-1, vib_frame_len=24, **kwargs) -> np.ndarray:
     """
     select frequency band at each time point for mapping to vibration, where vibration frequency is determined by 
     scaling the corresponding audio frequency
     :return: 2d vibration sequence (frame_num, vib_frame_len)
     """
     melspec = fm.feature_data('melspec')
+    stft = fm.feature_data('stft')
+    linspec = np.abs(stft)**2.0    # power linear spectrogram
     sr = fm.meta["sr"]
     len_hop = fm.meta["len_hop"]
     mel_freq = fm.feature_data('melspec', prop='mel_freq')
+    stft_freq = fm.feature_data('stft', prop='stft_freq')
+    stft_len_window = fm.feature_data('stft', prop='len_window')
     feat_dim, feat_time = melspec.shape
-    global_scale = kwargs["global_scale"]
-    assert peak_movlen%2==1, "moving average length should be odd"
+    global_scale = kwargs.get("global_scale", 1.0)
+    hprs_harmonic_filt_len = kwargs.get("hprs_harmonic_filt_len", 0.1)
+    hprs_percusive_filt_len = kwargs.get("hprs_percusive_filt_len", 400)
+    hprs_beta = kwargs.get("hprs_beta", 4.0)
+    peak_globalth = kwargs.get("peak_globalth", 20)
+    peak_relativeth = kwargs.get("peak_relativeth", 4)
+    stft_peak_movlen = int(kwargs.get("stft_peak_movlen", 400//np.abs(stft_freq[2]-stft_freq[1])))
+    mel_peak_movlen = int(kwargs.get("mel_peak_movlen", stft_peak_movlen//4))
+    assert mel_peak_movlen>1 and stft_peak_movlen>1, "peak moving average filter must have length larger than 1"
+    if stft_peak_movlen%2==0: stft_peak_movlen += 1
+    if mel_peak_movlen%2==0: mel_peak_movlen += 1
     assert global_scale>0 and global_scale<=1.0, "global scale must be in (0,1]"
-    melspec_mask = np.ones_like(melspec)    # mask of melspec
-    melspec_db = librosa.power_to_db(melspec)    # convert to db scale
+
 
     # get relationship between vib-freq and audio-freq
     # we assume they have linear relationship: aud_freq = a * vib_freq + b
@@ -301,77 +316,156 @@ def band_select(fm:FeatureManager, duty=0.5, peak_globalth = 50, peak_relativeth
     a = float((min(mel_freq)-max(mel_freq))) / (min(vib_extremefreq)-max(vib_extremefreq))
     b = max(mel_freq) - a * max(vib_extremefreq)
 
-    # extract peaks along mels
-    # exclude all-same time point
-    melspec_var = np.var(melspec_db, axis=0)
-    melspec_var_mask = np.ones_like(melspec_var)
-    melspec_var_mask[melspec_var==0] = 0    # if variance is zeros, all the elements have the same value (no peak exists)
-    melspec_var_mask_mat = np.tile(melspec_var_mask, (feat_dim, 1))
-    melspec_mask = melspec_mask * melspec_var_mask_mat
 
-    # move average
-    ma_kernel = [1/peak_movlen] * peak_movlen
-    melspec_ma = convolve1d(melspec_db, weights=ma_kernel, axis=0, mode='nearest')
-    melspec_ma_diff = melspec_db - melspec_ma    # value over local average
-    melspec_mask[melspec_ma_diff<peak_relativeth] = 0    # set mask based on local threshold
+    # harmonic-percusive-residual separation
+    power_spec_h, power_spec_p, power_spec_r, M_h, M_p, M_r = hrps(linspec, sr, len_harmonic_filt=hprs_harmonic_filt_len,
+                                                                   len_percusive_filt=hprs_percusive_filt_len, beta=hprs_beta,
+                                                                   len_window=stft_len_window, len_hop=len_hop)
 
-    # global threshold
-    melspec_max = np.max(melspec_db, axis=0)    # max at each time
-    global_th = melspec_max - peak_globalth    # threshold has determined difference from max amplitude at each time
-    global_th_mat = np.tile(global_th, (feat_dim, 1))
-    melspec_global_diff = melspec_db - global_th_mat    # value over threshold
-    melspec_mask[melspec_global_diff<0] = 0    # set mask based on global threshold
-
-    # local maxima
-    melspec_local_maxima_ind = argrelextrema(melspec_db, np.greater, axis=0)
-    melspec_local_maxima_ind = np.array(melspec_local_maxima_ind).transpose()
-    melspec_mask_localmax = np.zeros_like(melspec_mask)
-    melspec_mask_localmax[melspec_local_maxima_ind[:,0], melspec_local_maxima_ind[:,1]] = 1
-
-    # combine to all masks
-    melspec_mask = melspec_mask * melspec_mask_localmax
-
-    # ### debug ###
-    # melspec_masked_display = melspec * melspec_mask
+    # ### debug plot ###
+    # D = librosa.amplitude_to_db(power_spec, ref=np.max)
+    # D_h = librosa.amplitude_to_db(power_spec_h, ref=np.max)
+    # D_h_mask = librosa.amplitude_to_db(M_h, ref=np.max)
+    # D_p = librosa.amplitude_to_db(power_spec_p, ref=np.max)
+    # D_mel = librosa.amplitude_to_db(melspec, ref=np.max )
     # plt.figure()
-    # plt.imshow(np.flip(melspec_masked_display, axis=0), cmap='hot', interpolation='nearest', aspect='auto')
+    # librosa.display.specshow(D, x_axis='frames', y_axis='linear')
     # plt.colorbar()
-    # plt.savefig("plots/melspec_masked.png")
-    # melspec_db_masked = librosa.power_to_db(melspec_masked_display)
+    # plt.savefig("../plots/spec_original.png")
+    # plt.close()
     # plt.figure()
-    # plt.imshow(np.flip(melspec_db_masked, axis=0), cmap='hot', interpolation='nearest', aspect='auto')
+    # librosa.display.specshow(D_h, x_axis='frames', y_axis='linear')
     # plt.colorbar()
-    # plt.savefig("plots/melspec_db_masked.png")
+    # plt.savefig("../plots/spec_harmonics.png")
+    # plt.close()
+    # plt.figure()
+    # librosa.display.specshow(D_p, x_axis='frames', y_axis='linear')
+    # plt.colorbar()
+    # plt.savefig("../plots/spec_percussion.png")
+    # plt.close()
+    # plt.figure()
+    # librosa.display.specshow(D_mel, x_axis='frames', y_axis='mel')
+    # plt.colorbar()
+    # plt.savefig("../plots/spec_mel.png")
+    # plt.close()
     # ######
 
-    # only get top peaks
-    temp_melspec_masked = melspec * melspec_mask
-    temp_melspec_masked = librosa.power_to_db(temp_melspec_masked)
-    peak_inds = np.argpartition(temp_melspec_masked, -peak_limit, axis=0)[-peak_limit:, :]    # top peaks inds at each time point
-    peak_mask = np.zeros_like(melspec_mask)
-    np.put_along_axis(peak_mask, peak_inds, 1, axis=0)    # set 1 to peak mask where top peaks are seleted
-    melspec_mask = melspec_mask * peak_mask    # mask other peaks in the mask previously selected
-
-    # mask original mel-spec
-    melspec_masked = melspec * melspec_mask
+    # stft_mask = extract_peaks(linspec, peak_movlen=19, peak_relativeth=peak_relativeth, peak_globalth=peak_globalth)
+    melspec_mask = extract_peaks(melspec, peak_movlen=mel_peak_movlen, peak_relativeth=peak_relativeth, peak_globalth=peak_globalth)
+    harm_peaks = extract_peaks(power_spec_h, peak_movlen=stft_peak_movlen, peak_relativeth=peak_relativeth, peak_globalth=peak_globalth)
+    # melspec_mask_no_harms, melspec_mask = remove_harmonics(melspec_mask, melspec, mel_freq)
+    # stft_mask_no_harms, stft_mask = remove_harmonics(stft_mask, linspec, stft_freq)
+    spec_mask = melspec_mask
 
     # ### debug ###
-    # melspec_peak_num = np.sum(melspec_mask, axis=0)
-    # plt.figure()
-    # plt.imshow(np.flip(peak_mask, axis=0), cmap='hot', interpolation='nearest', aspect='auto')
-    # plt.savefig("plots/melspec_peak_mask.png")
-    # plt.figure()
-    # plt.plot(np.linspace(1, len(melspec_peak_num), len(melspec_peak_num)), melspec_peak_num, ".")
-    # plt.savefig("plots/melspec_peak_num.png")
-    # plt.figure()
-    # plt.imshow(np.flip(melspec_mask, axis=0), cmap='hot', interpolation='nearest', aspect='auto')
-    # plt.savefig("plots/melspec_final_mask.png")
-    # melspec_masked_display = melspec * melspec_mask
-    # melspec_masked_display = librosa.power_to_db(melspec_masked_display)
-    # plt.imshow(np.flip(melspec_masked_display, axis=0), cmap='hot', interpolation='nearest', aspect='auto')
-    # plt.savefig("plots/melspec_final_mask_db.png")
-    # sys.exit()
+    # spec_db = librosa.power_to_db(spec_mask, ref=np.max)
+    # harm_db = librosa.power_to_db(harm_peaks, ref=np.max)
+    # np.save("../plots/masks_spec.npy", spec_db, allow_pickle=True)
+    # np.save("../plots/masks_harm.npy", harm_db, allow_pickle=True)
+    # # plt.figure()
+    # # librosa.display.specshow(spec_db, x_axis='frames', y_axis='mel')
+    # # plt.savefig("../plots/masks_spec.png")
+    # # plt.close()
+    # # plt.figure()
+    # # librosa.display.specshow(harm_db, x_axis='frames', y_axis='linear')
+    # # plt.savefig("../plots/masks_harm.png")
+    # # plt.close()
+    # # sys.exit()
     # ######
+
+    # get top peaks
+    spec_masked = melspec * spec_mask
+    if peak_limit<=0:
+        # automatically determin peak limit
+        # TODO more sophisticated way to determin peak limits
+        peak_mask = np.zeros_like(spec_mask)
+        power_spec_sum = np.sum(linspec, axis=0)
+        power_spec_h_sum = np.sum(power_spec_h, axis=0)
+        power_spec_p_sum = np.sum(power_spec_p, axis=0)
+        power_spec_r_sum = np.sum(power_spec_r, axis=0)
+        h_ratio = power_spec_h_sum / power_spec_sum
+        p_ratio = power_spec_p_sum / power_spec_sum
+        r_ratio = power_spec_r_sum / power_spec_sum
+        for ti in range(feat_time):
+            if p_ratio[ti]>=2*r_ratio[ti] and p_ratio[ti]>2*h_ratio[ti]:
+                curr_peak_limit = 3
+            elif r_ratio[ti]>2*h_ratio[ti]  and r_ratio[ti]>2*p_ratio[ti]:
+                curr_peak_limit = 2
+            elif h_ratio[ti]>2*p_ratio[ti] and h_ratio[ti]>2*r_ratio[ti]:
+                curr_spec_mask = np.expand_dims(harm_peaks[:, ti], axis=1)
+                curr_spec = np.expand_dims(linspec[:, ti], axis=1)
+                spec_mask_no_harms, curr_spec_mask = remove_harmonics(curr_spec_mask, curr_spec, stft_freq)
+                # ### debug ###
+                # plt.figure()
+                # plt.plot(curr_spec_mask)
+                # plt.savefig("../plots/curr_spec_mask_"+str(ti)+".png")
+                # plt.close()
+                # plt.figure()
+                # plt.plot(spec_mask_no_harms)
+                # plt.savefig("../plots/curr_spec_no_harms_"+str(ti)+".png")
+                # plt.close()
+                # ######
+                curr_peak_limit = int(min(PEAK_LIMIT, np.sum(spec_mask_no_harms)+1))
+            else:
+                curr_peak_limit = PEAK_LIMIT
+            peak_inds = spec_masked[:,ti].argsort()[::-1][:curr_peak_limit]
+            peak_mask[peak_inds, ti] = 1
+    else:
+        # given pre-set peak_limit
+        spec_masked = librosa.power_to_db(spec_masked)
+        peak_inds = np.argpartition(spec_masked, -peak_limit, axis=0)[-peak_limit:, :]    # top peaks inds at each time point
+        peak_mask = np.zeros_like(spec_mask)
+        np.put_along_axis(peak_mask, peak_inds, 1, axis=0)    # set 1 to peak mask where top peaks are seleted
+    # incorporate peak's mask
+    spec_masked = spec_masked * peak_mask
+
+    # ### debug ###
+    # plt.figure()
+    # spec_db = librosa.power_to_db(spec_masked, ref=np.max)
+    # librosa.display.specshow(spec_db, x_axis='frames', y_axis='mel')
+    # plt.colorbar()
+    # plt.savefig("../plots/spec_masked_final.png")
+    # plt.close()
+    # # sys.exit()
+    # ######
+
+    # variance based strategy for peak limit determination
+    #     temp_linspec_masked = linspec * stft_mask_no_harms
+    #     masked_std = np.var(temp_linspec_masked, axis=1)
+    #     masked_std_sum = np.sum(masked_std)
+    #     masks_queue = masked_std.argsort()
+    #     masks_queue = masks_queue[::-1]
+    #     accumulate_std = 0
+    #     for m in range(PEAK_LIMIT):
+    #         accumulate_std += masked_std[masks_queue[m]]
+    #         std_proportion = accumulate_std / masked_std_sum
+    #         print("%d proportion %f" % (m, std_proportion))
+    #         if std_proportion>=0.75:
+    #             peak_limit = m+1
+    #             break
+    #     if peak_limit<=0: peak_limit = PEAK_LIMIT
+    # print(peak_limit)
+
+    # clustering based strategy for peak limit determination
+    # start_time = time.time()
+    # if isinstance(peak_limit, list) or peak_limit<=0:
+    #     if isinstance(peak_limit, list): class_n = peak_limit
+    #     else: class_n = [1,PEAK_LIMIT]
+    #     peak_limit_temp = np.zeros((feat_time), dtype=int)
+    #     for ft in range(feat_time):
+    #         curr_peaks = melspec_mask[:, ft]
+    #         if np.sum(curr_peaks)<=1:
+    #             peak_limit_temp[ft] = np.sum(curr_peaks)
+    #             continue
+    #         curr_class_n = [int(min(class_n)), int(min(np.sum(curr_peaks), max(class_n)))]    # up to the minimum between sum of peaks and pre-set {peak_limit}
+    #         input_feat = np.expand_dims(melspec[:,ft],axis=1)
+    #         peak_limit_temp[ft] = extract_clustern(input_feat, class_n=curr_class_n)
+    #         # set peak limit as the largest peak limit over all time
+    #         if peak_limit_temp[ft]>peak_limit: peak_limit = peak_limit_temp[ft]
+    #         if peak_limit==max(class_n): break
+    #     print("peak limit is %d" % (peak_limit))
+    #     peak_limit += 1    # to add more variations, we add 1 more peak for auxilary
+    # print("elapse %f secs" % (time.time()-start_time))
     
     # generate vibration
     final_vibration = 0
@@ -381,21 +475,12 @@ def band_select(fm:FeatureManager, duty=0.5, peak_globalth = 50, peak_relativeth
         curr_vib_freq = round((curr_aud_freq-b)/a)    # we round it for wave generation
         curr_vib_wav = periodic_rectangle_generator([1,0.], duty=duty, freq=curr_vib_freq, frame_num=feat_time,
                                                   frame_time=len_hop/float(sr), frame_len=vib_frame_len)
-        
         # get vib magnitude
-        curr_melspec = melspec_masked[f, :]
+        curr_melspec = spec_masked[f, :]
         curr_vib_mag = np.expand_dims(curr_melspec, axis=1)
         curr_vib_mag = np.tile(curr_vib_mag, (1, vib_frame_len))    # tile to form a matrix (frame_num, frame_len)
-
         # generate curr vib
         curr_vib = curr_vib_wav * curr_vib_mag
-        # ### debug ###
-        # total_len = curr_vib.shape[0]*curr_vib.shape[1]
-        # plt.figure()
-        # plt.plot(np.linspace(0, total_len-1, total_len), np.resize(curr_vib, (total_len,)))
-        # plt.savefig("plots/vib_"+str(curr_aud_freq)+".png")
-        # plt.close()
-        # ######
         # accumulate
         if f == 0:
             final_vibration = curr_vib
@@ -419,25 +504,10 @@ def band_select(fm:FeatureManager, duty=0.5, peak_globalth = 50, peak_relativeth
     # add offset
     final_vibration_bins += vib_bias
     # set zeros (we have to do this for body feeling)
-    # TODO we need more sophisticated way to set zeros
-    global_min = np.min(melspec_masked)
-    threshold_val = (peak_limit-1) * global_min    # we set zeroing condition: if less than {peak_limit}-1 bins have {global_min} values
+    global_min = np.min(spec_masked[np.nonzero(spec_masked)])    # find global minimum except 0
+    threshold_val = (PEAK_LIMIT//2) * global_min    # we set zeroing condition: if less than half of {peak_limit} bins have {global_min} values
     threshold_val_norm = (threshold_val - final_min) / (final_max - final_min)
     threshold_val_bin = np.digitize(threshold_val_norm, mu_bins)
-    final_vibration_bins[final_vibration_bins<=vib_bias+threshold_val_bin] = 0    # we set 
-
-    # ### debug ###
-    # debug_vibration = copy.deepcopy(final_vibration_bins)
-    # debug_vibration.resize(final_vibration_bins.shape[0]*final_vibration_norm.shape[1])
-    # # debug_vibration = debug_vibration.astype(int)
-    # plt.figure()
-    # plt.plot(debug_vibration)
-    # plt.savefig("plots/band_select_vib_signal.png")
-    # # plt.show()
-    # # debug_vibration_nozeros = debug_vibration[debug_vibration!=0]
-    # # plt.hist(debug_vibration_nozeros, bins="auto")
-    # # plt.savefig("histogram.png")
-    # sys.exit()
-    # ######
+    final_vibration_bins[final_vibration_bins<=vib_bias+threshold_val_bin] = 0    # set zeros below threshold
         
     return final_vibration_bins

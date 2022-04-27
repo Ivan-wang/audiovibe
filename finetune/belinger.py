@@ -1,5 +1,5 @@
 # 4/22/22
-# version: 清歌
+# version: 清歌v0.0
 # Fei Tao
 # taofei@feathervibe.com
 import numpy as np
@@ -45,12 +45,12 @@ def main():
 curr_path = os.getcwd()
 # sys.argv = ["demo.py", "--audio", str(os.path.join(curr_path,"../audio/m1_22k.wav")), "--task", "run",
 #             "--vibmode", "hrps_split", "--audmode", "stft,pitchpyin", "--config", "configs/hrps_split_demo.py"]
-sys.argv = ["belinger.py", "--audio", str(os.path.join(curr_path,"../audio/m1_22k.wav")), "--task", "run",
-            "--vibmode", "band_select"]
+sys.argv = ["belinger.py", "--audio", str(os.path.join(curr_path,"../audio/kick_22k.wav")), "--task", "run",
+            "--vibmode", "band_select", "--audmode", "melspec,stft", "--config", "configs/band_select_demo.py"]
 print("DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!")
 ######
 
 print("==================================")
-print("        莺歌项目   系统：清歌        ")
+print("    莺歌项目   系统：清歌 v0.0       ")
 print("==================================")
 main()

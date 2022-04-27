@@ -12,6 +12,6 @@ vib__beta = 20.0
 vib__vib_freq= {"per":20.0, "har":lambda x:0.1*x+20.0}    # vibration frequency for specified signal
 vib__global_scale = 1.0    # the global scale for vibration tense
 # dsp
-len_window = 512
+len_window = 1024
 pitch_len_window = 1024
 len_hop=256
