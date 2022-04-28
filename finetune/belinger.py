@@ -1,5 +1,4 @@
-# 4/22/22
-# version: 清歌v0.0
+# version: 清歌v0.1
 # Fei Tao
 # taofei@feathervibe.com
 import numpy as np
@@ -51,6 +50,6 @@ def main():
 ######
 
 print("==================================")
-print("    莺歌项目   系统：清歌 v0.0       ")
+print("    莺歌项目   系统：清歌 v0.1       ")
 print("==================================")
 main()
