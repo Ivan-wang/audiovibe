@@ -42,12 +42,12 @@ def main():
 
 
 ### debug part ###
-curr_path = os.getcwd()
+# curr_path = os.getcwd()
 # sys.argv = ["demo.py", "--audio", str(os.path.join(curr_path,"../audio/m1_22k.wav")), "--task", "run",
 #             "--vibmode", "hrps_split", "--audmode", "stft,pitchpyin", "--config", "configs/hrps_split_demo.py"]
-sys.argv = ["belinger.py", "--audio", str(os.path.join(curr_path,"../audio/kick_22k.wav")), "--task", "run",
-            "--vibmode", "band_select", "--audmode", "melspec,stft", "--config", "configs/band_select_demo.py"]
-print("DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!")
+# sys.argv = ["belinger.py", "--audio", str(os.path.join(curr_path,"../audio/kick_22k.wav")), "--task", "run",
+#             "--vibmode", "band_select", "--audmode", "melspec,stft", "--config", "configs/band_select_demo.py"]
+# print("DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!")
 ######
 
 print("==================================")
