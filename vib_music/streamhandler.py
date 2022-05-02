@@ -6,9 +6,7 @@ from vib_music.core.StreamData import StreamDataBase
 
 from .core import AudioStream, StreamDriverBase
 from .core import StreamEvent, StreamEventType
-from .core import StreamError
 from .drivers import AudioDriver
-from .streams import WaveAudioStream
 
 class StreamEndException(Exception):
     pass
@@ -83,7 +81,8 @@ class StreamHandler(object):
         return self.stream_driver.on_status_acq(what)
     
     def handle(self, event:StreamEvent) -> Optional[StreamEvent]:
-        return self.control_handle_funcs[event.head](event.what)
+        if event.head in self.control_handle_funcs:
+            return self.control_handle_funcs[event.head](event.what)
     
     def is_activate(self) -> bool:
         return self.stream_state == StreamState.STREAM_ACTIVE
