@@ -29,12 +29,12 @@ class StreamDriverBase(abc.ABC):
         raise NotImplementedError()
     
     # @abc.abstractmethod
-    # def on_pulse(self, what:Any=None) -> Message:
-    #     raise NotImplementedError()
+    def on_pulse(self, what:Optional[Dict]=None) -> None:
+        raise NotImplementedError()
     
     # @abc.abstractmethod
-    # def on_resume(self, what:Any=None) -> Message:
-    #     raise NotImplementedError()
+    def on_resume(self, what:Optional[Dict]=None) -> None:
+        raise NotImplementedError()
     
     @abc.abstractmethod
     def on_next_frame(self, what:Optional[Dict]=None) -> None:

@@ -27,6 +27,12 @@ class LogDriver(StreamDriverBase):
     def on_next_frame(self, what: Optional[Dict] = None) -> None:
         self.stream.info('LogDriver Move On Next Frame!')
     
+    def on_pulse(self, what: Optional[Dict] = None) -> None:
+        self.stream.info('LogDriver Pulsed!')
+    
+    def on_resume(self, what: Optional[Dict] = None) -> None:
+        self.stream.info('LogDriver Resumed!')
+    
     def on_status_acq(self, what: Optional[Dict] = None) -> Optional[StreamEvent]:
         self.stream.info('LogDriver Receives Status Req!')
         return StreamEvent(StreamEventType.STREAM_STATUS_ACK, {'status': 'LogDriver'})
