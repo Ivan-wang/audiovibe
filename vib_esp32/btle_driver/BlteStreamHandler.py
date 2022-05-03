@@ -10,7 +10,7 @@ from vib_music import StreamState
 from vib_music.streamhandler import StreamEndException
 
 class BlteStreamHandler(StreamHandler):
-    def __init__(self, stream_data: StreamDataBase, stream_driver: StreamDriverBase, block_size:int=256) -> None:
+    def __init__(self, stream_data: StreamDataBase, stream_driver: StreamDriverBase, block_size:int=8) -> None:
         super().__init__(stream_data, stream_driver)
         self.block_size = block_size # block_len = block_size * frame_len
 
