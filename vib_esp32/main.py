@@ -8,13 +8,16 @@ sys.path.append('..')
 from vib_music import AudioFeatureBundle
 from vib_music import VibrationStream
 from vib_music import LogDriver
-from vib_music import StreamHandler
-from vib_music import VibrationProcess
+from vib_music import VibrationProcess, StreamHandler
 from vib_music import StreamEvent, StreamEventType
 from vib_music import AudioStreamEvent, AudioStreamEventType
-from vib_music import get_audio_process
+from vib_music import AudioDriver
+from vib_music import AudioStreamHandler, WaveAudioStream, AudioProcess
 
 from btle_driver import BtleDriver
+from btle_driver import BlteStreamHandler
+from btle_driver import PulseAudioDriver
+
 BTLE_ADDR = "44:17:93:59:3F:92"
 SERVICE_UUID = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
 TX_CHAR_UUID = "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
@@ -24,12 +27,18 @@ fb = AudioFeatureBundle.from_folder('../data/test_fb')
 sdata = VibrationStream.from_feature_bundle(fb, 24, 'rmse_mode')
 sdriver = BtleDriver()
 # sdriver = LogDriver()
-shandler = StreamHandler(sdata, sdriver)
+# shandler = StreamHandler(sdata, sdriver)
+shandler = BlteStreamHandler(sdata, sdriver)
 vib_proc = VibrationProcess(shandler)
 
 audio = '../audio/test_beat_short_1.wav'
 len_hop = 512
-music_proc = get_audio_process(audio, len_hop)
+# music_proc = get_audio_process(audio, len_hop)
+astream = WaveAudioStream(audio, len_hop)
+adriver = PulseAudioDriver()
+# adriver = AudioDriver()
+ahandler = AudioStreamHandler(astream, adriver)
+music_proc = AudioProcess(ahandler)
 
 results, commands = Queue(), Queue()
 music_proc.set_event_queues(commands, results)
@@ -57,7 +66,7 @@ sleep(1)
 commands.put(AudioStreamEvent(head=AudioStreamEventType.AUDIO_PULSE))
 sleep(1)
 commands.put(AudioStreamEvent(head=AudioStreamEventType.AUDIO_RESUME))
-# commands.put(StreamEvent(head=StreamEventType.STREAM_CLOSE))
+commands.put(StreamEvent(head=StreamEventType.STREAM_CLOSE))
 
 vib_proc.join()
 print('vibration proc joined!')
