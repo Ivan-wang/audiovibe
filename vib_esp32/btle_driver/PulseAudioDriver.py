@@ -18,6 +18,7 @@ from vib_music import StreamEvent, StreamEventType
 # Know Issue: cannot control volume from python
 PA_STREAM_PLAYBACK = 1
 PA_SAMPLE_S16LE = 3
+PA_SAMPLE_S16BE = 4
 BUFFSIZE = 1024
 
 class struct_pa_sample_spec(ctypes.Structure):

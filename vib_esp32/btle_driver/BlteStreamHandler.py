@@ -29,20 +29,22 @@ class BlteStreamHandler(StreamHandler):
                 raise StreamEndException('received empty frame')
         else:
             if self.tell() == self.num_frame():
+                print(f'BTLE handler ends {self.tell()} == {self.num_frame()}')
+                print(f'self.loaded_frames {self.loaded_frames}')
                 raise StreamEndException('no more frames')
             
             if self.loaded_frames == self.tell():
                 # read whole block, and reset the stream data pointer
-                block = self.stream_data.readframe(self.block_size)
-                self.stream_data.setpos(self.loaded_frames)
-                self.loaded_frames += self.block_size
+                block = self.stream_data.readframe(self.block_size*2)
+                self.stream_data.setpos(self.tell()-self.block_size*2)
+                self.loaded_frames += self.block_size*2
                 if len(block) != 0:
                     self.stream_driver.on_next_frame({'frame': block})
-            elif self.loaded_frames == self.tell() + self.block_size // 2:
+            elif self.loaded_frames == self.tell() + self.block_size:
                 # read half block, and reset the stream data pointer
-                block = self.stream_data.readframe(self.block_size // 2)
-                self.stream_data.setpos(self.loaded_frames)
-                self.loaded_frames += self.block_size // 2
+                block = self.stream_data.readframe(self.block_size)
+                self.stream_data.setpos(self.tell()-self.block_size)
+                self.loaded_frames += self.block_size
                 if len(block) != 0:
                     self.stream_driver.on_next_frame({'frame': block})
             else:
