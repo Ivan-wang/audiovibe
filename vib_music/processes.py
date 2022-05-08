@@ -95,6 +95,7 @@ class AudioProcess(StreamProcess):
         self.received_msgs = []
         #
         self.auto_init = False
+        self.auto_init_info = {}
         self.auto_exit = True
     
     def enable_GUI_mode(self) -> None:
@@ -103,8 +104,9 @@ class AudioProcess(StreamProcess):
         self.enable_manual_exit()
         self.enable_frame_ack()
     
-    def enable_auto_init(self) -> None:
+    def enable_auto_init(self, what:Optional[Dict]=None) -> None:
         self.auto_init = True
+        self.auto_init_info = what
 
     def enable_manual_exit(self) -> None:
         self.auto_exit = False
@@ -162,8 +164,8 @@ class AudioProcess(StreamProcess):
     
     def run(self):
         if self.auto_init:
-            self.broadcast_event(StreamEvent(head=StreamEventType.STREAM_INIT))
-            msg = self.stream_handler.on_init()
+            self.broadcast_event(StreamEvent(head=StreamEventType.STREAM_INIT, what=self.auto_init_info))
+            msg = self.stream_handler.on_init(self.auto_init_info) # init audio
             self.send_conn.put(msg)
 
         while True:
