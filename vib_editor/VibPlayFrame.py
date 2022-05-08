@@ -1,7 +1,7 @@
 from tkinter import *
 import tkinter.ttk as ttk
 
-from backends import VibPlayBackend
+from .backends import VibPlayBackend
 
 class VibPlayFrame(LabelFrame):
     def __init__(self, master=None, processes=[], **args):
