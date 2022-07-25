@@ -511,3 +511,50 @@ def band_select(fm:FeatureManager, duty=0.5, vib_extremefreq = [50,500], vib_bia
     final_vibration_bins[final_vibration_bins<=vib_bias+threshold_val_bin] = 0    # set zeros below threshold
         
     return final_vibration_bins
+
+
+@FeatureManager.vibration_mode(over_ride=False)
+def rmse_freqmodul(fm:FeatureManager, duty=0.5, vib_extremefreq = [50,500], vib_bias=80, vib_maxbin=255, 
+                carrier_freq=100, vib_frame_len=24, **kwargs) -> np.ndarray:
+    """
+    use frequency modulation to map the wave rms to vibration
+    :return: 2d vibration sequence (frame_num, vib_frame_len)
+    """
+    rmse = fm.feature_data('rmse')
+    sr = fm.meta["sr"]
+    len_hop = fm.meta["len_hop"]
+    feat_time = len(rmse)
+    global_scale = kwargs.get("global_scale", 1.0)
+    assert global_scale>0 and global_scale<=1.0, "global scale must be in (0,1]"
+    rmse_anchor = (max(rmse)+min(rmse))/2.0    # compute the anchor point for rmse
+    freq_deviation = np.max(np.abs(vib_extremefreq-carrier_freq))
+    rmse_max = max(rmse)
+    
+    # generate vibration
+    final_vibration = np.zeros((feat_time, vib_frame_len))
+    for t in range(feat_time):    # per mel bin
+        curr_relative_rmse = rmse[t] - rmse_anchor
+        # get vib freq: vib_freq = carrier_freq + freq_deviation / rmse_max * curr_relative_rmse
+        curr_vib_freq = carrier_freq + freq_deviation / rmse_max * curr_relative_rmse
+        # cut vib freq to extreme freq
+        curr_vib_freq = max(curr_vib_freq, min(vib_extremefreq))
+        curr_vib_freq = min(curr_vib_freq, max(vib_extremefreq))
+        curr_vib_wav = periodic_rectangle_generator([1,0.], duty=duty, freq=curr_vib_freq, frame_num=1,
+                                                  frame_time=len_hop/float(sr), frame_len=vib_frame_len)
+        final_vibration[t, :] = curr_vib_wav[0]
+
+    assert not np.all(np.nonzero(final_vibration)), "final_vibration is not assigned!"
+    
+    # post-process
+    final_max = np.max(final_vibration)
+    final_min = np.min(final_vibration)
+    bin_num = vib_maxbin    # determine how many bins needed
+    bins = np.linspace(0., 1., bin_num, endpoint=True)    # linear bins for digitizing
+    # mu_bins = [x*(log(1+bin_num*x)/log(1+bin_num)) for x in bins]    # mu-law bins
+    # final normalization
+    final_vibration_norm = (final_vibration - final_min) / (final_max - final_min)
+    # digitize
+    final_vibration_bins = np.digitize(final_vibration_norm, bins)
+    final_vibration_bins = final_vibration_bins.astype(np.uint8)
+        
+    return final_vibration_bins
