@@ -527,7 +527,7 @@ def rmse_freqmodul(fm:FeatureManager, duty=0.5, vib_extremefreq = [50,500], vib_
     global_scale = kwargs.get("global_scale", 1.0)
     assert global_scale>0 and global_scale<=1.0, "global scale must be in (0,1]"
     rmse_anchor = (max(rmse)+min(rmse))/2.0    # compute the anchor point for rmse
-    freq_deviation = np.max(np.abs(vib_extremefreq-carrier_freq))
+    freq_deviation = np.max(np.abs(np.array(vib_extremefreq)-carrier_freq))
     rmse_max = max(rmse)
     
     # generate vibration
@@ -543,7 +543,7 @@ def rmse_freqmodul(fm:FeatureManager, duty=0.5, vib_extremefreq = [50,500], vib_
                                                   frame_time=len_hop/float(sr), frame_len=vib_frame_len)
         final_vibration[t, :] = curr_vib_wav[0]
 
-    assert not np.all(np.nonzero(final_vibration)), "final_vibration is not assigned!"
+    assert not np.sum(final_vibration)==0, "final_vibration is not assigned!"
     
     # post-process
     final_max = np.max(final_vibration)
