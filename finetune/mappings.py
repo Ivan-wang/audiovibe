@@ -526,19 +526,32 @@ def rmse_freqmodul(fm:FeatureManager, duty=0.5, vib_extremefreq = [50,500], vib_
     feat_time = len(rmse)
     global_scale = kwargs.get("global_scale", 1.0)
     assert global_scale>0 and global_scale<=1.0, "global scale must be in (0,1]"
-    rmse_anchor = (max(rmse)+min(rmse))/2.0    # compute the anchor point for rmse
+    # rmse_anchor = (max(rmse)+min(rmse))/2.0    # compute the anchor point for rmse
+    rmse_anchor = np.mean(rmse)    # compute the anchor point for rmse
     freq_deviation = np.max(np.abs(np.array(vib_extremefreq)-carrier_freq))
     rmse_max = max(rmse)
+    rmse_min = min(rmse)
     
     # generate vibration
     final_vibration = np.zeros((feat_time, vib_frame_len))
     for t in range(feat_time):    # per mel bin
-        curr_relative_rmse = rmse[t] - rmse_anchor
-        # get vib freq: vib_freq = carrier_freq + freq_deviation / rmse_max * curr_relative_rmse
-        curr_vib_freq = carrier_freq + freq_deviation / rmse_max * curr_relative_rmse
-        # cut vib freq to extreme freq
-        curr_vib_freq = max(curr_vib_freq, min(vib_extremefreq))
-        curr_vib_freq = min(curr_vib_freq, max(vib_extremefreq))
+        # TODO decide freq-determination strategy
+        # # linear freq modulation
+        # curr_relative_rmse = rmse[t] - rmse_anchor
+        # # get vib freq: vib_freq = carrier_freq + freq_deviation / rmse_max * curr_relative_rmse
+        # curr_vib_freq = carrier_freq + freq_deviation / rmse_max * curr_relative_rmse
+        # # cut vib freq to extreme freq
+        # curr_vib_freq = max(curr_vib_freq, min(vib_extremefreq))
+        # curr_vib_freq = min(curr_vib_freq, max(vib_extremefreq))
+        # # segmental freq modulation
+        if rmse[t] > rmse_anchor:
+            pos_vib_factor = (max(vib_extremefreq)-carrier_freq)/(rmse_max-rmse_anchor) 
+            curr_vib_freq = carrier_freq + pos_vib_factor * rmse[t]
+        elif rmse[t] < rmse_anchor:
+            neg_vib_factor = (min(vib_extremefreq)-carrier_freq) / log(rmse_min/rmse_anchor)
+            curr_vib_freq = carrier_freq + neg_vib_factor * log(rmse[t]/rmse_anchor)
+        else:
+            curr_vib_freq = carrier_freq
         curr_vib_wav = periodic_rectangle_generator([1,0.], duty=duty, freq=curr_vib_freq, frame_num=1,
                                                   frame_time=len_hop/float(sr), frame_len=vib_frame_len)
         final_vibration[t, :] = curr_vib_wav[0]
