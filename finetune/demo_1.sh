@@ -1,10 +1,10 @@
 curr_path=`pwd`
 
-echo "python demo.py --audio ${curr_path}/../audio/m1_22k.wav --task run --vibmode band_split --audmode melspec \
---config configs/band_split_demo.py"
+echo "python belinger.py --audio ${curr_path}/../audio/m1_22k.wav --task run --vibmode rmse_freqmodul --audmode rmse \
+--config configs/rmse_freqmodul_demo.py"
 
-python demo.py --audio "${curr_path}/../audio/m1_22k.wav" --task run --vibmode band_split --audmode melspec \
---config configs/band_split_demo.py
+python belinger.py --audio "${curr_path}/../audio/m1_22k.wav" --task run --vibmode rmse_freqmodul --audmode rmse \
+--config configs/rmse_freqmodul_demo.py
 
 #cd finetune \
 #    && python3 rmse.py --audio ../audio/test_beat_short_1.wav --task build --plot \
