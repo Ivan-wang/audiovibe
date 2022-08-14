@@ -6,6 +6,7 @@
 # Node artifact files
 node_modules/
 dist/
+**/build/*
 
 # Compiled Java class files
 *.class
@@ -18,6 +19,7 @@ dist/
 
 # Package files
 *.jar
+*.obj
 
 # Maven
 target/
@@ -57,6 +59,5 @@ configs/*
 **/*.jpg
 **/*.png
 **/*.bin
-**/*.txt
 **/*.o
 **/*.d
