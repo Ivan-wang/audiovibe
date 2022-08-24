@@ -318,9 +318,11 @@ def band_select(fm:FeatureManager, duty=0.5, vib_extremefreq = [50,500], vib_bia
 
 
     # harmonic-percusive-residual separation
+    start_t = time.time()
     power_spec_h, power_spec_p, power_spec_r, M_h, M_p, M_r = hrps(linspec, sr, len_harmonic_filt=hprs_harmonic_filt_len,
                                                                    len_percusive_filt=hprs_percusive_filt_len, beta=hprs_beta,
                                                                    len_window=stft_len_window, len_hop=len_hop)
+    print("hrps elapses %f" % (time.time()-start_t))
 
     # ### debug plot ###
     # D = librosa.amplitude_to_db(power_spec, ref=np.max)
@@ -351,8 +353,12 @@ def band_select(fm:FeatureManager, duty=0.5, vib_extremefreq = [50,500], vib_bia
     # ######
 
     # stft_mask = extract_peaks(linspec, peak_movlen=19, peak_relativeth=peak_relativeth, peak_globalth=peak_globalth)
+    start_t = time.time()
     melspec_mask = extract_peaks(melspec, peak_movlen=mel_peak_movlen, peak_relativeth=peak_relativeth, peak_globalth=peak_globalth)
+    print("melspec peak extraction elapses %f" % (time.time()-start_t))
+    start_t = time.time()
     harm_peaks = extract_peaks(power_spec_h, peak_movlen=stft_peak_movlen, peak_relativeth=peak_relativeth, peak_globalth=peak_globalth)
+    print("linspec peak extraction elapses %f" % (time.time()-start_t))
     # melspec_mask_no_harms, melspec_mask = remove_harmonics(melspec_mask, melspec, mel_freq)
     # stft_mask_no_harms, stft_mask = remove_harmonics(stft_mask, linspec, stft_freq)
     spec_mask = melspec_mask
@@ -375,6 +381,7 @@ def band_select(fm:FeatureManager, duty=0.5, vib_extremefreq = [50,500], vib_bia
 
     # get top peaks
     spec_masked = melspec * spec_mask
+    remove_t = 0    # harmonic removal timer
     if peak_limit<=0:
         # automatically determin peak limit
         # TODO more sophisticated way to determin peak limits
@@ -394,7 +401,9 @@ def band_select(fm:FeatureManager, duty=0.5, vib_extremefreq = [50,500], vib_bia
             elif h_ratio[ti]>2*p_ratio[ti] and h_ratio[ti]>2*r_ratio[ti]:
                 curr_spec_mask = np.expand_dims(harm_peaks[:, ti], axis=1)
                 curr_spec = np.expand_dims(linspec[:, ti], axis=1)
+                start_t = time.time()
                 spec_mask_no_harms, curr_spec_mask = remove_harmonics(curr_spec_mask, curr_spec, stft_freq)
+                remove_t = max(time.time() - start_t, remove_t)
                 # ### debug ###
                 # plt.figure()
                 # plt.plot(curr_spec_mask)
@@ -418,6 +427,8 @@ def band_select(fm:FeatureManager, duty=0.5, vib_extremefreq = [50,500], vib_bia
         np.put_along_axis(peak_mask, peak_inds, 1, axis=0)    # set 1 to peak mask where top peaks are seleted
     # incorporate peak's mask
     spec_masked = spec_masked * peak_mask
+    
+    print("harmonic removal at most elapses %f" % (remove_t))
 
     # ### debug ###
     # plt.figure()
@@ -466,7 +477,7 @@ def band_select(fm:FeatureManager, duty=0.5, vib_extremefreq = [50,500], vib_bia
     #     print("peak limit is %d" % (peak_limit))
     #     peak_limit += 1    # to add more variations, we add 1 more peak for auxilary
     # print("elapse %f secs" % (time.time()-start_time))
-    
+    exit()
     # generate vibration
     final_vibration = 0
     for f in range(feat_dim):    # per mel bin

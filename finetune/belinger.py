@@ -1,4 +1,4 @@
-# version: 清歌v0.1
+# version: 清歌v0.3.soc
 # Fei Tao
 # taofei@feathervibe.com
 import numpy as np
@@ -41,15 +41,19 @@ def main():
 
 
 ### debug part ###
-# curr_path = os.getcwd()
-# sys.argv = ["demo.py", "--audio", str(os.path.join(curr_path,"../audio/m1_22k.wav")), "--task", "run",
+curr_path = os.getcwd()
+
+# freqeuncy modulation
+# sys.argv = ["belinger.py", "--audio", str(os.path.join(curr_path,"../audio/m1_22k.wav")), "--task", "run",
 #             "--vibmode", "rmse_freqmodul", "--audmode", "rmse", "--config", "configs/rmse_freqmodul_demo.py"]
-# sys.argv = ["belinger.py", "--audio", str(os.path.join(curr_path,"../audio/kick_22k.wav")), "--task", "run",
-#             "--vibmode", "band_select", "--audmode", "melspec,stft", "--config", "configs/band_select_demo.py"]
-# print("DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!")
+
+# qingge 
+sys.argv = ["belinger.py", "--audio", str(os.path.join(curr_path,"../audio/kick_22k.wav")), "--task", "run",
+            "--vibmode", "band_select", "--audmode", "melspec,stft", "--config", "configs/band_select_demo.py"]
+print("DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!")
 ######
 
 print("==================================")
-print("    萦歌项目   系统：临时 v-0.1      ")
+print("    萦歌项目   系统：清歌 v0.3.soc   ")
 print("==================================")
 main()
