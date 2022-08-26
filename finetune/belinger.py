@@ -48,8 +48,8 @@ curr_path = os.getcwd()
 #             "--vibmode", "rmse_freqmodul", "--audmode", "rmse", "--config", "configs/rmse_freqmodul_demo.py"]
 
 # qingge 
-sys.argv = ["belinger.py", "--audio", str(os.path.join(curr_path,"../audio/kick_22k.wav")), "--task", "run",
-            "--vibmode", "band_select", "--audmode", "melspec,stft", "--config", "configs/band_select_demo.py"]
+sys.argv = ["belinger.py", "--audio", str(os.path.join(curr_path,"../audio/m1_cut_22k.wav")), "--task", "run",
+            "--vibmode", "band_select_fast", "--audmode", "stft", "--config", "configs/band_select_fast_demo.py"]
 print("DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!DEBUG!")
 ######
 

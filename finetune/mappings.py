@@ -477,7 +477,7 @@ def band_select(fm:FeatureManager, duty=0.5, vib_extremefreq = [50,500], vib_bia
     #     print("peak limit is %d" % (peak_limit))
     #     peak_limit += 1    # to add more variations, we add 1 more peak for auxilary
     # print("elapse %f secs" % (time.time()-start_time))
-    exit()
+
     # generate vibration
     final_vibration = 0
     for f in range(feat_dim):    # per mel bin
@@ -581,4 +581,205 @@ def rmse_freqmodul(fm:FeatureManager, duty=0.5, vib_extremefreq = [50,500], vib_
     final_vibration_bins = np.digitize(final_vibration_norm, bins)
     final_vibration_bins = final_vibration_bins.astype(np.uint8)
         
+    return final_vibration_bins
+
+
+@FeatureManager.vibration_mode(over_ride=False)
+def band_select_fast(fm:FeatureManager, duty=0.5, vib_extremefreq = [50,500], vib_bias=80, vib_maxbin=255, 
+                peak_limit=-1, vib_frame_len=24, **kwargs) -> np.ndarray:
+    """
+    select frequency band at each time point for mapping to vibration, where vibration frequency is determined by 
+    scaling the corresponding audio frequency
+    :return: 2d vibration sequence (frame_num, vib_frame_len)
+    """
+    start_t = time.time()
+    stft = fm.feature_data('stft')
+    linspec = np.abs(stft)**2.0    # power linear spectrogram
+    sr = fm.meta["sr"]
+    len_hop = fm.meta["len_hop"]
+    feat_dim, feat_time = linspec.shape
+    stft_freq = fm.feature_data('stft', prop='stft_freq')
+    stft_len_window = fm.feature_data('stft', prop='len_window')
+    global_scale = kwargs.get("global_scale", 1.0)
+    hprs_harmonic_filt_len = kwargs.get("hprs_harmonic_filt_len", 0.1)
+    hprs_percusive_filt_len = kwargs.get("hprs_percusive_filt_len", 400 * len_hop / 256)    # TODO this is determined by experience
+    hprs_beta = kwargs.get("hprs_beta", 4.0)
+    peak_globalth = kwargs.get("peak_globalth", 20)
+    peak_relativeth = kwargs.get("peak_relativeth", 4)
+    stft_peak_movlen = int(kwargs.get("stft_peak_movlen", 400//np.abs(stft_freq[2]-stft_freq[1])))    # TODO this is determined by experience
+    mel_peak_movlen = int(kwargs.get("mel_peak_movlen", stft_peak_movlen//4))
+    assert mel_peak_movlen>1 and stft_peak_movlen>1, "peak moving average filter must have length larger than 1"
+    if stft_peak_movlen%2==0: stft_peak_movlen += 1
+    if mel_peak_movlen%2==0: mel_peak_movlen += 1
+    assert global_scale>0 and global_scale<=1.0, "global scale must be in (0,1]"
+
+
+    # get relationship between vib-freq and audio-freq
+    # we assume they have linear relationship: aud_freq = a * vib_freq + b
+    # TODO we need more sophisticated way to model the relationship
+    a = float((min(stft_freq)-max(stft_freq))) / (min(vib_extremefreq)-max(vib_extremefreq))
+    b = max(stft_freq) - a * max(vib_extremefreq)
+
+
+    # harmonic-percusive-residual separation
+    # start_t = time.time()
+    power_spec_h, power_spec_p, power_spec_r, M_h, M_p, M_r = hrps(linspec, sr, len_harmonic_filt=hprs_harmonic_filt_len,
+                                                                   len_percusive_filt=hprs_percusive_filt_len, beta=hprs_beta,
+                                                                   len_window=stft_len_window, len_hop=len_hop)
+    # print("hrps elapses %f" % (time.time()-start_t))
+
+    # ### debug plot ###
+    # D = librosa.amplitude_to_db(linspec, ref=np.max)
+    # D_h = librosa.amplitude_to_db(power_spec_h, ref=np.max)
+    # D_p = librosa.amplitude_to_db(power_spec_p, ref=np.max)
+    # plt.figure()
+    # librosa.display.specshow(D, x_axis='frames', y_axis='linear')
+    # plt.colorbar()
+    # plt.savefig("../plots/spec_original_var_linspec.png")
+    # plt.close()
+    # plt.figure()
+    # librosa.display.specshow(D_h, x_axis='frames', y_axis='linear')
+    # plt.colorbar()
+    # plt.savefig("../plots/spec_harmonics_var_D_h.png")
+    # plt.close()
+    # plt.figure()
+    # librosa.display.specshow(D_p, x_axis='frames', y_axis='linear')
+    # plt.colorbar()
+    # plt.savefig("../plots/spec_percussion_var_D_p.png")
+    # plt.close()
+    # ######
+
+    # stft_mask = extract_peaks(linspec, peak_movlen=19, peak_relativeth=peak_relativeth, peak_globalth=peak_globalth)
+    # start_t = time.time()
+    # melspec_mask = extract_peaks(melspec, peak_movlen=mel_peak_movlen, peak_relativeth=peak_relativeth, peak_globalth=peak_globalth)
+    # print("melspec peak extraction elapses %f" % (time.time()-start_t))
+    # start_t = time.time()
+    harm_peaks = extract_peaks(power_spec_h, peak_movlen=stft_peak_movlen, peak_relativeth=peak_relativeth, peak_globalth=peak_globalth)
+    # print("linspec peak extraction elapses %f" % (time.time()-start_t))
+    # melspec_mask_no_harms, melspec_mask = remove_harmonics(melspec_mask, melspec, mel_freq)
+    # stft_mask_no_harms, stft_mask = remove_harmonics(stft_mask, linspec, stft_freq)
+    spec_mask = harm_peaks
+
+    # ### debug ###
+    # spec_db = librosa.power_to_db(spec_mask, ref=np.max)
+    # harm_db = librosa.power_to_db(harm_peaks, ref=np.max)
+    # # np.save("../plots/masks_spec_var_spec_mask.npy", spec_db, allow_pickle=True)
+    # # np.save("../plots/masks_harm_var_harm_peaks.npy", harm_db, allow_pickle=True)
+    # plt.figure()
+    # librosa.display.specshow(spec_db, x_axis='frames', y_axis='mel')
+    # plt.savefig("../plots/masks_spec_var_spec_mask.png")
+    # plt.close()
+    # plt.figure()
+    # librosa.display.specshow(harm_db, x_axis='frames', y_axis='linear')
+    # plt.savefig("../plots/masks_harm_var_harm_peaks.png")
+    # plt.close()
+    # # sys.exit()
+    # ######
+
+    # get top peaks
+    spec_masked = linspec * harm_peaks
+    # remove_t = 0    # harmonic removal timer
+    if peak_limit<=0:
+        # automatically determin peak limit
+        # TODO more sophisticated way to determin peak limits
+        peak_mask = np.zeros_like(spec_mask)
+        power_spec_sum = np.sum(linspec, axis=0)
+        power_spec_h_sum = np.sum(power_spec_h, axis=0)
+        power_spec_p_sum = np.sum(power_spec_p, axis=0)
+        power_spec_r_sum = np.sum(power_spec_r, axis=0)
+        h_ratio = power_spec_h_sum / power_spec_sum
+        p_ratio = power_spec_p_sum / power_spec_sum
+        r_ratio = power_spec_r_sum / power_spec_sum
+        for ti in range(feat_time):
+            if p_ratio[ti]>=2*r_ratio[ti] and p_ratio[ti]>2*h_ratio[ti]:
+                curr_peak_limit = 3
+            elif r_ratio[ti]>2*h_ratio[ti]  and r_ratio[ti]>2*p_ratio[ti]:
+                curr_peak_limit = 2
+            elif h_ratio[ti]>2*p_ratio[ti] and h_ratio[ti]>2*r_ratio[ti]:
+                curr_spec_mask = np.expand_dims(harm_peaks[:, ti], axis=1)
+                curr_spec = np.expand_dims(linspec[:, ti], axis=1)
+                # start_t = time.time()
+                spec_mask_no_harms, curr_spec_mask = remove_harmonics(curr_spec_mask, curr_spec, stft_freq)
+                # remove_t = max(time.time() - start_t, remove_t)
+                # ### debug ###
+                # plt.figure()
+                # plt.plot(curr_spec_mask)
+                # plt.savefig("../plots/curr_spec_mask_"+str(ti)+".png")
+                # plt.close()
+                # plt.figure()
+                # plt.plot(spec_mask_no_harms)
+                # plt.savefig("../plots/curr_spec_no_harms_"+str(ti)+".png")
+                # plt.close()
+                # ######
+                curr_peak_limit = int(min(PEAK_LIMIT, np.sum(spec_mask_no_harms)+1))
+            else:
+                curr_peak_limit = PEAK_LIMIT
+            peak_inds = spec_masked[:,ti].argsort()[::-1][:curr_peak_limit]
+            peak_mask[peak_inds, ti] = 1
+    else:
+        # given pre-set peak_limit
+        spec_masked = librosa.power_to_db(spec_masked)
+        peak_inds = np.argpartition(spec_masked, -peak_limit, axis=0)[-peak_limit:, :]    # top peaks inds at each time point
+        peak_mask = np.zeros_like(spec_mask)
+        np.put_along_axis(peak_mask, peak_inds, 1, axis=0)    # set 1 to peak mask where top peaks are seleted
+    # incorporate peak's mask
+    spec_masked = spec_masked * peak_mask
+    
+    # print("harmonic removal at most elapses %f" % (remove_t))
+
+    # ### debug ###
+    # plt.figure()
+    # spec_db = librosa.power_to_db(spec_masked, ref=np.max)
+    # librosa.display.specshow(spec_db, x_axis='frames', y_axis='mel')
+    # plt.colorbar()
+    # plt.savefig("../plots/spec_masked_final_var_spec_masked.png")
+    # plt.close()
+    # sys.exit()
+    # ######
+
+    # generate vibration
+    final_vibration = 0
+    for f in range(feat_dim):    # per mel bin
+        # get vib freq: vib_freq = (aud_freq - b) / a
+        curr_aud_freq = stft_freq[f]
+        curr_vib_freq = round((curr_aud_freq-b)/a)    # we round it for wave generation
+        curr_vib_wav = periodic_rectangle_generator([1,0.], duty=duty, freq=curr_vib_freq, frame_num=feat_time,
+                                                  frame_time=len_hop/float(sr), frame_len=vib_frame_len)
+        # get vib magnitude
+        curr_melspec = spec_masked[f, :]
+        curr_vib_mag = np.expand_dims(curr_melspec, axis=1)
+        curr_vib_mag = np.tile(curr_vib_mag, (1, vib_frame_len))    # tile to form a matrix (frame_num, frame_len)
+        # generate curr vib
+        curr_vib = curr_vib_wav * curr_vib_mag
+        # accumulate
+        if f == 0:
+            final_vibration = curr_vib
+        else:
+            final_vibration += curr_vib
+
+    assert not isinstance(final_vibration,int), "final_vibration is not assigned!"
+    
+    # post-process
+    final_vibration = final_vibration / feat_dim    # average accumulated signal
+    final_max = np.max(final_vibration)
+    final_min = np.min(final_vibration)
+    bin_num = vib_maxbin-vib_bias
+    bins = np.linspace(0., 1., bin_num, endpoint=True)    # linear bins for digitizing
+    mu_bins = [x*(log(1+bin_num*x)/log(1+bin_num)) for x in bins]    # mu-law bins
+    # final normalization
+    final_vibration_norm = (final_vibration - final_min) / (final_max - final_min)
+    # digitize
+    final_vibration_bins = np.digitize(final_vibration_norm, mu_bins)
+    final_vibration_bins = final_vibration_bins.astype(np.uint8)
+    # add offset
+    final_vibration_bins += vib_bias
+    # set zeros (we have to do this for body feeling)
+    global_min = np.min(spec_masked[np.nonzero(spec_masked)])    # find global minimum except 0
+    threshold_val = (PEAK_LIMIT//2) * global_min    # we set zeroing condition: if less than half of {peak_limit} bins have {global_min} values
+    threshold_val_norm = (threshold_val - final_min) / (final_max - final_min)
+    threshold_val_bin = np.digitize(threshold_val_norm, mu_bins)
+    final_vibration_bins[final_vibration_bins<=vib_bias+threshold_val_bin] = 0    # set zeros below threshold
+    
+    print("mapping elapses: %f" % (time.time()-start_t))
+    
     return final_vibration_bins

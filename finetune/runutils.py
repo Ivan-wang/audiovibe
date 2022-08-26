@@ -113,8 +113,10 @@ from vib_music import launch_plotting
 
 def _main(opt, mode, driver, librosa_cfg, plot_cfg, vib_kwargs_dict):
     if opt.task == 'run' or opt.task == 'build':
+        start_t = time.time()
         ctx = FeatureExtractionManager.from_config(librosa_cfg)
         ctx.save_features(root=opt.data_dir)
+        print("feature extraction elapses: %f" % (time.time()-start_t))
 
     feature_folder = os.path.basename(opt.audio).split('.')[0]
     feature_folder = os.path.join(opt.data_dir, feature_folder)
