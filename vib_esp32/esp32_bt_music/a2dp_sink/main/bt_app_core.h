@@ -87,4 +87,10 @@ void bt_i2s_task_shut_down(void);
  */
 size_t write_ringbuf(const uint8_t *data, size_t size);
 
+/**
+ * @brief  write data to vibration ringbuffer
+ * 
+ */
+size_t write_ringbuf_vib(const uint8_t *data, size_t size);
+
 #endif /* __BT_APP_CORE_H__ */

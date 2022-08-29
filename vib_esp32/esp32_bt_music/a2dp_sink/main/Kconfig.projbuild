@@ -39,4 +39,11 @@ menu "A2DP Example Configuration"
         help
             GPIO number to use for I2S Data Driver.
 
+    config EXAMPLE_I2S_BUILTIN_BIT
+        int "BITS USED FOR BUILTIN DAC"
+        default 16
+    
+    config EXAMPLE_I2S_BUILTIN_SAMPLE_RATE
+        int "SAMPLE RATE USED FOR BUILTIN DAC"
+        default 5000
 endmenu

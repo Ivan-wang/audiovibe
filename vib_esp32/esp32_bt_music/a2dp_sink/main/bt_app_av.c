@@ -174,9 +174,10 @@ void bt_i2s_driver_install(void)
         .mclk_multiple = I2S_MCLK_MULTIPLE_256
     };
 
-    /* enable I2S */
-    i2s_driver_install(0, &i2s_config, 0, NULL);
-#ifdef CONFIG_EXAMPLE_A2DP_SINK_OUTPUT_INTERNAL_DAC
+    /* enable I2S, standard I2S use channel 1, reserve channel 0 for build-in DAC*/
+    i2s_driver_install(1, &i2s_config, 0, NULL);
+// #ifdef CONFIG_EXAMPLE_A2DP_SINK_OUTPUT_INTERNAL_DAC
+#if 0
     i2s_set_dac_mode(I2S_DAC_CHANNEL_BOTH_EN);
     i2s_set_pin(0, NULL);
 #else
@@ -186,13 +187,32 @@ void bt_i2s_driver_install(void)
         .data_out_num = CONFIG_EXAMPLE_I2S_DATA_PIN,
         .data_in_num = -1                                   /* not used */
     };
-    i2s_set_pin(0, &pin_config);
+    i2s_set_pin(1, &pin_config);
 #endif
+
+    /* use internal DAC for vibration control */
+    i2s_config_t i2s_builtin_config = {
+        .mode = I2S_MODE_MASTER | I2S_MODE_TX | I2S_MODE_DAC_BUILT_IN,
+        .sample_rate =  CONFIG_EXAMPLE_I2S_BUILTIN_SAMPLE_RATE,
+        .bits_per_sample = CONFIG_EXAMPLE_I2S_BUILTIN_BIT,
+        .communication_format = I2S_COMM_FORMAT_STAND_MSB,
+        .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT, // TODO: use single channel?
+        .intr_alloc_flags = 0,
+        .dma_buf_count = 2,
+        .dma_buf_len = 1024,
+        .use_apll = 1,
+     };
+
+     /*install builtin ADC i2s driver, use ADC_UNIT_1 and CHANNEL_0*/
+     i2s_driver_install(0, &i2s_builtin_config, 0, NULL);
+     i2s_set_dac_mode(I2S_DAC_CHANNEL_BOTH_EN);
+     i2s_set_adc_mode(ADC_UNIT_1, ADC1_CHANNEL_0);
 }
 
 void bt_i2s_driver_uninstall(void)
 {
-    i2s_driver_uninstall(0);
+    i2s_driver_uninstall(1); // external DAC 
+    i2s_driver_uninstall(0); // builtin DAC 
 }
 
 static void volume_set_by_controller(uint8_t volume)
@@ -449,6 +469,7 @@ void bt_app_a2d_cb(esp_a2d_cb_event_t event, esp_a2d_cb_param_t *param)
 void bt_app_a2d_data_cb(const uint8_t *data, uint32_t len)
 {
     write_ringbuf(data, len);
+    write_ringbuf_vib(data, len);
 
     /* log the number every 100 packets */
     if (++s_pkt_cnt % 100 == 0) {
