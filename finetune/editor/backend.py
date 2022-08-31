@@ -21,8 +21,8 @@ from vib_music.utils import show_proc_bar
 from vib_music.misc import init_vibration_extraction_config
 from exp_utils import periodic_rectangle_generator, sine_wave_generator, rectangle_generator
 
-AUDIO_SR = 44100
-AUDIO_FRAME_LEN = 512
+AUDIO_SR = 22050
+AUDIO_FRAME_LEN = 256
 FRAME_TIME = AUDIO_FRAME_LEN / AUDIO_SR
 FRAME_LEN = 24
 VIB_TUNE_MODE = 'vibration_tune_mode'

@@ -2,7 +2,7 @@ import yaml
 from collections import OrderedDict
 
 VIB_FRAME_LEN = 24
-BASE_HOP_LEN = 512
+BASE_HOP_LEN = 128
 
 def init_driver_config(save=None):
     config = OrderedDict()

@@ -21,5 +21,5 @@ hprs_harmonic_filt_len = 0.1    # HPRS harmonic direction filter length (in sec)
 hprs_percusive_filt_len = 400    # HPRS percusive direction filter length (in hz)
 hprs_beta = 4.0    # HPRS harmonic and percusive threshold factor
 # dsp
-len_window = 256    # acoustic feature window length
-len_hop = 128    # acoustic feature hop length
+len_window = 512    # acoustic feature window length
+len_hop = 256    # acoustic feature hop length
