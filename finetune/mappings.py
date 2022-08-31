@@ -597,20 +597,24 @@ def band_select_fast(fm:FeatureManager, duty=0.5, vib_extremefreq = [50,500], vi
     linspec = np.abs(stft)**2.0    # power linear spectrogram
     sr = fm.meta["sr"]
     len_hop = fm.meta["len_hop"]
-    feat_dim, feat_time = linspec.shape
     stft_freq = fm.feature_data('stft', prop='stft_freq')
+    # select bins lower than 8k hz
+    num_8k_bins = np.sum(stft_freq<=8000)
+    linspec = linspec[:num_8k_bins,:]
+    stft_freq = stft_freq[:num_8k_bins]
     stft_len_window = fm.feature_data('stft', prop='len_window')
-    global_scale = kwargs.get("global_scale", 1.0)
+    feat_dim, feat_time = linspec.shape
+    global_scale = kwargs.get("global_scale", 0.05)
     hprs_harmonic_filt_len = kwargs.get("hprs_harmonic_filt_len", 0.1)
-    hprs_percusive_filt_len = kwargs.get("hprs_percusive_filt_len", 400 * len_hop / 256)    # TODO this is determined by experience
+    hprs_percusive_filt_len = kwargs.get("hprs_percusive_filt_len", 400 * stft_len_window / 512)    # TODO this is determined by experience
     hprs_beta = kwargs.get("hprs_beta", 4.0)
     peak_globalth = kwargs.get("peak_globalth", 20)
     peak_relativeth = kwargs.get("peak_relativeth", 4)
     stft_peak_movlen = int(kwargs.get("stft_peak_movlen", 400//np.abs(stft_freq[2]-stft_freq[1])))    # TODO this is determined by experience
-    mel_peak_movlen = int(kwargs.get("mel_peak_movlen", stft_peak_movlen//4))
-    assert mel_peak_movlen>1 and stft_peak_movlen>1, "peak moving average filter must have length larger than 1"
-    if stft_peak_movlen%2==0: stft_peak_movlen += 1
-    if mel_peak_movlen%2==0: mel_peak_movlen += 1
+    # mel_peak_movlen = int(kwargs.get("mel_peak_movlen", stft_peak_movlen//4))
+    # assert mel_peak_movlen>1 and stft_peak_movlen>1, "peak moving average filter must have length larger than 1"
+    # if stft_peak_movlen%2==0: stft_peak_movlen += 1
+    # if mel_peak_movlen%2==0: mel_peak_movlen += 1
     assert global_scale>0 and global_scale<=1.0, "global scale must be in (0,1]"
 
 
