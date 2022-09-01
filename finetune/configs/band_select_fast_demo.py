@@ -6,7 +6,7 @@
 vib_lead_aud = 0    # time shift, how many frames vibration will lead audio (vibration occurs early), range in [-10, 10]
 # vibration
 vib__duty = 0.5    # vibration signal duty ratio, if larger than 1, it represents the number of "1"
-vib__vib_extremefreq = [100,500]    # extreme value of the vibration frequency (highest and lowest frequency)
+vib__vib_extremefreq = [30,200]    # extreme value of the vibration frequency (highest and lowest frequency)
 vib__vib_bias = 80    # zero-feeling offset
 vib__vib_maxbin = 255    # number of bins for digitizing vibration magnitude
 vib__peak_limit = -1    # the limit of peaks selected for vibration generation (at most this many components will be included in final vibration at current time)
@@ -21,5 +21,5 @@ hprs_harmonic_filt_len = 0.1    # HPRS harmonic direction filter length (in sec)
 hprs_percusive_filt_len = 400    # HPRS percusive direction filter length (in hz)
 hprs_beta = 4.0    # HPRS harmonic and percusive threshold factor
 # dsp
-len_window = 512    # acoustic feature window length
-len_hop = 256    # acoustic feature hop length
+len_window = 128    # acoustic feature window length
+len_hop = 64    # acoustic feature hop length

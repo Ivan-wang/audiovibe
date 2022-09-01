@@ -61,6 +61,11 @@ def show_proc_bar(num_frame, sem):
 
 def launch_vibration(audio, feature_dir, mode, driver, vib_kwargs_dict):
     fm = FeatureManager.from_folder(feature_dir, mode)
+    frame_len = fm.frame_len()
+
+    # hard code vib_frame_len to meet hardware requirement
+    vib_kwargs_dict["vib_frame_len"] = int(24 * frame_len/256)
+    assert vib_kwargs_dict["vib_frame_len"] > 1, "[ERROR] vib_frame_len must be larger than 1"
 
     if driver == 'drv2605':
         driver = DR2605Driver(fm.vibration_sequence(**vib_kwargs_dict))
@@ -73,7 +78,6 @@ def launch_vibration(audio, feature_dir, mode, driver, vib_kwargs_dict):
     audio_sem = multiprocessing.Semaphore()
     vib_sem = multiprocessing.Semaphore()
 
-    frame_len = fm.frame_len()
     audio_proc = get_audio_process(audio, frame_len, audio_sem, vib_sem)
     if audio_proc is None:
         print('initial audio process failed. exit...')

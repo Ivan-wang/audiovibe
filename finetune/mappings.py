@@ -598,13 +598,15 @@ def band_select_fast(fm:FeatureManager, duty=0.5, vib_extremefreq = [50,500], vi
     sr = fm.meta["sr"]
     len_hop = fm.meta["len_hop"]
     stft_freq = fm.feature_data('stft', prop='stft_freq')
+    
     # select bins lower than 8k hz
     num_8k_bins = np.sum(stft_freq<=8000)
     linspec = linspec[:num_8k_bins,:]
     stft_freq = stft_freq[:num_8k_bins]
     stft_len_window = fm.feature_data('stft', prop='len_window')
+
     feat_dim, feat_time = linspec.shape
-    global_scale = kwargs.get("global_scale", 0.05)
+    global_scale = kwargs.get("global_scale", 0.01)
     hprs_harmonic_filt_len = kwargs.get("hprs_harmonic_filt_len", 0.1)
     hprs_percusive_filt_len = kwargs.get("hprs_percusive_filt_len", 400 * stft_len_window / 512)    # TODO this is determined by experience
     hprs_beta = kwargs.get("hprs_beta", 4.0)
