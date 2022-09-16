@@ -115,6 +115,14 @@ def _main(opt, mode, driver, librosa_cfg, plot_cfg, vib_kwargs_dict):
     if opt.task == 'run' or opt.task == 'build':
         start_t = time.time()
         ctx = FeatureExtractionManager.from_config(librosa_cfg)
+        
+        # set streaming flag for feature extraction
+        stream_flag = bool(vib_kwargs_dict.get("streaming", False))
+        ctx.streaming = stream_flag
+        # if streaming flag re-set read audio length
+        if stream_flag:
+            ctx.audio_len = float(vib_kwargs_dict.get("audio_len", 0.1)) * ctx.sr
+
         ctx.save_features(root=opt.data_dir)
         print("feature extraction elapses: %f" % (time.time()-start_t))
 

@@ -25,7 +25,7 @@ if AUDIO_RUNTIME_READY:
     import pyaudio
     import wave
 
-def get_audio_process(audio, frame_len, sem, vib_sim=None):
+def get_audio_process(audio, frame_len, sem, vib_sim=None, fm=None):
     if not AUDIO_RUNTIME_READY:
         print('cannot import audio libs.')
         return None
@@ -36,7 +36,7 @@ def get_audio_process(audio, frame_len, sem, vib_sim=None):
         print('cannot open audio file.')
         return None
 
-    return AudioProcess(wf, frame_len, sem, vib_sim)
+    return AudioProcess(wf, frame_len, sem, vib_sim, fm)
 
 from .processes import BoardProcess
 from .drivers import DR2605Driver, AdcDriver, VibrationDriver
@@ -68,9 +68,9 @@ def launch_vibration(audio, feature_dir, mode, driver, vib_kwargs_dict):
     assert vib_kwargs_dict["vib_frame_len"] > 1, "[ERROR] vib_frame_len must be larger than 1"
 
     if driver == 'drv2605':
-        driver = DR2605Driver(fm.vibration_sequence(**vib_kwargs_dict))
+        driver = DR2605Driver(fm.vibration_sequence(**vib_kwargs_dict), wavefile=audio, fm=fm, **vib_kwargs_dict)
     elif driver == 'adc':
-        driver = AdcDriver(fm.vibration_sequence(**vib_kwargs_dict))
+        driver = AdcDriver(fm.vibration_sequence(**vib_kwargs_dict), wavefile=audio, fm=fm, **vib_kwargs_dict)
     else:
         print(f'unknown driver {driver}. exit...')
         return
@@ -78,7 +78,7 @@ def launch_vibration(audio, feature_dir, mode, driver, vib_kwargs_dict):
     audio_sem = multiprocessing.Semaphore()
     vib_sem = multiprocessing.Semaphore()
 
-    audio_proc = get_audio_process(audio, frame_len, audio_sem, vib_sem)
+    audio_proc = get_audio_process(audio, frame_len, audio_sem, vib_sem, fm)
     if audio_proc is None:
         print('initial audio process failed. exit...')
         return

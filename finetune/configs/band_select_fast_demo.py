@@ -12,6 +12,8 @@ vib__vib_maxbin = 255    # number of bins for digitizing vibration magnitude
 vib__peak_limit = -1    # the limit of peaks selected for vibration generation (at most this many components will be included in final vibration at current time)
 vib__vib_frame_len = 24    # vibration signal sample number for each output frame
 vib__global_scale = 1.0    # the global scale for vibration tense
+vib__streaming = True    # flag to use streaming inference
+vib__audio_len = 0.1    # seconds of the read audio length in streaming inference
 # signal analysis
 peak_globalth = 20    # global threshold for peak detection in dB (difference from the max value at current time)
 peak_relativeth = 4    # local threshold for peak detection in dB (difference over the moving average at current time)

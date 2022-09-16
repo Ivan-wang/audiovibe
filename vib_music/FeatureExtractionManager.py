@@ -34,6 +34,8 @@ class FeatureExtractionManager(object):
             self.audio = np.pad(self.audio, (expect_len-current_len,0), 'constant', constant_values=0)
         # print(f"we should have {len(self.audio)//len_hop} frames")
 
+        self.streaming = False    # by default, set streaming false
+        self.audio_len = self.audio.shape[0]    # when streaming false, use the entire audio, otherwise, set as audio reading length
         self.len_hop = len_hop
         self.stg_names = list(stg.keys())
         self.stg = [self._init_stg(s, v) for s, v in stg.items()]
@@ -90,21 +92,21 @@ class FeatureExtractionManager(object):
         else:
             feat_dir = os.path.join(root, self.audio_name)
         os.makedirs(feat_dir, exist_ok=True)
-
-        # save features
-        for n in self.stg_names:
-            feat_file = os.path.join(feat_dir, n+'.pkl')
-            if not os.path.exists(feat_file):
-                if features is None:
-                    features = self.audio_features(extract_list=[n])
-                dump_data = features[n]
-                with open(feat_file, 'wb') as f:
-                    pickle.dump(dump_data, f)
-                    features = None    # reset feature for next update
+        if not self.streaming:
+            # save features
+            for n in self.stg_names:
+                feat_file = os.path.join(feat_dir, n+'.pkl')
+                if not os.path.exists(feat_file):
+                    if features is None:
+                        features = self.audio_features(extract_list=[n])
+                    dump_data = features[n]
+                    with open(feat_file, 'wb') as f:
+                        pickle.dump(dump_data, f)
+                        features = None    # reset feature for next update
 
         # save meta
-        meta = {"audio_name": self.audio_name, "sr": self.sr, "len_sample": self.audio.shape[0], "len_hop":
-            self.len_hop}
+        meta = {"audio_name": self.audio_name, "sr": self.sr, "len_sample": self.audio_len, "len_hop":
+            self.len_hop, "streaming":self.streaming}
         meta["audfeats"] = self.stg_names
         with open(os.path.join(feat_dir, 'meta.pkl'), 'wb') as f:
             pickle.dump(meta, f)

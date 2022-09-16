@@ -14,6 +14,7 @@ class FeatureManager(object):
         self.features = features
         self.mode = mode
         self.vib_sequence = None
+        self.streaming = meta["streaming"]
 
     def set_vibration_sequence(self, seq):
         if seq.dtype != np.uint8:
@@ -25,6 +26,10 @@ class FeatureManager(object):
 
     def vibration_sequence(self, cached=True, **kwargs):
         if self.vib_sequence is not None and cached:
+            return self.vib_sequence
+        
+        if self.streaming:
+            self.vib_sequence = np.ones((1,24))    # create a fake data sequence for viberation
             return self.vib_sequence
 
         if self.mode in FeatureManager.vibration_mode_func:

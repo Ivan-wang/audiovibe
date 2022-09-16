@@ -7,14 +7,18 @@ if AUDIO_RUNTIME_READY:
     from pyaudio import PyAudio
 
 class AudioProcess(multiprocessing.Process):
-    def __init__(self, wavefile, frame_len, vib_sem, proc_sem=None):
+    def __init__(self, wavefile, frame_len, vib_sem, proc_sem=None, fm=None):
         super(AudioProcess, self).__init__()
         self.wavefile= wavefile
         self.frame_len = frame_len
         self.vib_sem = vib_sem
         self.proc_sem = proc_sem
 
-        self.stream = None
+        self.streaming = None
+        self.read_aud_len = self.frame_len    # by default only read 1 frame audio
+        if not fm:
+            self.streaming = fm.streaming
+            if self.streaming: self.read_aud_len = fm.meta["len_sample"]    # if streaming, read audio of specified length
 
     def _init_audio_stream(self):
         from pyaudio import PyAudio
@@ -38,7 +42,7 @@ class AudioProcess(multiprocessing.Process):
 
         print('start to play audio...')
         while True:
-            data = self.wavefile.readframes(self.frame_len)
+            data = self.wavefile.readframes(self.read_aud_len)
             if len(data) > 0:
                 # release to vibration process
                 self.vib_sem.release()
@@ -59,7 +63,28 @@ class BoardProcess(multiprocessing.Process):
         self.sem = sem
         self.driver = driver
 
+        if self.driver.streaming:
+            self.wavefile = self.driver.wavefile
+            self.fm = self.driver.fm
+
+    def _init_audio_stream(self):
+        from pyaudio import PyAudio
+        audio = PyAudio()
+        self.stream = audio.open(
+            format=audio.get_format_from_width(self.wavefile.getsampwidth()),
+            channels = self.wavefile.getnchannels(),
+            rate=self.wavefile.getframerate(),
+            output=True
+        )
+
+    def _clean_stream(self):
+        if self.stream is not None:
+            self.stream.stop_stream()
+            self.stream.close()
+
     def run(self):
+        self._init_audio_stream()
+
         # driver starting before creating the board process
         # self.driver.on_start()
         if self.sem is None:
@@ -82,3 +107,4 @@ class BoardProcess(multiprocessing.Process):
                     update = False
 
         self.driver.on_close()
+        self._clean_stream()
