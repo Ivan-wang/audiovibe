@@ -35,7 +35,7 @@ if DRV2605_ENV_READY:
     import adafruit_drv2605
 
 class DR2605Driver(VibrationDriver):
-    def __init__(self, vibrations) -> None:
+    def __init__(self, vibrations, wavefile=None, fm=None, **kwargs) -> None:
         if (vibrations.shape[1] != 2):
             vibrations = None
         super().__init__(vibration_data=vibrations)
@@ -74,7 +74,7 @@ if ADC_ENV_READY:
 # NOTE: each sample accept at most 8 operations
 import numpy as np
 class AdcDriver(VibrationDriver):
-    def __init__(self, vibration_data=None) -> None:
+    def __init__(self, vibration_data=None, wavefile=None, fm=None, **kwargs) -> None:
         if isinstance(vibration_data, np.ndarray):
             if len(vibration_data.shape) > 2:
                 print(f'vibration data should be at most 2D but get {vibration_data.shape}')
@@ -89,6 +89,13 @@ class AdcDriver(VibrationDriver):
         # when use a sequence for each frame, set blocking mode as true
         if len(vibration_data.shape) > 2:
             self.blocking = False
+        
+        self.streaming = kwargs.get("streaming", False)
+        if self.streaming:
+            assert wavefile is not None, "[ERROR] wavefile must be provided under streaming"
+            assert fm is not None, "[ERROR] FeatureManager must be passed under streaming"
+        self.wavefile = wavefile
+        self.fm = fm
 
     def on_start(self):
         if self.vibration_iter is None:
@@ -100,7 +107,7 @@ class AdcDriver(VibrationDriver):
         else:
             return False
 
-    def on_running(self, update=False):
+    def on_running(self, update=False, data=None):
         if update:
             try:
                 amp = next(self.vibration_iter)
