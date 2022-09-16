@@ -68,6 +68,13 @@ class BoardProcess(multiprocessing.Process):
                 pass
         else:
             update = False
+            # on_running "update" arguments:
+            # offline data:
+            #   True: play next frame vibration
+            #   False: do nothing
+            # online data:
+            #   numpy array: playing the vibration data in this array
+            #   None: shutdown the driver and exit this process
             while self.driver.on_running(update):
                 if self.sem.acquire(block=self.driver.blocking):
                     update = True
