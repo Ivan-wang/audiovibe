@@ -117,6 +117,20 @@ class AdcDriver(VibrationDriver):
             return True # when playing realtime data, always return true
 
         # for normal offline data
+        if update:
+            try:
+                amp = next(self.vibration_iter)
+            except StopIteration:
+                return False
+            else:
+                if isinstance(amp, np.ndarray):
+                    for a in amp:
+                        self.device.write_byte_data(0x48, 0x40, a)
+                else:
+                    for _ in range(4):
+                        self.device.write_byte_data(0x48, 0x40, amp)
+                    self.device.write_byte_data(0x48, 0x40, 0)
+        return True
 
     def on_close(self):
         # close the device?
