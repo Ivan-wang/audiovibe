@@ -107,6 +107,7 @@ class AdcDriver(VibrationDriver):
         else:
             return False
 
+
     def on_running(self, update=False):
         # HOTFIX: accept an arry as vibration data
         if update is None:
