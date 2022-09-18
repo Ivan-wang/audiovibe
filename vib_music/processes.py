@@ -62,10 +62,15 @@ class BoardProcess(multiprocessing.Process):
         super().__init__()
         self.sem = sem
         self.driver = driver
-
-        if self.driver.streaming:
+        self.wavefile = None
+        self.fm = None
+        self.read_aud_len = 0
+        # read streaming info from driver
+        self.streaming = self.driver.streaming
+        if self.streaming:
             self.wavefile = self.driver.wavefile
             self.fm = self.driver.fm
+            self.read_aud_len = self.fm.meta["len_sample"]
 
     def _init_audio_stream(self):
         from pyaudio import PyAudio
@@ -92,19 +97,25 @@ class BoardProcess(multiprocessing.Process):
             while self.driver.on_running(True):
                 pass
         else:
-            update = False
-            # on_running "update" arguments:
-            # offline data:
-            #   True: play next frame vibration
-            #   False: do nothing
-            # online data:
-            #   numpy array: playing the vibration data in this array
-            #   None: shutdown the driver and exit this process
-            while self.driver.on_running(update):
-                if self.sem.acquire(block=self.driver.blocking):
-                    update = True
-                else:
-                    update = False
+            if not self.streaming:
+                update = False
+                while self.driver.on_running(update):
+                    if self.sem.acquire(block=self.driver.blocking):
+                        update = True
+                    else:
+                        update = False
+            else:
+                update = True
+                while True:
+                    data = self.wavefile.readframes(self.read_aud_len)
+                    if len(data) > 0:
+                        _ = self.driver.on_running(update, data)
+                        if self.sem.acquire(block=self.driver.blocking):
+                            update = True
+                        else:
+                            update = False
+                    else:
+                        break
 
         self.driver.on_close()
         self._clean_stream()

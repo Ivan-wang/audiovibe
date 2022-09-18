@@ -108,19 +108,16 @@ class AdcDriver(VibrationDriver):
             return False
 
 
-    def on_running(self, update=False):
-        # HOTFIX: accept an arry as vibration data
-        if update is None:
-            return False # no more realtime  data
-        if isinstance(update, np.ndarray):
-            for a in update:
-                self.device.write_byte_data(0x48, 0x40, a)
-            return True # when playing realtime data, always return true
-
+    def on_running(self, update=False, data=None):
         # for normal offline data
         if update:
             try:
-                amp = next(self.vibration_iter)
+                # process based on streaming status
+                if not data:
+                    amp = next(self.vibration_iter)
+                else:
+                    # TODO mapping function
+                    amp = None
             except StopIteration:
                 return False
             else:
