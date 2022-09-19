@@ -111,7 +111,7 @@ class BoardProcess(multiprocessing.Process):
                         if not start_switch: start_switch = True    # one we recieve audio, we start vibration
                         data = self.wavefile.readframes(self.read_aud_len)
                         if len(data) > 0:
-                            update = self.driver.on_running(update, data, self.driver, self.fm)
+                            update = self.driver.on_running(update, data, self.fm)
                         else: break
                         if start_switch and not update: break    # once we start vibration, if we do not update, break
 

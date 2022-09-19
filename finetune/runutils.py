@@ -115,13 +115,22 @@ def _main(opt, mode, driver, librosa_cfg, plot_cfg, vib_kwargs_dict):
     if opt.task == 'run' or opt.task == 'build':
         start_t = time.time()
         ctx = FeatureExtractionManager.from_config(librosa_cfg)
-        
-        # set streaming flag for feature extraction
+
+        # preprocess streaming parameters
         stream_flag = bool(vib_kwargs_dict.get("streaming", False))
         ctx.streaming = stream_flag
-        # if streaming flag re-set read audio length
         if stream_flag:
-            ctx.audio_len = float(vib_kwargs_dict.get("audio_len", 0.1)) * ctx.sr
+            # adujst read audio length
+            design_read_audio_len = float(vib_kwargs_dict.get("audio_len", 0.1)) * ctx.sr
+            design_audio_frames = design_read_audio_len // librosa_cfg["len_hop"]
+            # TODO we only support stft for streaming now, so the len_window must be for stft
+            assert librosa_cfg["stgs"]["stft"]["len_window"] - librosa_cfg["len_hop"] >=0, "[ERROR] len_window must be larger or equal to len_hop"
+            # compute practical read audio length
+            practical_read_audio_len = int(librosa_cfg["len_hop"] * design_audio_frames)    # we use the simplest way by now
+            # TODO use more accurate way - add the remaining window
+            # practical_read_audio_len = librosa_config["len_hop"] * design_audio_frames + librosa_config["len_window"] - librosa_config["len_hop"]
+            vib_kwargs_dict["audio_len"] = practical_read_audio_len
+            ctx.audio_len = vib_kwargs_dict["audio_len"]
 
         ctx.save_features(root=opt.data_dir)
         print("feature extraction elapses: %f" % (time.time()-start_t))
