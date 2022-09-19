@@ -28,6 +28,7 @@ class VibrationDriver(abc.ABC):
     def on_close(self):
         return
 
+import librosa
 from .env import DRV2605_ENV_READY
 if DRV2605_ENV_READY:
     import board
@@ -108,7 +109,7 @@ class AdcDriver(VibrationDriver):
             return False
 
 
-    def on_running(self, update=False, data=None):
+    def on_running(self, update=False, data=None, driver=None, fm=None):
         # for normal offline data
         if update:
             try:
@@ -116,7 +117,12 @@ class AdcDriver(VibrationDriver):
                 if not data:
                     amp = next(self.vibration_iter)
                 else:
-                    # TODO mapping function
+                    # TODO we use fixed feats and algorithms by now, may add options later
+                    # feature extraction
+                    X = librosa.stft(data, n_fft=len_window, hop_length=len_hop, win_length=len_window, window='hann',
+                                    center=True, pad_mode='constant')
+                    stft_freq = librosa.fft_frequencies(sr=sr, n_fft=len_window)
+                    ret = {'len_window': len_window, 'data': X, "stft_freq":stft_freq}
                     amp = None
             except StopIteration:
                 return False

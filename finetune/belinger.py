@@ -37,6 +37,20 @@ def main():
         plot_config = {
             'plots': ['waveform', 'wavermse', 'vibration_adc']
         }
+
+    # preprocess streaming parameters
+    stream_flag = bool(vib_kwargs_dict.get("streaming", False))
+    if stream_flag:
+        # adujst read audio length
+        design_read_audio_len = float(vib_kwargs_dict.get("audio_len", 0.1)) * librosa_config["sr"]
+        design_audio_frames = design_read_audio_len % librosa_config["len_hop"]
+        assert librosa_config["len_window"] - librosa_config["len_hop"] >=0, "[ERROR] len_window must be larger or equal to len_hop"
+        # compute practical read audio length
+        practical_read_audio_len = librosa_config["len_hop"] * design_audio_frames    # we use the simplest way by now
+        # TODO use more accurate way - add the remaining window
+        # practical_read_audio_len = librosa_config["len_hop"] * design_audio_frames + librosa_config["len_window"] - librosa_config["len_hop"]
+        vib_kwargs_dict["audio_len"] = practical_read_audio_len
+
     _main(opt, opt.vibmode, 'adc', librosa_config, plot_config, vib_kwargs_dict)
 
 

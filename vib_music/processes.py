@@ -89,6 +89,7 @@ class BoardProcess(multiprocessing.Process):
 
     def run(self):
         self._init_audio_stream()
+        start_switch = False    # flag indicating whether we start vibration
 
         # driver starting before creating the board process
         # self.driver.on_start()
@@ -97,25 +98,22 @@ class BoardProcess(multiprocessing.Process):
             while self.driver.on_running(True):
                 pass
         else:
+            update = False
             if not self.streaming:
-                update = False
                 while self.driver.on_running(update):
                     if self.sem.acquire(block=self.driver.blocking):
                         update = True
                     else:
                         update = False
             else:
-                update = True
                 while True:
-                    data = self.wavefile.readframes(self.read_aud_len)
-                    if len(data) > 0:
-                        _ = self.driver.on_running(update, data)
-                        if self.sem.acquire(block=self.driver.blocking):
-                            update = True
-                        else:
-                            update = False
-                    else:
-                        break
+                    if self.sem.acquire(block=self.driver.blocking):
+                        if not start_switch: start_switch = True    # one we recieve audio, we start vibration
+                        data = self.wavefile.readframes(self.read_aud_len)
+                        if len(data) > 0:
+                            update = self.driver.on_running(update, data, self.driver, self.fm)
+                        else: break
+                        if start_switch and not update: break    # once we start vibration, if we do not update, break
 
         self.driver.on_close()
         self._clean_stream()
