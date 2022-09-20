@@ -115,18 +115,18 @@ class AdcDriver(VibrationDriver):
             return False
 
 
-    def on_running(self, update=False, data=None, fm=None):
+    def on_running(self, update=False, data=None, params=None):
         # for normal offline data
         if update:
             try:
                 # process based on streaming status
-                if not data:
+                if data is None:
                     amp = next(self.vibration_iter)
                 else:
                     # TODO we use fixed feats and algorithms by now, may add options later
-                    len_window = fm["features"]["stft"]["len_window"]
-                    len_hop = fm["meta"]["len_hop"]
-                    sr = fm["meta"]["sr"]
+                    len_window = params["len_window"]
+                    len_hop = params["len_hop"]
+                    sr = params["sr"]
                     # feature extraction
                     stft = librosa.stft(data, n_fft=len_window, hop_length=len_hop, win_length=len_window, window='hann',
                                     center=True, pad_mode='constant')
@@ -140,19 +140,19 @@ class AdcDriver(VibrationDriver):
                     stft_len_window = len_window
 
                     feat_dim, feat_time = linspec.shape
-                    global_scale = fm.vib_kwarg_buffer.get("global_scale", 0.01)
-                    hprs_harmonic_filt_len = fm.vib_kwarg_buffer.get("hprs_harmonic_filt_len", 0.1)
-                    hprs_percusive_filt_len = fm.vib_kwarg_buffer.get("hprs_percusive_filt_len", 400 * stft_len_window / 512)    # TODO this is determined by experience
-                    hprs_beta = fm.vib_kwarg_buffer.get("hprs_beta", 4.0)
-                    peak_globalth = fm.vib_kwarg_buffer.get("peak_globalth", 20)
-                    peak_relativeth = fm.vib_kwarg_buffer.get("peak_relativeth", 4)
-                    stft_peak_movlen = int(fm.vib_kwarg_buffer.get("stft_peak_movlen", 400//np.abs(stft_freq[2]-stft_freq[1])))    # TODO this is determined by experience
-                    vib_extremefreq = fm.vib_kwarg_buffer.get("vib_extreamfreq", [50,500])
-                    peak_limit = fm.vib_kwarg_buffer.get("peak_limit", -1)
-                    vib_maxbin = fm.vib_kwarg_buffer.get("vib_maxbin", 255)
-                    vib_bias = fm.vib_kwarg_buffer.get("vib_bias", 80)
-                    duty = fm.vib_kwarg_buffer.get("duty", 0.5)
-                    vib_frame_len = fm.vib_kwarg_buffer.get("vib_frame_len", 24)
+                    global_scale = params.get("global_scale", 0.01)
+                    hprs_harmonic_filt_len = params.get("hprs_harmonic_filt_len", 0.1)
+                    hprs_percusive_filt_len = params.get("hprs_percusive_filt_len", 400 * stft_len_window / 512)    # TODO this is determined by experience
+                    hprs_beta = params.get("hprs_beta", 4.0)
+                    peak_globalth = params.get("peak_globalth", 20)
+                    peak_relativeth = params.get("peak_relativeth", 4)
+                    stft_peak_movlen = int(params.get("stft_peak_movlen", 400//np.abs(stft_freq[2]-stft_freq[1])))    # TODO this is determined by experience
+                    vib_extremefreq = params.get("vib_extreamfreq", [50,500])
+                    peak_limit = params.get("peak_limit", -1)
+                    vib_maxbin = params.get("vib_maxbin", 255)
+                    vib_bias = params.get("vib_bias", 80)
+                    duty = params.get("duty", 0.5)
+                    vib_frame_len = params.get("vib_frame_len", 24)
 
                     assert global_scale>0 and global_scale<=1.0, "global scale must be in (0,1]"
 
@@ -252,7 +252,11 @@ class AdcDriver(VibrationDriver):
                     threshold_val_bin = np.digitize(threshold_val_norm, mu_bins)
                     final_vibration_bins[final_vibration_bins<=vib_bias+threshold_val_bin] = 0    # set zeros below threshold
 
-                    amp = None
+                    # change shape from [nframes x vib_num_per_frame] to [total_vib_num]
+                    vib_frames, vib_num_per_frame = final_vibration_bins.shape
+                    final_amp = np.reshape(final_vibration_bins, (int(vib_frames*vib_num_per_frame)))
+
+                    amp = final_amp
             except StopIteration:
                 return False
             else:

@@ -1,6 +1,6 @@
 import wave
 import multiprocessing
-
+import numpy as np
 from .env import AUDIO_RUNTIME_READY
 
 if AUDIO_RUNTIME_READY:
@@ -63,14 +63,37 @@ class BoardProcess(multiprocessing.Process):
         self.sem = sem
         self.driver = driver
         self.wavefile = None
-        self.fm = None
+        self.params = {}
         self.read_aud_len = 0
         # read streaming info from driver
         self.streaming = self.driver.streaming
         if self.streaming:
-            self.wavefile = self.driver.wavefile
-            self.fm = self.driver.fm
-            self.read_aud_len = self.fm.meta["len_sample"]
+            try:
+                self.wavefile = wave.open(self.driver.wavefile, "rb")
+            except:
+                print('cannot open audio file.')
+                return
+            self.audio_norm_scale = 1./float(1 << ((8 * self.wavefile.getsampwidth()) - 1))
+            self.audio_channel_n = self.wavefile.getnchannels()
+            self.read_aud_len = self.driver.fm.meta["len_sample"]
+            self.params["len_window"] = self.driver.fm.features["stft"]["len_window"]
+            self.params["len_hop"] = self.driver.fm.meta["len_hop"]
+            self.params["sr"] = self.driver.fm.meta["sr"]
+            self.params["global_scale"] = self.driver.fm.vib_kwargs_buffer.get("global_scale", 0.01)
+            self.params["hprs_harmonic_filt_len"] = self.driver.fm.vib_kwargs_buffer.get("hprs_harmonic_filt_len", 0.1)
+            if "hprs_percusive_filt_len" in self.driver.fm.vib_kwargs_buffer:
+                self.params["hprs_percusive_filt_len"] = self.driver.fm.vib_kwargs_buffer.get("hprs_percusive_filt_len")
+            self.params["hprs_beta"] = self.driver.fm.vib_kwargs_buffer.get("hprs_beta", 4.0)
+            self.params["peak_globalth"] = self.driver.fm.vib_kwargs_buffer.get("peak_globalth", 20)
+            self.params["peak_relativeth"] = self.driver.fm.vib_kwargs_buffer.get("peak_relativeth", 4)
+            if "stft_peak_movlen" in self.driver.fm.vib_kwargs_buffer:
+                self.params["stft_peak_movlen"] = int(self.driver.fm.vib_kwargs_buffer.get("stft_peak_movlen"))
+            self.params["vib_extremefreq"] = self.driver.fm.vib_kwargs_buffer.get("vib_extreamfreq", [50,500])
+            self.params["peak_limit"] = self.driver.fm.vib_kwargs_buffer.get("peak_limit", -1)
+            self.params["vib_maxbin"] = self.driver.fm.vib_kwargs_buffer.get("vib_maxbin", 255)
+            self.params["vib_bias"] = self.driver.fm.vib_kwargs_buffer.get("vib_bias", 80)
+            self.params["duty"] = self.driver.fm.vib_kwargs_buffer.get("duty", 0.5)
+            self.params["vib_frame_len"] = self.driver.fm.vib_kwargs_buffer.get("vib_frame_len", 24)
 
     def _init_audio_stream(self):
         from pyaudio import PyAudio
@@ -88,9 +111,6 @@ class BoardProcess(multiprocessing.Process):
             self.stream.close()
 
     def run(self):
-        self._init_audio_stream()
-        start_switch = False    # flag indicating whether we start vibration
-
         # driver starting before creating the board process
         # self.driver.on_start()
         if self.sem is None:
@@ -106,12 +126,19 @@ class BoardProcess(multiprocessing.Process):
                     else:
                         update = False
             else:
+                # self._init_audio_stream()
+                start_switch = False    # flag indicating whether we start vibration
                 while True:
                     if self.sem.acquire(block=self.driver.blocking):
                         if not start_switch: start_switch = True    # one we recieve audio, we start vibration
-                        data = self.wavefile.readframes(self.read_aud_len)
+                        raw_data = self.wavefile.readframes(self.read_aud_len)
+                        data = np.frombuffer(raw_data, dtype=np.int16).astype(np.float32)
+                        data = data*self.audio_norm_scale
+                        # TODO we don't use stereos now, only mono to match librosa load results
+                        data = np.reshape(data, (-1, self.audio_channel_n))
+                        data = np.mean(data,axis=-1)    # mix channels to mono
                         if len(data) > 0:
-                            update = self.driver.on_running(update, data, self.fm)
+                            update = self.driver.on_running(update, data, self.params)
                         else: break
                         if start_switch and not update: break    # once we start vibration, if we do not update, break
 
