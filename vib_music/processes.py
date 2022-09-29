@@ -94,6 +94,8 @@ class BoardProcess(multiprocessing.Process):
             self.params["vib_bias"] = self.driver.fm.vib_kwargs_buffer.get("vib_bias", 80)
             self.params["duty"] = self.driver.fm.vib_kwargs_buffer.get("duty", 0.5)
             self.params["vib_frame_len"] = self.driver.fm.vib_kwargs_buffer.get("vib_frame_len", 24)
+            self.params["stream_nwin"] = self.driver.fm.vib_kwargs_buffer.get("stream_nwin", 5)
+            assert self.params["stream_nwin"]%2==1, "[ERROR] stream_nwin must be a odd number"
 
     def _init_audio_stream(self):
         from pyaudio import PyAudio
@@ -106,7 +108,7 @@ class BoardProcess(multiprocessing.Process):
         )
 
     def _clean_stream(self):
-        if self.stream is not None:
+        if self.streaming is not None:
             self.stream.stop_stream()
             self.stream.close()
 
@@ -128,19 +130,52 @@ class BoardProcess(multiprocessing.Process):
             else:
                 # self._init_audio_stream()
                 start_switch = False    # flag indicating whether we start vibration
+                read_start = 0    # steps after starting reading
+                read_end = 0    # steps after ending reading
+                map_buffer_len = self.params["stream_nwin"] * self.read_aud_len
+                map_buffer = np.zeros((map_buffer_len))
                 while True:
                     if self.sem.acquire(block=self.driver.blocking):
+                        print("read_start %d, read_end %d" % (read_start, read_end))
                         if not start_switch: start_switch = True    # one we recieve audio, we start vibration
-                        raw_data = self.wavefile.readframes(self.read_aud_len)
+                        # set audio read_len
+                        if read_start==0:
+                            # first reading, read half_map_buffer + 1 windows audio
+                            read_len = (self.params["stream_nwin"]//2+1)*self.read_aud_len
+                        else:
+                            # not first freading, read 1 window audio
+                            read_len = 1 * self.read_aud_len
+                        print("read_len is %d" % (read_len))
+                        # read audio
+                        raw_data = self.wavefile.readframes(read_len)
                         data = np.frombuffer(raw_data, dtype=np.int16).astype(np.float32)
                         data = data*self.audio_norm_scale
                         # TODO we don't use stereos now, only mono to match librosa load results
                         data = np.reshape(data, (-1, self.audio_channel_n))
                         data = np.mean(data,axis=-1)    # mix channels to mono
-                        if len(data) > 0:
-                            update = self.driver.on_running(update, data, self.params)
-                        else: break
+                        if len(raw_data)<=0 and read_end<self.params["stream_nwin"]//2:
+                            # if we have no more audio, still read until we make the last audio window the center window of map_buffer
+                            data = np.zeros((self.read_aud_len))
+                        # store audio data
+                        if read_start==0:
+                            # first reading, put data into map_buffer, make the first audio window the center window of map_buffer
+                            map_buffer[self.params["stream_nwin"]//2*self.read_aud_len:] = data
+                            print("skip len is %d" % (self.params["stream_nwin"]//2*self.read_aud_len))
+                        else:
+                            # not first reading, read one window audio to the map_buffer and shift the stored data by one window 
+                            temp_buffer = map_buffer[self.read_aud_len:]
+                            map_buffer[:len(temp_buffer)] = temp_buffer
+                            map_buffer[len(temp_buffer):len(temp_buffer)+len(data)] = data
+                            print("skip len is %d" % (self.read_aud_len))
+                        # mapping and vibrate
+                        if len(raw_data) > 0 or read_end< self.params["stream_nwin"]//2:
+                            print(map_buffer.shape)
+                            update = self.driver.on_running(update, map_buffer, self.params)
+                        else: 
+                            break
+                        if len(raw_data)>0: read_start += 1    # increase step after starting reading
+                        if len(raw_data)<=0: read_end += 1    # increase step after ending reading
                         if start_switch and not update: break    # once we start vibration, if we do not update, break
 
         self.driver.on_close()
-        self._clean_stream()
+        # self._clean_stream()

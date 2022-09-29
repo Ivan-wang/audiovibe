@@ -132,6 +132,7 @@ class AdcDriver(VibrationDriver):
                                     center=True, pad_mode='constant')
                     stft_freq = librosa.fft_frequencies(sr=sr, n_fft=len_window)
                     linspec = np.abs(stft)**2.0    # power linear spectrogram
+                    linspec = linspec[:, 1:]    # remove the first vector so we eleminate the padding effect
                     
                     # select bins lower than 8k hz
                     num_8k_bins = np.sum(stft_freq<=8000)
@@ -140,6 +141,7 @@ class AdcDriver(VibrationDriver):
                     stft_len_window = len_window
 
                     feat_dim, feat_time = linspec.shape
+                    # print("feat_time is %d" % (feat_time))
                     global_scale = params.get("global_scale", 0.01)
                     hprs_harmonic_filt_len = params.get("hprs_harmonic_filt_len", 0.1)
                     hprs_percusive_filt_len = params.get("hprs_percusive_filt_len", 400 * stft_len_window / 512)    # TODO this is determined by experience
@@ -255,6 +257,12 @@ class AdcDriver(VibrationDriver):
                     # change shape from [nframes x vib_num_per_frame] to [total_vib_num]
                     vib_frames, vib_num_per_frame = final_vibration_bins.shape
                     final_amp = np.reshape(final_vibration_bins, (int(vib_frames*vib_num_per_frame)))
+                    # get the center window result
+                    final_len = len(final_amp)
+                    unit_len = int(final_len / params["stream_nwin"])
+                    skip_len = params["stream_nwin"]//2 * unit_len
+                    final_amp = final_amp[skip_len:skip_len+unit_len]
+                    # print("final_len %d, unit_len %d, skip_len %d, final final_len %d" % (final_len, unit_len, skip_len, len(final_amp)))
 
                     amp = final_amp
             except StopIteration:
