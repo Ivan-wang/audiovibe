@@ -4,7 +4,7 @@ from finetune.utils.signal_analysis import remove_harmonics, extract_peaks
 from finetune.utils.wave_generator import periodic_rectangle_generator
 from finetune.utils.global_paras import PEAK_LIMIT
 from math import log
-import abc
+import abc, time
 
 
 class VibrationDriver(abc.ABC):
@@ -123,6 +123,7 @@ class AdcDriver(VibrationDriver):
                 if data is None:
                     amp = next(self.vibration_iter)
                 else:
+                    start_time = time.time()
                     # TODO we use fixed feats and algorithms by now, may add options later
                     len_window = params["len_window"]
                     len_hop = params["len_hop"]
@@ -265,6 +266,8 @@ class AdcDriver(VibrationDriver):
                     # print("final_len %d, unit_len %d, skip_len %d, final final_len %d" % (final_len, unit_len, skip_len, len(final_amp)))
 
                     amp = final_amp
+
+                    print("input audio %f secs, vibration has %f points, mapping elapse %f secs" % (len(data)/22000, len(amp), time.time()-start_time))
             except StopIteration:
                 return False
             else:

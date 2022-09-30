@@ -136,7 +136,7 @@ class BoardProcess(multiprocessing.Process):
                 map_buffer = np.zeros((map_buffer_len))
                 while True:
                     if self.sem.acquire(block=self.driver.blocking):
-                        print("read_start %d, read_end %d" % (read_start, read_end))
+                        # print("read_start %d, read_end %d" % (read_start, read_end))
                         if not start_switch: start_switch = True    # one we recieve audio, we start vibration
                         # set audio read_len
                         if read_start==0:
@@ -145,7 +145,7 @@ class BoardProcess(multiprocessing.Process):
                         else:
                             # not first freading, read 1 window audio
                             read_len = 1 * self.read_aud_len
-                        print("read_len is %d" % (read_len))
+                        # print("read_len is %d" % (read_len))
                         # read audio
                         raw_data = self.wavefile.readframes(read_len)
                         data = np.frombuffer(raw_data, dtype=np.int16).astype(np.float32)
@@ -160,16 +160,16 @@ class BoardProcess(multiprocessing.Process):
                         if read_start==0:
                             # first reading, put data into map_buffer, make the first audio window the center window of map_buffer
                             map_buffer[self.params["stream_nwin"]//2*self.read_aud_len:] = data
-                            print("skip len is %d" % (self.params["stream_nwin"]//2*self.read_aud_len))
+                            # print("skip len is %d" % (self.params["stream_nwin"]//2*self.read_aud_len))
                         else:
                             # not first reading, read one window audio to the map_buffer and shift the stored data by one window 
                             temp_buffer = map_buffer[self.read_aud_len:]
                             map_buffer[:len(temp_buffer)] = temp_buffer
                             map_buffer[len(temp_buffer):len(temp_buffer)+len(data)] = data
-                            print("skip len is %d" % (self.read_aud_len))
+                            # print("skip len is %d" % (self.read_aud_len))
                         # mapping and vibrate
                         if len(raw_data) > 0 or read_end< self.params["stream_nwin"]//2:
-                            print(map_buffer.shape)
+                            # print(map_buffer.shape)
                             update = self.driver.on_running(update, map_buffer, self.params)
                         else: 
                             break
