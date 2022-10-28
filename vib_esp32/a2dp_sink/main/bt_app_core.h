@@ -77,6 +77,10 @@ void bt_i2s_task_start_up(void);
  */
 void bt_i2s_task_shut_down(void);
 
+void bt_pwm_task_start_up(void);
+
+void bt_pwm_task_shut_down(void);
+
 /**
  * @brief  write data to ringbuffer
  *

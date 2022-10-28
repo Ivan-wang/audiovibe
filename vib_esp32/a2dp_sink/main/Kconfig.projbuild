@@ -20,23 +20,41 @@ menu "A2DP Example Configuration"
 
     config EXAMPLE_I2S_LRCK_PIN
         int "I2S LRCK (WS) GPIO"
-        default 22
+        default 4
         depends on EXAMPLE_A2DP_SINK_OUTPUT_EXTERNAL_I2S
         help
             GPIO number to use for I2S LRCK(WS) Driver.
 
     config EXAMPLE_I2S_BCK_PIN
         int "I2S BCK GPIO"
-        default 26
+        default 17
         depends on EXAMPLE_A2DP_SINK_OUTPUT_EXTERNAL_I2S
         help
             GPIO number to use for I2S BCK Driver.
 
     config EXAMPLE_I2S_DATA_PIN
         int "I2S DATA GPIO"
-        default 25
+        default 16
         depends on EXAMPLE_A2DP_SINK_OUTPUT_EXTERNAL_I2S
         help
             GPIO number to use for I2S Data Driver.
+    
+    config EXAMPLE_ENABLE_GPIO
+        int "POWER MODULE ENABLE GPIO"
+        default 13
+        help
+            GPIO number to enable power module
+        
+    config EXAMPLE_LEDC_OUT
+        int "POWER MODULE PWM OUTPUT"
+        default 12
+        help
+            GPIO number to the power module FREQ input
+        
+    config EXAMPLE_LEDC_DUTY
+        int "POWER MODULE PWM DUTY"
+        default 4095
+        help
+            Duty of power module PWM (default is 4095; 50%)
 
 endmenu

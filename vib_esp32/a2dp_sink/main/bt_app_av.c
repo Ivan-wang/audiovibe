@@ -23,6 +23,8 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/i2s.h"
+#include "driver/ledc.h"
+#include "driver/gpio.h"
 
 #include "sys/lock.h"
 
@@ -51,8 +53,10 @@ static void bt_av_notify_evt_handler(uint8_t event_id, esp_avrc_rn_param_t *even
 static void bt_i2s_driver_install(void);
 /* uninstallation for i2s */
 static void bt_i2s_driver_uninstall(void);
-/* installation for spi port */
-static void data_spi_port_install(void);
+/* installation for pwm port */
+static void bt_pwm_driver_install(void);
+/* uninstallation for pwm port */
+static void bt_pwm_driver_uninstall(void);
 /* set volume by remote controller */
 static void volume_set_by_controller(uint8_t volume);
 /* set volume by local host */
@@ -159,11 +163,7 @@ void bt_i2s_driver_install(void)
 {
     /* I2S configuration parameters */
     i2s_config_t i2s_config = {
-// #ifdef CONFIG_EXAMPLE_A2DP_SINK_OUTPUT_INTERNAL_DAC
-//         .mode = I2S_MODE_MASTER | I2S_MODE_TX | I2S_MODE_DAC_BUILT_IN,
-// #else
         .mode = I2S_MODE_MASTER | I2S_MODE_TX,              /* only TX */
-// #endif
         .sample_rate = 44100,
         .bits_per_sample = 16,
         .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT,       /* 2-channels */
@@ -176,17 +176,10 @@ void bt_i2s_driver_install(void)
 
     /* enable I2S */
     i2s_driver_install(1, &i2s_config, 0, NULL);
-// #ifdef CONFIG_EXAMPLE_A2DP_SINK_OUTPUT_INTERNAL_DAC
-//     i2s_set_dac_mode(I2S_DAC_CHANNEL_BOTH_EN);
-//    i2s_set_pin(0, NULL);
-// #else
     i2s_pin_config_t pin_config = {
-        // .bck_io_num = CONFIG_EXAMPLE_I2S_BCK_PIN,
-        .bck_io_num = 17,
-        // .ws_io_num = CONFIG_EXAMPLE_I2S_LRCK_PIN,
-        .ws_io_num = 4,
-        .data_out_num = 16,
-        // .data_out_num = CONFIG_EXAMPLE_I2S_DATA_PIN,
+        .bck_io_num = CONFIG_EXAMPLE_I2S_BCK_PIN, // 17
+        .ws_io_num = CONFIG_EXAMPLE_I2S_LRCK_PIN, // 4
+        .data_out_num = CONFIG_EXAMPLE_I2S_DATA_PIN, // 16
         .data_in_num = -1                                   /* not used */
     };
     i2s_set_pin(1, &pin_config);
@@ -194,9 +187,11 @@ void bt_i2s_driver_install(void)
 
     i2s_config_t i2s_out_config = {
         .mode = I2S_MODE_MASTER | I2S_MODE_TX | I2S_MODE_DAC_BUILT_IN,
-        .sample_rate = 8000, // approx. 1/8 of 44100 Hz
-        .bits_per_sample = 8,
-        .channel_format = I2S_CHANNEL_MONO,
+        // .sample_rate = 8000, // approx. 1/8 of 44100 Hz
+        .sample_rate = 11025,
+        .bits_per_sample = 16, // sample bit 16, internal DAC bit 8, need handling
+        // .channel_format = I2S_CHANNEL_MONO,
+        .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT,
         .communication_format = I2S_COMM_FORMAT_STAND_MSB,
         .dma_buf_count = 6,
         .dma_buf_len = 60,
@@ -215,6 +210,46 @@ void bt_i2s_driver_uninstall(void)
     i2s_driver_uninstall(1);
 }
 
+void bt_pwm_driver_install(void)
+{
+    // config LEDC timer
+    ledc_timer_config_t ledc_timer = {
+        .duty_resolution = LEDC_TIMER_13_BIT, // resolution of PWM duty
+        .freq_hz = 5000,                      // frequency of PWM signal
+        .speed_mode = LEDC_LOW_SPEED_MODE,    // timer mode
+        .timer_num = LEDC_TIMER_0,            // timer index
+        .clk_cfg = LEDC_AUTO_CLK,             // Auto select the source clock
+    };
+    ledc_timer_config(&ledc_timer);
+
+    ledc_channel_config_t ledc_channel = {
+        .speed_mode     = LEDC_LOW_SPEED_MODE,
+        .channel        = LEDC_CHANNEL_0,
+        .timer_sel      = LEDC_TIMER_0,
+        .intr_type      = LEDC_INTR_DISABLE,
+        .gpio_num       = CONFIG_EXAMPLE_LEDC_OUT,
+        .duty           = 0, // Set duty to 0%
+        .hpoint         = 0
+    };
+    ledc_channel_config(&ledc_channel);
+
+    gpio_config_t enable_conf = {
+        .intr_type      = GPIO_INTR_DISABLE,
+        .mode           = GPIO_MODE_OUTPUT,
+        .pin_bit_mask   = (1ULL<<CONFIG_EXAMPLE_ENABLE_GPIO),
+        .pull_down_en   = 0,
+        .pull_up_en     = 0
+    };
+    gpio_config(&enable_conf);
+}
+
+void bt_pwm_driver_uninstall(void)
+{
+    gpio_set_level(CONFIG_EXAMPLE_ENABLE_GPIO, 0);
+    ledc_stop(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0);
+    ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
+}
+
 static void volume_set_by_controller(uint8_t volume)
 {
     ESP_LOGI(BT_RC_TG_TAG, "Volume is set by remote controller to: %d%%", (uint32_t)volume * 100 / 0x7f);
@@ -224,22 +259,22 @@ static void volume_set_by_controller(uint8_t volume)
     _lock_release(&s_volume_lock);
 }
 
-static void volume_set_by_local_host(uint8_t volume)
-{
-    ESP_LOGI(BT_RC_TG_TAG, "Volume is set locally to: %d%%", (uint32_t)volume * 100 / 0x7f);
-    /* set the volume in protection of lock */
-    _lock_acquire(&s_volume_lock);
-    s_volume = volume;
-    _lock_release(&s_volume_lock);
+// static void volume_set_by_local_host(uint8_t volume)
+// {
+//     ESP_LOGI(BT_RC_TG_TAG, "Volume is set locally to: %d%%", (uint32_t)volume * 100 / 0x7f);
+//     /* set the volume in protection of lock */
+//     _lock_acquire(&s_volume_lock);
+//     s_volume = volume;
+//     _lock_release(&s_volume_lock);
 
-    /* send notification response to remote AVRCP controller */
-    if (s_volume_notify) {
-        esp_avrc_rn_param_t rn_param;
-        rn_param.volume = s_volume;
-        esp_avrc_tg_send_rn_rsp(ESP_AVRC_RN_VOLUME_CHANGE, ESP_AVRC_RN_RSP_CHANGED, &rn_param);
-        s_volume_notify = false;
-    }
-}
+//     /* send notification response to remote AVRCP controller */
+//     if (s_volume_notify) {
+//         esp_avrc_rn_param_t rn_param;
+//         rn_param.volume = s_volume;
+//         esp_avrc_tg_send_rn_rsp(ESP_AVRC_RN_VOLUME_CHANGE, ESP_AVRC_RN_RSP_CHANGED, &rn_param);
+//         s_volume_notify = false;
+//     }
+// }
 
 // static void volume_change_simulation(void *arg)
 // {
@@ -270,11 +305,15 @@ static void bt_av_hdl_a2d_evt(uint16_t event, void *p_param)
             esp_bt_gap_set_scan_mode(ESP_BT_CONNECTABLE, ESP_BT_GENERAL_DISCOVERABLE);
             bt_i2s_task_shut_down();
             bt_i2s_driver_uninstall();
+            bt_pwm_task_shut_down();
+            bt_pwm_driver_uninstall();
         } else if (a2d->conn_stat.state == ESP_A2D_CONNECTION_STATE_CONNECTED){
             esp_bt_gap_set_scan_mode(ESP_BT_NON_CONNECTABLE, ESP_BT_NON_DISCOVERABLE);
             bt_i2s_task_start_up();
+            // bt_pwm_task_start_up();
         } else if (a2d->conn_stat.state == ESP_A2D_CONNECTION_STATE_CONNECTING) {
             bt_i2s_driver_install();
+            bt_pwm_driver_install();
         }
         break;
     }
@@ -284,7 +323,11 @@ static void bt_av_hdl_a2d_evt(uint16_t event, void *p_param)
         ESP_LOGI(BT_AV_TAG, "A2DP audio state: %s", s_a2d_audio_state_str[a2d->audio_stat.state]);
         s_audio_state = a2d->audio_stat.state;
         if (ESP_A2D_AUDIO_STATE_STARTED == a2d->audio_stat.state) {
+            bt_pwm_task_start_up();
             s_pkt_cnt = 0;
+        }
+        else if (ESP_A2D_AUDIO_STATE_REMOTE_SUSPEND == a2d->audio_stat.state) {
+            bt_pwm_task_shut_down();
         }
         break;
     }

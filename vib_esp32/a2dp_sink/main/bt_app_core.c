@@ -19,9 +19,10 @@
 #include "bt_app_core.h"
 #include "driver/i2s.h"
 #include "freertos/ringbuf.h"
+#include "driver/ledc.h"
+#include "driver/gpio.h"
 
 #include "fft.h"
-#include "MD_MAX72xx.h"
 
 /*******************************
  * STATIC FUNCTION DECLARATIONS
@@ -56,6 +57,7 @@ static xTaskHandle s_data_i2s_task_handle = NULL;
 #define FFT_LEN 256
 #define COMPLEX_FFT_LEN 512
 #define ENERGE_THRESHOLD 8000 
+// complex [R(x0), I(x0), ...]
 float l_data[COMPLEX_FFT_LEN], r_data[COMPLEX_FFT_LEN];
 /*******************************
  * STATIC FUNCTION DEFINITIONbS
@@ -127,12 +129,16 @@ static void bt_i2s_task_handler(void *arg)
             if (uxQueueMessagesWaiting(s_bt_map_task_queue) == 0) {
                 // when fft handler is idle
                 int l_sample = 0, r_sample = 0;
+                // 2 channel, FFT_LEN
                 for (int i = 0; i < FFT_LEN * 2 * sizeof(uint16_t); i+=4) {
                     l_sample = (int16_t)(((*(data + i + 1) << 8) | *(data + i)));
                     r_sample = (int16_t)(((*(data + i + 3) << 8) | *(data + i + 2)));
 
+                    // put real(x) to [0, 2, 4, 6], clean up imag(x)
                     l_data[i>>1] = (float)l_sample;
+                    l_data[(i>>1)+1] = 0.;
                     r_data[i>>1] = (float)r_sample;
+                    r_data[(i>>1)+1] = 0.;
                 }
                 // send an int to queue to notify data mapping task, any int works here
                 xQueueSend(s_bt_map_task_queue, &item_size, portMAX_DELAY);
@@ -151,39 +157,36 @@ static void data_i2s_task_handler(void *arg)
     fft_config_t *lfft = fft_init(FFT_LEN, FFT_COMPLEX, FFT_FORWARD, l_data, NULL);
     fft_config_t *rfft = fft_init(FFT_LEN, FFT_COMPLEX, FFT_FORWARD, r_data, NULL);
     
-    // audio sample rate 44100, i2s data rate 6000
-    // use 1/8 of FFT LEN
-    size_t data_len = FFT_LEN / 8;
-    uint8_t data[data_len];
+    // audio sample rate 44100
+    size_t data_len = FFT_LEN / 4; // mono channel
+    size_t i2s_len = data_len * 2 * 2; // i2s buffer needs 16 bit
+    uint8_t dbuf[i2s_len]; // dual channel
     
-    for (int i = 0; i < data_len; ++i) {
-        if (i & 0x00000001) {
-            data[i] = 255;
-        }
-        else { data[i] = 0; }
-    }
-
     size_t item_written;
     for (;;) {
         if (xQueuePeek(s_bt_map_task_queue, &msg, portMAX_DELAY)) {
             // use data to calculate FFT, the release resource
-            float sum = 0.;
+            float lavg = 0., ravg = 0.;
             for (int i = 0; i < FFT_LEN; ++i) {
-                // sum += (l_data[i<<1] + r_data[i<<1]) / 2;
-                sum += (sqrt(l_data[i<<1]*l_data[i<<1]) + sqrt(r_data[i<<1]*r_data[i<<1])) / 2;
+                lavg += sqrt(l_data[i<<1] * l_data[i<<1]);
+                ravg += sqrt(r_data[i<<1] * r_data[i<<1]);
             }
-            sum /= FFT_LEN;
-            sum /= ENERGE_THRESHOLD;
-            if (sum > 1.) { sum = 1; }
 
-            uint8_t frame_eng = (uint8_t)(sum * 255.);
-            memset(data, frame_eng, data_len);
+            uint8_t lval = (uint8_t)(lavg / FFT_LEN / 32767 * 256);
+            uint8_t rval = (uint8_t)(ravg / FFT_LEN / 32767 * 256);
+
+            for (int i = 0; i < data_len; ++i) {
+                dbuf[i<<2] = 0; // LSB left channel
+                dbuf[(i<<2)+1] = lval;
+                dbuf[(i<<2)+2] = 0;
+                dbuf[(i<<2)+3] = rval;
+            }
 
             fft_execute(lfft);
             fft_execute(rfft);
 
             xQueueReceive(s_bt_map_task_queue, &msg, 0);
-            i2s_write(0, data, data_len, &item_written, portMAX_DELAY);
+            i2s_write(0, dbuf, i2s_len, &item_written, portMAX_DELAY);
         }
         // write some data
     }
@@ -252,6 +255,20 @@ void bt_i2s_task_start_up(void)
     xTaskCreatePinnedToCore(bt_i2s_task_handler, "BtI2STask", 9012, NULL, configMAX_PRIORITIES - 3, &s_bt_i2s_task_handle, 0);
     xTaskCreatePinnedToCore(data_i2s_task_handler, "DataI2STask", 9012, NULL, configMAX_PRIORITIES - 4, &s_data_i2s_task_handle, 1);
 
+}
+
+void bt_pwm_task_start_up(void)
+{
+    gpio_set_level(CONFIG_EXAMPLE_ENABLE_GPIO, 1);
+    ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, CONFIG_EXAMPLE_LEDC_DUTY);
+    ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
+}
+
+void bt_pwm_task_shut_down(void)
+{
+    gpio_set_level(CONFIG_EXAMPLE_ENABLE_GPIO, 0);
+    ledc_stop(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0);
+    ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
 }
 
 void bt_i2s_task_shut_down(void)
