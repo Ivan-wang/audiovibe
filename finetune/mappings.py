@@ -688,6 +688,7 @@ def band_select_fast(fm:FeatureManager, duty=0.5, vib_extremefreq = [50,500], vi
     if peak_limit<=0:
         # automatically determin peak limit
         # np.save("spec.npy", linspec)
+        # np.save("harm_peaks.npy", harm_peaks)
         # np.save("spec_masked.npy", spec_masked)
         # np.save("spec_h.npy", power_spec_h)
         # np.save("spec_p.npy", power_spec_p)

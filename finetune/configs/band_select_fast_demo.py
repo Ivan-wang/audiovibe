@@ -12,7 +12,7 @@ vib__vib_maxbin = 255    # number of bins for digitizing vibration magnitude
 vib__peak_limit = -1    # the limit of peaks selected for vibration generation (at most this many components will be included in final vibration at current time)
 vib__vib_frame_len = 12    # vibration signal sample number for each output frame
 vib__global_scale = 1.0    # the global scale for vibration tense
-vib__streaming = True    # flag to use streaming inference
+vib__streaming = False    # flag to use streaming inference
 vib__audio_len = 0.1    # seconds of the audio window in streaming inference
 vib__stream_nwin = 1    # number of streaming inferencing windows in mapping buffer. Mapping algo will be performed over it and the center window's result will be output.
 # signal analysis
