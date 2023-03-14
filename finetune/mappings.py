@@ -687,6 +687,10 @@ def band_select_fast(fm:FeatureManager, duty=0.5, vib_extremefreq = [50,500], vi
     # remove_t = 0    # harmonic removal timer
     if peak_limit<=0:
         # automatically determin peak limit
+        # np.save("spec.npy", linspec)
+        # np.save("spec_h.npy", power_spec_h)
+        # np.save("spec_p.npy", power_spec_p)
+        # np.save("spec_r.npy", power_spec_r)
         # TODO more sophisticated way to determin peak limits
         peak_mask = np.zeros_like(spec_mask)
         power_spec_sum = np.sum(linspec, axis=0)
@@ -730,7 +734,7 @@ def band_select_fast(fm:FeatureManager, duty=0.5, vib_extremefreq = [50,500], vi
         np.put_along_axis(peak_mask, peak_inds, 1, axis=0)    # set 1 to peak mask where top peaks are seleted
     # incorporate peak's mask
     spec_masked = spec_masked * peak_mask
-    
+    # sys.exit()
     # print("harmonic removal at most elapses %f" % (remove_t))
 
     # ### debug ###
