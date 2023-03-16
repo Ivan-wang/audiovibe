@@ -18,8 +18,8 @@ vib__stream_nwin = 1    # number of streaming inferencing windows in mapping buf
 # signal analysis
 peak_globalth = 20    # global threshold for peak detection in dB (difference from the max value at current time)
 peak_relativeth = 4    # local threshold for peak detection in dB (difference over the moving average at current time)
-mel_peak_movlen = 5    # moving average length (in number of bins) along frequency axis
-stft_peak_movlen = 19    # moving average length (in number of bins) along frequency axis
+mel_peak_movlen = 5    # moving average length (in number of bins) along frequency axis for mel spec
+stft_peak_movlen = 19    # moving average length (in number of bins) along frequency axis for linear spec
 hprs_harmonic_filt_len = 0.1    # HPRS harmonic direction filter length (in sec)
 hprs_percusive_filt_len = 400    # HPRS percusive direction filter length (in hz)
 hprs_beta = 4.0    # HPRS harmonic and percusive threshold factor
