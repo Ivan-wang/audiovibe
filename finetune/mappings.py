@@ -601,6 +601,7 @@ def band_select_fast(fm:FeatureManager, duty=0.5, vib_extremefreq = [50,500], vi
     
     # select bins lower than 8k hz
     num_8k_bins = np.sum(stft_freq<=8000)
+    # num_8k_bins = np.sum(stft_freq<=8000000)
     linspec = linspec[:num_8k_bins,:]
     stft_freq = stft_freq[:num_8k_bins]
     stft_len_window = fm.feature_data('stft', prop='len_window')
