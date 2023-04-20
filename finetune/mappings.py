@@ -595,6 +595,7 @@ def band_select_fast(fm:FeatureManager, duty=0.5, vib_extremefreq = [50,500], vi
     start_t = time.time()
     stft = fm.feature_data('stft')
     linspec = np.abs(stft)**2.0    # power linear spectrogram
+    # np.save("hrps_in.npy", stft)
     sr = fm.meta["sr"]
     len_hop = fm.meta["len_hop"]
     stft_freq = fm.feature_data('stft', prop='stft_freq')
@@ -630,9 +631,15 @@ def band_select_fast(fm:FeatureManager, duty=0.5, vib_extremefreq = [50,500], vi
 
     # harmonic-percusive-residual separation
     # start_t = time.time()
+    # np.save("hrps_in.npy", linspec)
     power_spec_h, power_spec_p, power_spec_r, M_h, M_p, M_r = hrps(linspec, sr, len_harmonic_filt=hprs_harmonic_filt_len,
                                                                    len_percusive_filt=hprs_percusive_filt_len, beta=hprs_beta,
                                                                    len_window=stft_len_window, len_hop=len_hop)
+    
+    # np.save("hrps_h.npy", power_spec_h)
+    # np.save("hrps_p.npy", power_spec_p)
+    # np.save("hrps_r.npy", power_spec_r)
+    # sys.exit()
     # print("hrps elapses %f" % (time.time()-start_t))
 
     # ### debug plot ###
@@ -661,7 +668,10 @@ def band_select_fast(fm:FeatureManager, duty=0.5, vib_extremefreq = [50,500], vi
     # melspec_mask = extract_peaks(melspec, peak_movlen=mel_peak_movlen, peak_relativeth=peak_relativeth, peak_globalth=peak_globalth)
     # print("melspec peak extraction elapses %f" % (time.time()-start_t))
     # start_t = time.time()
+    # np.save("harm_spec.npy", power_spec_h)    # for debug
     harm_peaks = extract_peaks(power_spec_h, peak_movlen=stft_peak_movlen, peak_relativeth=peak_relativeth, peak_globalth=peak_globalth)
+    # np.save("harm_peaks.npy", harm_peaks)    # for debug
+    # sys.exit()    # for debug
     # print("linspec peak extraction elapses %f" % (time.time()-start_t))
     # melspec_mask_no_harms, melspec_mask = remove_harmonics(melspec_mask, melspec, mel_freq)
     # stft_mask_no_harms, stft_mask = remove_harmonics(stft_mask, linspec, stft_freq)
