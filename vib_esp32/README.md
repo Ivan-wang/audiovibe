@@ -1,5 +1,16 @@
 # VIB ESP32 Readme
 
+## UPDATE - 07/16/2023
+
+**Update a2dp_sink exmaple**
+
+1. See new demo in folder `a2dp_sink_v5`
+2. Please use ESP-IDF v5.1 for this new demo 
+
+**Add signal processing code**
+
+Add the code from `vibe_alg` repo. Compiling successeed. TODO: need to debug on memory issue
+
 ## UPDATE - 05/05/2022
 
 Bluetooth music and vibration beta version done
