@@ -15,6 +15,7 @@
 #include "freertos/task.h"
 #include "esp_log.h"
 #include "bt_app_core.h"
+#include "bt_sig_proc.h"
 // #ifdef CONFIG_EXAMPLE_A2DP_SINK_OUTPUT_INTERNAL_DAC
 #include "driver/dac_continuous.h"
 // #else
@@ -73,6 +74,7 @@ uint8_t dac_buf[DAC_LEN];
 #ifndef CONFIG_EXAMPLE_A2DP_SINK_OUTPUT_INTERNAL_DAC
 extern i2s_chan_handle_t tx_chan;
 extern dac_continuous_handle_t sig_chan;
+extern audio_handler_t* sig_proc_handler;
 #else
 extern dac_continuous_handle_t tx_chan;
 #endif
@@ -190,11 +192,14 @@ static void bt_i2s_task_handler(void *arg)
 
 static void sig_proc_task_handler(void *arg)
 {
-    int msg;
     // using internal DAC for fig
     size_t item_written;
     int frame_count = 0;
     ESP_LOGI(BT_APP_CORE_TAG, "sig proc task lanuched");
+    if (pdFALSE == xSemaphoreGive(s_sig_write_semaphore)) {
+        ESP_LOGE(BT_APP_CORE_TAG, "semphore give failed");
+    }
+
     for (;;) {
         if (xSemaphoreTake(s_sig_read_semaphore, portMAX_DELAY)) {
             frame_count += 1;
@@ -203,6 +208,7 @@ static void sig_proc_task_handler(void *arg)
                 lavg += l_data[i];
                 ravg += r_data[i];
             }
+            proc_audio_frame(l_data);
 
             xSemaphoreGive(s_sig_write_semaphore);
 
@@ -305,6 +311,7 @@ void bt_i2s_task_start_up(void)
     if ((s_bt_sig_task_queue = xQueueCreate(1, sizeof(int))) == NULL) {
         ESP_LOGE(BT_APP_CORE_TAG, "%s, sig task queue create failed", __func__);
     }
+    init_audio_handler();
 
     // xTaskCreate(bt_i2s_task_handler, "BtI2STask", 2048, NULL, configMAX_PRIORITIES - 3, &s_bt_i2s_task_handle);
     xTaskCreatePinnedToCore(bt_i2s_task_handler, "BtI2STask", 9012, NULL, configMAX_PRIORITIES - 3, &s_bt_i2s_task_handle, 0);
@@ -342,6 +349,7 @@ void bt_i2s_task_shut_down(void)
         vSemaphoreDelete(s_sig_write_semaphore);
         s_sig_write_semaphore= NULL;
     }
+    deinit_audio_handler();
 }
 
 size_t write_ringbuf(const uint8_t *data, size_t size)
@@ -372,9 +380,6 @@ size_t write_ringbuf(const uint8_t *data, size_t size)
             ESP_LOGI(BT_APP_CORE_TAG, "ringbuffer data increased! mode changed: RINGBUFFER_MODE_PROCESSING");
             ringbuffer_mode = RINGBUFFER_MODE_PROCESSING;
             if (pdFALSE == xSemaphoreGive(s_i2s_write_semaphore)) {
-                ESP_LOGE(BT_APP_CORE_TAG, "semphore give failed");
-            }
-            if (pdFALSE == xSemaphoreGive(s_sig_write_semaphore)) {
                 ESP_LOGE(BT_APP_CORE_TAG, "semphore give failed");
             }
         }
