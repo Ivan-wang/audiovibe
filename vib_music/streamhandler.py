@@ -1,6 +1,7 @@
 from enum import IntEnum, unique, auto
-from typing import Optional, NamedTuple, Dict
+from typing import Optional, NamedTuple, Dict, Any, Callable
 from tqdm import tqdm
+from vib_music.core import StreamEvent
 
 from vib_music.core.StreamData import StreamDataBase
 
@@ -155,3 +156,29 @@ class AudioStreamHandler(StreamHandler):
     def on_close(self, what: Optional[Dict] = None) -> None:
         if self.bar is not None: self.bar.close()
         return super().on_close(what)
+
+class LiveStreamHandler(StreamHandler):
+    def __init__(self, live_data_stream:StreamDataBase, stream_driver:StreamDriverBase) -> None:
+        super(LiveStreamHandler, self).__init__(live_data_stream, stream_driver)
+    
+    def on_init(self, what:Optional[Dict]=None) -> None:
+        self.stream_driver.on_init(what)
+        self.stream_state = StreamState.STREAM_ACTIVE
+    
+    def on_seek(self, what:Optional[Dict]=None) -> None:
+        # reset data handler buffer
+        self.reset_stream()
+    
+    def on_next_frame(self, what:Optional[Dict]=None) -> None:
+        if not self.is_activate():
+            return
+        
+        frame = what.get('frame', None)
+        if frame is None:
+            raise StreamEndException('no more frames')
+        else:
+            frame = self.stream_data.readframe(frame)
+        
+        if frame is not None:
+            self.stream_driver.on_next_frame(frame)
+    

@@ -12,7 +12,7 @@ class StreamDataBase(abc.ABC):
 
     @abc.abstractmethod
     def init_stream(self) -> None:
-        self.rewind()
+        pass
 
     @abc.abstractmethod
     def getnframes(self) -> int:
@@ -50,4 +50,24 @@ class AudioStream(StreamDataBase):
 
     @abc.abstractmethod
     def getframerate(self) -> int:
+        pass
+
+class LiveStreamData(StreamDataBase):
+    def __init__(self) -> None:
+        super().__init__(None, None)
+    
+    # live stream position is always latest, just return -1
+    def tell(self) -> int:
+        return -1
+
+    # set pos will destory all buffered data
+    def setpos(self, pos: int) -> None:
+        self.clear_buffer()
+    
+    # live stream cannot be rewinded, just clear buffer
+    def rewind(self) -> None:
+        self.clear_buffer()
+    
+    @abc.abstractclassmethod
+    def clear_buffer(self):
         pass

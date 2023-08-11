@@ -100,3 +100,6 @@ class VibrationStream(StreamDataBase):
         else:
             raise VibrationFormatError(f'vibration mode {mode} not defined.')
 
+
+class LiveVibrationStream(VibrationStream):
+    pass
