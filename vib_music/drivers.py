@@ -129,6 +129,9 @@ class UARTDriver(StreamDriverBase):
         # send init signals?
     
     def on_next_frame(self, what: Optional[Dict] = None) -> None:
+        if what is None:
+            return
+
         CH0, CH1, CH2, CH3 = what.get('CH', '1 0 Z Z').split(' ')
         channel_control = 0
         for c in [CH3, CH2, CH1, CH0]:
@@ -145,7 +148,7 @@ class UARTDriver(StreamDriverBase):
         self.last_feedback = self.stream.read(7) # collect feed back
     
     def on_close(self, what: Optional[Dict] = None) -> None:
-        self.stream.write(bytearray.fromhex('BC0100000000000000AAAAFFDF'))
+        self.stream.write(bytearray.fromhex('BC0100000000000000FFFFFFDF'))
         self.stream.close()
     
     def _translate_current(self, current:bytearray) -> str:

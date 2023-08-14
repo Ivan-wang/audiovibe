@@ -156,7 +156,7 @@ class AudioStreamHandler(StreamHandler):
         return super().on_close(what)
 
 class LiveStreamHandler(StreamHandler):
-    def __init__(self, live_data_stream:LiveStreamData, stream_driver:StreamDriverBase) -> None:
+    def __init__(self, live_data_stream:StreamDataI, stream_driver:StreamDriverBase) -> None:
         super(LiveStreamHandler, self).__init__(live_data_stream, stream_driver)
     
     def on_next_frame(self, what:Optional[Dict]=None) -> None:

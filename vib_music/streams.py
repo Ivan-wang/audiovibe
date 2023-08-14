@@ -1,7 +1,7 @@
 import wave
 import numpy as np
 
-from .core import StreamDataI, AudioStreamI, LiveStreamData
+from .core import StreamDataI, AudioStreamI
 from .core import AudioFeatureBundle
 
 class WaveAudioStream(AudioStreamI):
@@ -116,10 +116,13 @@ class LiveVibrationStream(StreamDataI):
 
     # cannot rewind a live stream data
     def rewind(self) -> None:
-        return None
+        self.clear_buffer()
     
     def close(self) -> None:
         return None
     
     def setpos(self, pos: int) -> None:
+        self.clear_buffer()
+    
+    def clear_buffer(self) -> None:
         return None
