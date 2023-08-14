@@ -5,7 +5,7 @@ from .drivers import PCF8591Driver, AudioDriver, LogDriver
 from .streamhandler import StreamHandler, AudioStreamHandler
 from .streamhandler import AudioStreamEvent, AudioStreamEventType
 from .streamhandler import StreamState
-from .streams import WaveAudioStream, VibrationStream
+from .streams import WaveAudioStream, VibrationStream, LiveVibrationStream
 
 from .utils import launch_vibration
 from .utils import get_audio_process, get_vib_process

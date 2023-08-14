@@ -5,7 +5,7 @@ from typing import List, Optional
 from collections import UserDict
 
 sys.path.append('..')
-from vib_music import AudioStream
+from vib_music import AudioStreamI
 
 class AtomicWaveDatabase(UserDict):
     def save(self, to:str) -> None:
@@ -111,7 +111,7 @@ class AtomicWaveBackend(object):
     def save_database(self, to:str) -> None:
         self.database.save(to)
 
-class MonoFrameAudioStream(AudioStream):
+class MonoFrameAudioStream(AudioStreamI):
     def __init__(self, num_frame:int, len_frame: int) -> None:
         super().__init__(np.zeros((len_frame,), dtype=np.uint16), len_frame)
         self.next_frame = 0

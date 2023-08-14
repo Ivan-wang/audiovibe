@@ -3,9 +3,7 @@ from typing import Optional, NamedTuple, Dict, Any, Callable
 from tqdm import tqdm
 from vib_music.core import StreamEvent
 
-from vib_music.core.StreamData import StreamDataBase
-
-from .core import AudioStream, StreamDriverBase
+from .core import AudioStreamI, StreamDriverBase, StreamDataI
 from .core import StreamEvent, StreamEventType
 from .drivers import AudioDriver
 
@@ -38,7 +36,7 @@ class StreamState(IntEnum):
     STREAM_ACTIVE = auto()
 
 class StreamHandler(object):
-    def __init__(self, stream_data:StreamDataBase, stream_driver:StreamDriverBase) -> None:
+    def __init__(self, stream_data:StreamDataI, stream_driver:StreamDriverBase) -> None:
         super(StreamHandler).__init__()
 
         self.stream_data = stream_data # inputs
@@ -95,7 +93,7 @@ class StreamHandler(object):
         return self.stream_data.getnframes()
 
 class AudioStreamHandler(StreamHandler):
-    def __init__(self, stream_data: AudioStream, stream_driver: AudioDriver) -> None:
+    def __init__(self, stream_data: AudioStreamI, stream_driver: AudioDriver) -> None:
         super(AudioStreamHandler, self).__init__(stream_data, stream_driver)
 
         self.control_handle_funcs.update({
@@ -158,16 +156,8 @@ class AudioStreamHandler(StreamHandler):
         return super().on_close(what)
 
 class LiveStreamHandler(StreamHandler):
-    def __init__(self, live_data_stream:StreamDataBase, stream_driver:StreamDriverBase) -> None:
+    def __init__(self, live_data_stream:LiveStreamData, stream_driver:StreamDriverBase) -> None:
         super(LiveStreamHandler, self).__init__(live_data_stream, stream_driver)
-    
-    def on_init(self, what:Optional[Dict]=None) -> None:
-        self.stream_driver.on_init(what)
-        self.stream_state = StreamState.STREAM_ACTIVE
-    
-    def on_seek(self, what:Optional[Dict]=None) -> None:
-        # reset data handler buffer
-        self.reset_stream()
     
     def on_next_frame(self, what:Optional[Dict]=None) -> None:
         if not self.is_activate():

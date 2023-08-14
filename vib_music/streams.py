@@ -1,14 +1,15 @@
 import wave
 import numpy as np
 
-from .core import StreamDataBase, AudioStream
+from .core import StreamDataI, AudioStreamI, LiveStreamData
 from .core import AudioFeatureBundle
 
-class WaveAudioStream(AudioStream):
+class WaveAudioStream(AudioStreamI):
     def __init__(self, wavefile:str, len_frame:int) -> None:
         # NOTE: avoid opening the wave here, opening files may have problems when sharing by difference process
-        super(WaveAudioStream, self).__init__(None, len_frame)
+        super(WaveAudioStream, self).__init__()
         self.wavefile = wavefile
+        self.len_frame = len_frame
     
     def init_stream(self) -> None:
         try:
@@ -48,14 +49,15 @@ class WaveAudioStream(AudioStream):
 class VibrationFormatError(Exception):
     pass
     
-class VibrationStream(StreamDataBase):
+class VibrationStream(StreamDataI):
     '''
     Generating vibrations, providing a file-like IO like wave lib for .wav files
     '''
     vibration_mode_func = {}
     def __init__(self, chunks:np.ndarray, len_frame:int) -> None:
-        chunks = chunks.ravel().astype(np.uint8)
-        super(VibrationStream, self).__init__(chunks, len_frame)
+        super(VibrationStream, self).__init__()
+        self.chunks = chunks.ravel().astype(np.uint8)
+        self.len_frame = len_frame
         self.pos = 0
 
     def init_stream(self) -> None:
@@ -100,6 +102,24 @@ class VibrationStream(StreamDataBase):
         else:
             raise VibrationFormatError(f'vibration mode {mode} not defined.')
 
+class LiveVibrationStream(StreamDataI):
+    live_vibration_mode_func = {}
+    def __init__(self) -> None:
+        super().__init__()
 
-class LiveVibrationStream(VibrationStream):
-    pass
+    def getnframes(self) -> int:
+        return -1
+
+    # live stream position is always latest, just return -1
+    def tell(self) -> int:
+        return -1
+
+    # cannot rewind a live stream data
+    def rewind(self) -> None:
+        return None
+    
+    def close(self) -> None:
+        return None
+    
+    def setpos(self, pos: int) -> None:
+        return None
