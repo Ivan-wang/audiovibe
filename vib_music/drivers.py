@@ -1,5 +1,8 @@
+import time
 import logging
 from typing import Optional, Dict
+
+from vib_music.core.StreamEvent import StreamEvent
 
 from .core import StreamEvent, StreamEventType
 from .core import StreamDriverBase, StreamError
@@ -26,6 +29,12 @@ class LogDriver(StreamDriverBase):
 
     def on_next_frame(self, what: Optional[Dict] = None) -> None:
         self.stream.info('LogDriver Move On Next Frame!')
+    
+    def on_pulse(self, what: Optional[Dict] = None) -> None:
+        self.stream.info('LogDriver Pulsed!')
+    
+    def on_resume(self, what: Optional[Dict] = None) -> None:
+        self.stream.info('LogDriver Resumed!')
     
     def on_status_acq(self, what: Optional[Dict] = None) -> Optional[StreamEvent]:
         self.stream.info('LogDriver Receives Status Req!')
@@ -105,3 +114,58 @@ class PCF8591Driver(StreamDriverBase):
 
 class PWMDriver(StreamDriverBase):
     pass
+
+import serial
+class UARTDriver(StreamDriverBase):
+    CHANNEL_MAP = {'Z': 0b01, '0': 0b00, '1': 0b10}
+    def __init__(self) -> None:
+        super(UARTDriver, self).__init__()
+        self.stream = None
+        self.last_cmd = None
+        self.last_feedback = None
+    
+    def on_init(self, what: Optional[Dict] = None) -> None:
+        self.stream = serial.Serial('/dev/ttyS0', 115200, timeout=0.01)
+        # send init signals?
+    
+    def on_next_frame(self, what: Optional[Dict] = None) -> None:
+        if what is None:
+            return
+
+        CH0, CH1, CH2, CH3 = what.get('CH', '1 0 Z Z').split(' ')
+        channel_control = 0
+        for c in [CH3, CH2, CH1, CH0]:
+            channel_control = (channel_control << 2) | self.CHANNEL_MAP[c]
+
+        volt = what.get('voltage', 180)
+        freq = what.get('freq', 1000)
+        duty = what.get('duty', 50)
+
+        self.last_cmd = f'BC01{channel_control:02X}{int(volt):02X}{duty*2+1:02X}{int(freq):04X}AFAAFFDF'
+        bytes = bytearray.fromhex(self.last_cmd)
+        self.stream.write(bytes)
+        time.sleep(0.1)
+        self.last_feedback = self.stream.read(7) # collect feed back
+    
+    def on_close(self, what: Optional[Dict] = None) -> None:
+        self.stream.write(bytearray.fromhex('BC0100000000000000FFFFFFDF'))
+        self.stream.close()
+    
+    def _translate_current(self, current:bytearray) -> str:
+        return ' '.join([f'{int(x)/255*16:.2f}' for x in bytes[1:5]])
+    
+    def on_status_acq(self, what: Optional[Dict] = None) -> Optional[StreamEvent]:
+        if self.last_cmd is None:
+            return StreamEvent(StreamEventType.STREAM_STATUS_ACK, {})
+
+        # need to repeat last command to get feed back
+        self.stream.write(bytearray.fromhex(self.last_cmd))
+        time.sleep(0.1)
+        try:
+            feedback = self.stream.read(7) # read a feed back
+            current = self._translate_current(feedback)
+        except Exception:
+            return StreamEvent(StreamEventType.STREAM_STATUS_ACK, {'current': self._translate_current(self.last_feedback)})
+        else:
+            self.last_feedback = feedback
+            return StreamEvent(StreamEventType.STREAM_STATUS_ACK, {'current': current})

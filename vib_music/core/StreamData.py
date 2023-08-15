@@ -1,18 +1,15 @@
 import abc
+from typing import Any
 
 
-class StreamDataBase(abc.ABC):
+class StreamDataI(abc.ABC):
     '''frame based stream data'''
-    def __init__(self, chunks, len_frame:int) -> None:
-        self.chunks = chunks
-        self.len_frame = len_frame
+    def __init__(self) -> None:
+        super().__init__()
     
-    def getchunks(self):
-        return self.chunks
-
     @abc.abstractmethod
     def init_stream(self) -> None:
-        self.rewind()
+        pass
 
     @abc.abstractmethod
     def getnframes(self) -> int:
@@ -20,7 +17,7 @@ class StreamDataBase(abc.ABC):
 
     # return type depends on the chunks
     @abc.abstractmethod
-    def readframe(self, n:int=1):
+    def readframe(self, what:Any=1):
         pass
 
     @abc.abstractmethod
@@ -39,7 +36,7 @@ class StreamDataBase(abc.ABC):
     def close(self) -> None:
         pass
 
-class AudioStream(StreamDataBase):
+class AudioStreamI(StreamDataI):
     @abc.abstractmethod
     def getsampwidth(self) -> int:
         pass

@@ -1,14 +1,11 @@
 from enum import IntEnum, unique, auto
-from typing import Optional, NamedTuple, Dict
+from typing import Optional, NamedTuple, Dict, Any, Callable
 from tqdm import tqdm
+from vib_music.core import StreamEvent
 
-from vib_music.core.StreamData import StreamDataBase
-
-from .core import AudioStream, StreamDriverBase
+from .core import AudioStreamI, StreamDriverBase, StreamDataI
 from .core import StreamEvent, StreamEventType
-from .core import StreamError
 from .drivers import AudioDriver
-from .streams import WaveAudioStream
 
 class StreamEndException(Exception):
     pass
@@ -39,7 +36,7 @@ class StreamState(IntEnum):
     STREAM_ACTIVE = auto()
 
 class StreamHandler(object):
-    def __init__(self, stream_data:StreamDataBase, stream_driver:StreamDriverBase) -> None:
+    def __init__(self, stream_data:StreamDataI, stream_driver:StreamDriverBase) -> None:
         super(StreamHandler).__init__()
 
         self.stream_data = stream_data # inputs
@@ -83,7 +80,8 @@ class StreamHandler(object):
         return self.stream_driver.on_status_acq(what)
     
     def handle(self, event:StreamEvent) -> Optional[StreamEvent]:
-        return self.control_handle_funcs[event.head](event.what)
+        if event.head in self.control_handle_funcs:
+            return self.control_handle_funcs[event.head](event.what)
     
     def is_activate(self) -> bool:
         return self.stream_state == StreamState.STREAM_ACTIVE
@@ -95,7 +93,7 @@ class StreamHandler(object):
         return self.stream_data.getnframes()
 
 class AudioStreamHandler(StreamHandler):
-    def __init__(self, stream_data: AudioStream, stream_driver: AudioDriver) -> None:
+    def __init__(self, stream_data: AudioStreamI, stream_driver: AudioDriver) -> None:
         super(AudioStreamHandler, self).__init__(stream_data, stream_driver)
 
         self.control_handle_funcs.update({
@@ -156,3 +154,21 @@ class AudioStreamHandler(StreamHandler):
     def on_close(self, what: Optional[Dict] = None) -> None:
         if self.bar is not None: self.bar.close()
         return super().on_close(what)
+
+class LiveStreamHandler(StreamHandler):
+    def __init__(self, live_data_stream:StreamDataI, stream_driver:StreamDriverBase) -> None:
+        super(LiveStreamHandler, self).__init__(live_data_stream, stream_driver)
+    
+    def on_next_frame(self, what:Optional[Dict]=None) -> None:
+        if not self.is_activate():
+            return
+        
+        frame = what.get('frame', None)
+        if frame is None:
+            raise StreamEndException('no more frames')
+        else:
+            frame = self.stream_data.readframe(frame)
+        
+        if frame is not None:
+            self.stream_driver.on_next_frame(frame)
+    
