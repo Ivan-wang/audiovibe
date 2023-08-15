@@ -60,7 +60,7 @@ def set_configs(ser:serial.Serial, cmd:str, last_cmd:Optional[str]=None):
         duty = int(duty)
         if duty < 0 or duty > 100:
             raise ValueError('Duty out of range [0, 100]')
-        cmd_hex = f'BC01{channel_controls:02X}{int(volt):02X}{duty*2+1:02X}{int(freq):04X}AFAAFFDF'
+        cmd_hex = f'BC01{channel_controls:02X}{int(volt):02X}{duty*2+1:02X}{int(freq):04X}FFFFFFDF'
         print(cmd_hex)
 
     bytes = bytearray.fromhex(cmd_hex)
